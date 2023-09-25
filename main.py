@@ -1,5 +1,5 @@
-from gui.login_menu import LoginMenu
+from gui.controller import Controller
 
 if __name__ == "__main__":
-    login_menu = LoginMenu()
-    login_menu.mainloop()
+    controller = Controller()
+    controller.run()
