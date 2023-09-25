@@ -17,7 +17,7 @@ class LoginMenu(tk.Tk):
         # self.label = tk.Label(self, text="Login Menu")
         # self.label.grid(row=0, column=0, padx=10, pady=10)
 
-        self.logo_image = tk.PhotoImage(file="Images/logo.png")
+        self.logo_image = tk.PhotoImage(file="gui/Images/logo.png")
         self.logo_image = self.logo_image.subsample(4, 4)
         self.logo_label1 = tk.Label(self, image=self.logo_image, bg="black")
         self.logo_label1.grid(row=0, column=0, sticky="nw", padx=5, pady=5)
@@ -127,7 +127,7 @@ class RegisterMenu(tk.Tk):
         # self.label = tk.Label(self, text="Login Menu")
         # self.label.grid(row=0, column=0, padx=10, pady=10)
 
-        self.logo_image = tk.PhotoImage(file="Images/logo.png")
+        self.logo_image = tk.PhotoImage(file="gui/Images/logo.png")
         self.logo_image = self.logo_image.subsample(4, 4)
         self.logo_label1 = tk.Label(self, image=self.logo_image, bg="black")
         self.logo_label1.grid(row=0, column=0, sticky="nw", padx=5, pady=5)
@@ -257,7 +257,3 @@ class RegisterMenu(tk.Tk):
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-
-# Create and run the login menu
-login_menu = LoginMenu()
-login_menu.mainloop()
