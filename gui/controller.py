@@ -4,13 +4,14 @@ from gui.register_menu import RegisterMenu
 from gui.lobby_browser import LobbyBrowser
 from gui.main_menu import MainMenu
 
+
 class Controller:
     def __init__(self):
         self.current_menu = None
 
     def run(self):
-        # self.open_login_menu()
-        self.open_main_menu(2)
+        self.open_login_menu()
+        # self.open_main_menu(2)
         tk.mainloop()
 
     def open_login_menu(self):

@@ -1,7 +1,6 @@
 from logic.auth import UserAuth
 import tkinter as tk, tkinter.font as tk_font
 
-
 class LoginMenu(tk.Tk):
     def __init__(self, controller):
         super().__init__()
@@ -11,11 +10,6 @@ class LoginMenu(tk.Tk):
         self.geometry("800x600")
         self.configure(bg="#181F1C")
         self.user_id = -1
-        print(tk_font.families())
-
-        # Create and configure widgets
-        # self.label = tk.Label(self, text="Login Menu")
-        # self.label.grid(row=0, column=0, padx=10, pady=10)
 
         self.logo_image = tk.PhotoImage(file="gui/Images/logo.png")
         self.logo_image = self.logo_image.subsample(4, 4)
