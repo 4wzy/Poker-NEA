@@ -22,37 +22,37 @@ class RegisterMenu(tk.Tk):
         self.logo_label2 = tk.Label(self, image=self.logo_image, bg="black")
         self.logo_label2.grid(row=0, column=2, sticky="ne", padx=5, pady=5)
 
-        self.register_label = tk.Label(self, text="Register", font=("Arial", 60), bg="#181F1C", fg="white")
+        self.register_label = tk.Label(self, text="Register", font=("Cambria", 60), bg="#181F1C", fg="white")
         self.register_label.grid(row=0, column=0, columnspan=4, pady=20)
 
-        self.username_label = tk.Label(self, text="Username:", font=("Arial bold", 12), bg="#181F1C", fg="white")
+        self.username_label = tk.Label(self, text="Username:", font=("Cambria bold", 12), bg="#181F1C", fg="white")
         self.username_label.grid(row=1, column=0, pady=10, sticky="e")
-        self.username_entry = tk.Entry(self, font=("Arial", 12), bg="#DC851F")
+        self.username_entry = tk.Entry(self, font=("Cambria", 12), bg="#DC851F")
         self.username_entry.grid(row=1, column=1, pady=10, padx=10, sticky="w")
 
-        self.email_label = tk.Label(self, text="Email:", font=("Arial bold", 12), bg="#181F1C", fg="white")
+        self.email_label = tk.Label(self, text="Email:", font=("Cambria bold", 12), bg="#181F1C", fg="white")
         self.email_label.grid(row=2, column=0, pady=10, sticky="e")
-        self.email_entry = tk.Entry(self, font=("Arial", 12), bg="#DC851F")
+        self.email_entry = tk.Entry(self, font=("Cambria", 12), bg="#DC851F")
         self.email_entry.grid(row=2, column=1, pady=10, padx=10, sticky="w")
 
-        self.password_label = tk.Label(self, text="Password:", font=("Arial bold", 12), bg="#181F1C", fg="white")
+        self.password_label = tk.Label(self, text="Password:", font=("Cambria bold", 12), bg="#181F1C", fg="white")
         self.password_label.grid(row=3, column=0, pady=10, sticky="e")
-        self.password_entry = tk.Entry(self, font=("Arial", 12), show="*", bg="#DC851F")
+        self.password_entry = tk.Entry(self, font=("Cambria", 12), show="*", bg="#DC851F")
         self.password_entry.grid(row=3, column=1, padx=10, pady=10, sticky="w")
 
         self.register_button = tk.Button(self, text="Register", command=lambda: self.register_user(
             username=self.username_entry.get(), password=self.password_entry.get(), email=self.email_entry.get()),
-                                         font=("Arial", 12), bg="#BF1A1A", fg="white", width=20)
+                                         font=("Cambria", 12), bg="#BF1A1A", fg="white", width=20)
         self.register_button.grid(row=4, column=1, padx=10, pady=10, sticky="e")
 
-        self.login_button_label = tk.Label(self, text="Already have an account?", font=("Arial bold", 12),
+        self.login_button_label = tk.Label(self, text="Already have an account?", font=("Cambria bold", 12),
                                            bg="#181F1C", fg="white")
         self.login_button_label.grid(row=6, column=0, pady=5, sticky="e")
-        self.login_button = tk.Button(self, text="Login", command=self.open_login_menu, font=("Arial", 12),
+        self.login_button = tk.Button(self, text="Login", command=self.open_login_menu, font=("Cambria", 12),
                                       bg="#4f1111", fg="white", width=20)
         self.login_button.grid(row=6, column=1, padx=10, pady=10, sticky="e")
 
-        self.help_label = tk.Label(self, text="", font=("Arial", 12), bg="#191F1C", fg="white")
+        self.help_label = tk.Label(self, text="", font=("Cambria", 12), bg="#191F1C", fg="white")
         self.help_label.grid(row=7, column=0, padx=10, pady=10, columnspan=4)
 
         self.grid_rowconfigure(0, weight=1)
