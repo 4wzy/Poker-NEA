@@ -10,8 +10,8 @@ class Controller:
         self.current_menu = None
 
     def run(self):
-        self.open_login_menu()
-        # self.open_main_menu(2)
+        # self.open_login_menu()
+        self.open_main_menu(2)
         tk.mainloop()
 
     def open_login_menu(self):

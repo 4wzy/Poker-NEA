@@ -27,3 +27,6 @@ class DatabaseInteraction:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
+
+    def get_all_lobbies(self):
+        pass
