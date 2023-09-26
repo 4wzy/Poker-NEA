@@ -1,5 +1,6 @@
 import tkinter as tk
 from logic.auth import UserAuth
+from tkinter import messagebox
 
 
 class RegisterMenu(tk.Tk):
@@ -70,6 +71,16 @@ class RegisterMenu(tk.Tk):
         result = self.user_auth.register_user(username, password, email)
 
         self.help_label.config(text=result["message"])
+        if not result["success"]:
+            if "Password" in result["message"]:
+                messagebox.showerror("Error", f"{result['message']}.\nYour password must have:\n- At least 12 "
+                                              f"characters\n- A combination of uppercase and lowercase letters \n- "
+                                              f"One or more special characters ")
+            elif "Username" in result["message"]:
+                messagebox.showerror("Error", f"{result['message']}.\nYour username must be at least 3 characters "
+                                              f"long.")
+            else:
+                messagebox.showerror("Error", f"{result['message']}")
 
     def open_login_menu(self):
         self.controller.open_login_menu()

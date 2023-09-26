@@ -3,11 +3,14 @@ from gui.login_menu import LoginMenu
 from gui.register_menu import RegisterMenu
 from gui.lobby_browser import LobbyBrowser
 from gui.main_menu import MainMenu
-
+import socket
 
 class Controller:
     def __init__(self):
         self.current_menu = None
+        # Set up the client socket for networking
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket.connect(("localhost", 12345))
 
     def run(self):
         # self.open_login_menu()

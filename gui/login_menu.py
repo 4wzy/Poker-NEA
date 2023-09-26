@@ -1,5 +1,6 @@
 from logic.auth import UserAuth
-import tkinter as tk, tkinter.font as tk_font
+import tkinter as tk
+from tkinter import messagebox
 
 class LoginMenu(tk.Tk):
     def __init__(self, controller):
@@ -66,6 +67,8 @@ class LoginMenu(tk.Tk):
             self.user_id = result["user_id"]
             print(self.user_id)
             self.controller.open_main_menu(self.user_id)
+        else:
+            messagebox.showerror("Error", f"{result['message']}")
 
     def open_register_menu(self):
         self.controller.open_register_menu()
