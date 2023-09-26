@@ -35,11 +35,11 @@ class LobbyBrowser(tk.Tk):
 
         status_checkbutton = tk.Checkbutton(filter_frame, text="Show Lobbies In Progress", variable=self.status_var,
                                             onvalue="in_progress", offvalue="waiting", bg="#333333",
-                                            selectcolor="grey", fg="white")
+                                            selectcolor="grey", fg="white", command=self.refresh_lobby_list)
         status_checkbutton.pack(side="left")
 
         odds_checkbutton = tk.Checkbutton(filter_frame, text="Show Odds", variable=self.odds_var, bg="#333333",
-                                          selectcolor="grey", fg="white")
+                                          selectcolor="grey", fg="white", command=self.refresh_lobby_list)
         odds_checkbutton.pack(side="left")
 
         # Set up the listbox which displays the available lobbies
