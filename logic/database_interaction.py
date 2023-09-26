@@ -34,19 +34,26 @@ class DatabaseInteraction:
             connection = mysql.connector.connect(**self.config)
             cursor = connection.cursor()
 
-            cursor.execute("SELECT * FROM lobbies WHERE status = %s AND show_odds = %s", (status_filter, odds_filter))
+            # Modify the SQL query to also get the count of players in each lobby
+            cursor.execute("""
+                SELECT l.lobby_id, l.name, l.status, COUNT(pl.user_id), l.created_at, l.show_odds
+                FROM lobbies l
+                LEFT JOIN player_lobbies pl ON l.lobby_id = pl.lobby_id
+                WHERE l.status = %s AND l.show_odds = %s
+                GROUP BY l.lobby_id
+            """, (status_filter, odds_filter))
+
             lobbies = cursor.fetchall()
 
-            # Convert each lobby's datetime objects to string
-            lobbies_str = []
-            for lobby in lobbies:
-                lobby_list = list(lobby)
-                for i, item in enumerate(lobby_list):
-                    if isinstance(item, datetime):
-                        lobby_list[i] = item.strftime('%Y-%m-%d %H:%M:%S')
-                lobbies_str.append(lobby_list)
+            return [{
+                'lobby_id': lobby[0],
+                'name': lobby[1],
+                'status': lobby[2],
+                'player_count': lobby[3],
+                'created_at': lobby[4].strftime('%Y-%m-%d %H:%M:%S'),  # Convert datetime to string
+                'show_odds': lobby[5]
+            } for lobby in lobbies]
 
-            return lobbies_str
         except Exception as e:
             print(f"Error: {e}")
             return []

@@ -100,11 +100,8 @@ class LobbyBrowser(tk.Tk):
         print(f"Received lobbies: {lobbies}")
 
         for lobby in lobbies:
-            i = 4
-            lobby[i] = datetime.strptime(lobby[i], '%Y-%m-%d %H:%M:%S')
-
-            # Or leave them as strings and insert into the listbox
-            self.lobby_listbox.insert(tk.END, lobby)
+            display_text = f"{lobby['name']} ({lobby['status']}, {lobby['player_count']} players)"
+            self.lobby_listbox.insert(tk.END, display_text)
 
     def refresh_lobby_list(self):
         self.lobby_listbox.delete(0, tk.END)
