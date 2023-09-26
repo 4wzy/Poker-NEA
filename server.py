@@ -2,7 +2,7 @@ import socket
 import threading
 from logic.database_interaction import DatabaseInteraction
 import json
-
+#a
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.bind(("localhost", 12345))
 server_socket.listen(5)
