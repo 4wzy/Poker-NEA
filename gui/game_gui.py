@@ -107,19 +107,26 @@ class GameGUI(tk.Tk):
         for i, button in enumerate(buttons):
             button.place(relx=0.9, rely=0.2 * (2 * i + 5) / len(buttons), anchor='center')
 
-        self.network_thread = threading.Thread(target=self.network_loop)
-        self.network_thread.daemon = True  # Daemonize thread to exit when main program exits
-        self.network_thread.start()
+        self.controller.network_manager.client_socket.setblocking(0)
+        self.network_loop()
 
         self.process_initial_state(initial_state)
 
     def network_loop(self):
         s = self.controller.network_manager.client_socket
-        while True:
+        try:
+            # Try to receive data from the server
             data = s.recv(4096)
-            if not data:
-                break
-            self.process_server_message(data)
+
+            # If data is received, process it
+            if data:
+                self.process_server_message(data)
+        except BlockingIOError:
+            # If no data is received, continue without blocking
+            pass
+
+        # Schedule the next call to the network_loop method
+        self.after(100, self.network_loop)
 
     def process_initial_state(self, initial_state):
         print("processing initial state")
