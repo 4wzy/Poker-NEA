@@ -56,14 +56,7 @@ class LobbyServer:
             game = self.lobbies[lobby_name]
             game.remove_player(user_id)
 
-            # Update database to reflect the user has left the lobby
             self.database_interaction.remove_player_from_lobby(user_id, lobby_name)
-
-            # Notify other clients in the lobby that the user has left method 1 (if method 2 doesn't work)
-            # self.broadcast_to_lobby(lobby_name, {
-            #     'type': 'player_left',
-            #     'user_id': user_id
-            # })
 
             self.broadcast_game_state(lobby_name)
 

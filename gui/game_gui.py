@@ -30,7 +30,7 @@ class GameGUI(tk.Tk):
         logo_frame = tk.Frame(self.sidebar, bg="#444444")
         logo_frame.pack(pady=5, fill="x")
 
-        self.logo = Image.open("gui/Images/logo.png")  # update to gui/Images when running from main.py
+        self.logo = Image.open("gui/Images/logo.png")
         self.logo = self.logo.resize((50, 50))
         self.logo = ImageTk.PhotoImage(self.logo)
 
@@ -64,7 +64,7 @@ class GameGUI(tk.Tk):
                                      fg="#FFFFFF", font=("Cambria", 12), relief="flat", padx=10, pady=10)
         leave_button.pack(side="bottom", fill="x", pady=5, padx=10)
 
-        self.game_area = tk.Frame(main_pane, bg="#228B22")
+        self.game_area = tk.Frame(main_pane, bg="#302525")
         main_pane.add(self.game_area)
 
         self.sidebar_max_width = int(0.2 * 1280)
@@ -73,7 +73,7 @@ class GameGUI(tk.Tk):
 
         self.show_chat()
 
-        self.game_canvas = tk.Canvas(self.game_area, bg="#228B22", highlightthickness=0)
+        self.game_canvas = tk.Canvas(self.game_area, bg="#302525", highlightthickness=0)
         self.game_canvas.pack(fill="both", expand=True)
 
         # Draw Poker Table
@@ -82,14 +82,6 @@ class GameGUI(tk.Tk):
                                      table_x + table_radius * 1.5,
                                      table_y + table_radius * 0.95, fill="#006400", outline="#8B4513",
                                      width=2)
-
-        # Arrange Players
-        # self.place_player(420, 190, "Top Middle Player", "top")
-        # self.place_player(650, 200, "Top Right Player", "right")
-        # self.place_player(190, 200, "Top Left Player", "left")
-        # self.place_player(420, 530, "Bottom Middle Player", "bottom")
-        # self.place_player(710, 440, "Bottom Right Player", "bottom")
-        # self.place_player(130, 440, "Bottom Left Player", "bottom")
 
         # Define the buttons
         buttons = [
@@ -234,32 +226,46 @@ class GameGUI(tk.Tk):
 
     def place_player(self, x, y, name, position):
         # Create a frame to hold the player components
-        player_frame = tk.Frame(self.game_canvas, bg="#228B22")
+        player_frame = tk.Frame(self.game_canvas, bg="#302525")
 
-        # Add profile picture
         profile_photo = Image.open("gui/Images/Pfps/default.png")
         profile_photo = profile_photo.resize((50, 50))
+
+        # Create a mask
+        mask = Image.new('L', profile_photo.size, 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse((0, 0) + profile_photo.size, fill=255)
+
+        # Apply the mask to the image
+        profile_photo.putalpha(mask)
         profile_photo = ImageTk.PhotoImage(profile_photo)
-        profile_label = tk.Label(player_frame, image=profile_photo, bg="#228B22")
+
+        profile_label = tk.Label(player_frame, image=profile_photo, bg="#302525")
         profile_label.photo = profile_photo  # keep a reference to avoid garbage collection
         profile_label.pack()
 
         # Add name label
-        name_label = tk.Label(player_frame, text=name, bg="#228B22", fg="#FFFFFF")
+        name_label = tk.Label(player_frame, text=name, bg="#302525", fg="#FFFFFF")
         name_label.pack()
 
         # Add card images
-        card1_photo = Image.open("gui/Images/Cards/black_joker.png")
+        if self.username == name:
+            card1_photo = Image.open("gui/Images/Cards/black_joker.png")
+            card2_photo = Image.open("gui/Images/Cards/black_joker.png")
+        else:
+            card1_photo = Image.open("gui/Images/Cards/back.png")
+            card2_photo = Image.open("gui/Images/Cards/back.png")
+
         card1_photo = card1_photo.resize((60, 90))
         card1_photo = ImageTk.PhotoImage(card1_photo)
-        card1_label = tk.Label(player_frame, image=card1_photo, bg="#228B22")
+        card1_label = tk.Label(player_frame, image=card1_photo, bg="#302525")
         card1_label.photo = card1_photo  # keep a reference to avoid garbage collection
         card1_label.pack(side="left", padx=2)
 
-        card2_photo = Image.open("gui/Images/Cards/black_joker.png")
+
         card2_photo = card2_photo.resize((60, 90))
         card2_photo = ImageTk.PhotoImage(card2_photo)
-        card2_label = tk.Label(player_frame, image=card2_photo, bg="#228B22")
+        card2_label = tk.Label(player_frame, image=card2_photo, bg="#302525")
         card2_label.photo = card2_photo  # keep a reference to avoid garbage collection
         card2_label.pack(side="left", padx=2)
 

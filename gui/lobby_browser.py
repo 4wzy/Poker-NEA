@@ -119,7 +119,7 @@ class LobbyBrowser(tk.Tk):
             lobby_card.grid(row=row, column=col, padx=10, pady=5, sticky="nsew")
 
             col += 1
-            if col > 2:  # Move to the next row after every 3 cards
+            if col > 2:
                 col = 0
                 row += 1
 
@@ -150,7 +150,7 @@ class LobbyCard(tk.Frame):
                                 fg="#FFFFFF", bg="#444444")
         status_label.pack(side="top", fill="x", padx=5, pady=2)
 
-        player_count_label = tk.Label(self, text=f"{lobby_info['player_count']} players",
+        player_count_label = tk.Label(self, text=f"{lobby_info['player_count']}/6 players",
                                       font=tkfont.Font(family="Cambria", size=10), fg="#FFFFFF", bg="#444444")
         player_count_label.pack(side="top", fill="x", padx=5, pady=2)
 
