@@ -3,6 +3,7 @@ from gui.login_menu import LoginMenu
 from gui.register_menu import RegisterMenu
 from gui.lobby_browser import LobbyBrowser
 from gui.main_menu import MainMenu
+from gui.game_gui import GameGUI
 import socket
 
 class Controller:
@@ -36,3 +37,8 @@ class Controller:
         if self.current_menu:
             self.current_menu.destroy()
         self.current_menu = LobbyBrowser(self, user_id)
+
+    def join_lobby(self, user_id, lobby_name):
+        if self.current_menu:
+            self.current_menu.destroy()
+        self.current_menu = GameGUI(self, user_id, lobby_name)

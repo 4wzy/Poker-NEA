@@ -2,6 +2,7 @@ from datetime import datetime
 import mysql.connector
 
 
+
 class DatabaseInteraction:
     def __init__(self):
         self.config = {
@@ -63,6 +64,7 @@ class DatabaseInteraction:
                 connection.close()
 
     def create_lobby(self, lobby_data):
+        response = {"success": True, "error": None}
         try:
             connection = mysql.connector.connect(**self.config)
             cursor = connection.cursor()
@@ -71,14 +73,18 @@ class DatabaseInteraction:
             INSERT INTO lobbies (host_user_id, name, status, show_odds)
             VALUES (%s, %s, %s, %s)
             """
-            print("inserted")
             cursor.execute(sql, (lobby_data['host_user_id'], lobby_data['name'], 'waiting', lobby_data['show_odds']))
-
             connection.commit()
 
+        except mysql.connector.IntegrityError as e:
+            response["success"] = False
+            response["error"] = "A lobby with this name already exists"
         except Exception as e:
-            print(f"Error: {e}")
+            response["success"] = False
+            response["error"] = f"Error: {e}"
         finally:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
+
+        return response

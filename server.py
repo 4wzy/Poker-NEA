@@ -25,7 +25,8 @@ def handle_client(client_socket):
 
             client_socket.sendall(json.dumps(lobbies).encode('utf-8'))
         elif request["type"] == 'create_lobby':
-            database_interaction.create_lobby(request)
+            response = database_interaction.create_lobby(request)
+            client_socket.sendall(json.dumps(response).encode('utf-8'))
 
     client_socket.close()
 

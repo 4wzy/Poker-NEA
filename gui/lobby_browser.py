@@ -1,3 +1,4 @@
+import string
 import tkinter as tk
 from tkinter import font as tkfont
 from logic.database_interaction import DatabaseInteraction
@@ -5,6 +6,9 @@ from tkinter import messagebox
 import json
 from datetime import datetime
 
+# To do:
+# Handle joining and creating lobbies properly
+# The join command should take in a user_id, and a lobby_id, and should open a new GUI for the player joining
 
 class LobbyBrowser(tk.Tk):
     def __init__(self, controller, user_id, *args, **kwargs):
@@ -42,14 +46,20 @@ class LobbyBrowser(tk.Tk):
                                           selectcolor="grey", fg="white", command=self.refresh_lobby_list)
         odds_checkbutton.pack(side="left")
 
-        # Set up the listbox which displays the available lobbies
-        self.lobby_listbox = tk.Listbox(container, bg="#555555", fg="#FFFFFF", font=tkfont.Font(family="Cambria", size=12),
-                                   selectbackground="#444444")
-        self.lobby_listbox.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
+        # Setting up a place for each lobby card to go
+        self.lobby_container_canvas = tk.Canvas(container, bg="#555555")
+        self.lobby_container_canvas.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
 
-        scrollbar = tk.Scrollbar(container, orient="vertical", command=self.lobby_listbox.yview)
+        self.lobby_container_frame = tk.Frame(self.lobby_container_canvas, bg="#555555")
+        self.lobby_container_canvas.create_window((0, 0), window=self.lobby_container_frame, anchor="nw")
+
+        scrollbar = tk.Scrollbar(container, orient="vertical", command=self.lobby_container_canvas.yview)
         scrollbar.grid(row=2, column=1, sticky="ns")
-        self.lobby_listbox.config(yscrollcommand=scrollbar.set)
+        self.lobby_container_canvas.config(yscrollcommand=scrollbar.set)
+        self.lobby_container_canvas.yview_moveto(0)
+
+        self.lobby_container_frame.bind("<Configure>", lambda e: self.lobby_container_canvas.configure(
+            scrollregion=self.lobby_container_canvas.bbox("all")))
 
         button_frame = tk.Frame(container, bg="#333333")
         button_frame.grid(row=3, column=0, columnspan=2, sticky="ew")
@@ -75,6 +85,10 @@ class LobbyBrowser(tk.Tk):
                 self.user_id))
         back_button.grid(row=4, column=0, columnspan=2, sticky="ew", pady=10, padx=10)
 
+        self.lobby_container_frame.grid_columnconfigure(0, minsize=130)
+        self.lobby_container_frame.grid_columnconfigure(1, minsize=130)
+        self.lobby_container_frame.grid_columnconfigure(2, minsize=130)
+
         self.refresh_lobby_list()
 
     def open_create_lobby_window(self):
@@ -99,21 +113,50 @@ class LobbyBrowser(tk.Tk):
 
         print(f"Received lobbies: {lobbies}")
 
+        row = 0
+        col = 0
         for lobby in lobbies:
-            display_text = f"{lobby['name']} ({lobby['status']}, {lobby['player_count']} players)"
-            self.lobby_listbox.insert(tk.END, display_text)
+            lobby_card = LobbyCard(self.lobby_container_frame, lobby, self.join_selected_lobby)
+            lobby_card.grid(row=row, column=col, padx=10, pady=5, sticky="nsew")
+
+            col += 1
+            if col > 2:  # Move to the next row after every 3 cards
+                col = 0
+                row += 1
 
     def refresh_lobby_list(self):
-        self.lobby_listbox.delete(0, tk.END)
-        self.populate_lobby_list()
+        for widget in self.lobby_container_frame.winfo_children():
+            widget.destroy()
 
-    def join_selected_lobby(self):
-        selected_index = self.lobby_listbox.curselection()
-        if not selected_index:
-            messagebox.showinfo("Error", "Please select a lobby to join")
-            return
-        selected_lobby = self.lobby_listbox.get(selected_index)
-        self.controller.join_lobby(self.user_id, selected_lobby)
+        self.populate_lobby_list()
+        self.lobby_container_canvas.yview_moveto(0)
+
+    def join_selected_lobby(self, lobby_info):
+        self.controller.join_lobby(self.user_id, lobby_info['name'])
+
+
+class LobbyCard(tk.Frame):
+    def __init__(self, container, lobby_info, join_command, *args, **kwargs):
+        super().__init__(container, *args, **kwargs)
+        self.join_command = join_command
+
+        self.configure(bg="#444444", bd=2, relief="groove")
+
+        # You can replace the labels with images or other widgets as needed
+        lobby_name_label = tk.Label(self, text=lobby_info['name'], font=tkfont.Font(family="Cambria", size=12),
+                                    fg="#FFFFFF", bg="#444444", wraplength=80)
+        lobby_name_label.pack(side="top", fill="x", padx=5, pady=2)
+
+        status_label = tk.Label(self, text=lobby_info['status'], font=tkfont.Font(family="Cambria", size=10),
+                                fg="#FFFFFF", bg="#444444")
+        status_label.pack(side="top", fill="x", padx=5, pady=2)
+
+        player_count_label = tk.Label(self, text=f"{lobby_info['player_count']} players",
+                                      font=tkfont.Font(family="Cambria", size=10), fg="#FFFFFF", bg="#444444")
+        player_count_label.pack(side="top", fill="x", padx=5, pady=2)
+
+        join_button = tk.Button(self, text="Join", command=lambda: self.join_command(lobby_info["name"]))
+        join_button.pack(side="bottom", padx=5, pady=5)
 
 
 class CreateLobbyWindow(tk.Toplevel):
@@ -161,8 +204,8 @@ class CreateLobbyWindow(tk.Toplevel):
         lobby_name = self.lobby_name_entry.get()
         show_odds = self.show_odds_var.get()
 
-        if not lobby_name or len(lobby_name) > 32:
-            messagebox.showinfo("Error", "Please enter a valid lobby name (1-32 characters)")
+        if not lobby_name or len(lobby_name) > 16:
+            messagebox.showinfo("Error", "Please enter a valid lobby name (1-16 characters)")
             return
 
         lobby_data = {
@@ -172,7 +215,23 @@ class CreateLobbyWindow(tk.Toplevel):
             "show_odds": show_odds
         }
 
-        self.controller.client_socket.sendall(json.dumps(lobby_data).encode('utf-8'))
+        try:
+            self.controller.client_socket.sendall(json.dumps(lobby_data).encode('utf-8'))
+            response = self.controller.client_socket.recv(1024)
+            if not response:
+                messagebox.showinfo("Error", "No response from server")
+                return
+            response_data = json.loads(response.decode('utf-8'))
 
-        self.destroy()
+            print(response_data['success'])
+            # Checks for errors when creating a lobby and make sure that lobbies with duplicate names can not be created
+            if 'error' in response_data and not response_data['success']:
+                messagebox.showinfo("Error", response_data['error'])
+                return
+
+            self.controller.join_lobby(self.user_id, lobby_name)
+
+        except Exception as e:
+            print(f"Error while creating lobby: {e}")
+            messagebox.showinfo("Error", "An error occurred while creating the lobby")
 
