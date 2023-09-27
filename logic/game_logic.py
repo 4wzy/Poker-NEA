@@ -31,12 +31,14 @@ class Deck:
 
 
 class Player:
-    def __init__(self, name, user_id, chips):
+    def __init__(self, name, user_id, chips, position):
         self.name = name
         self.user_id = user_id
         self.profile_picture = None
         self.chips = chips
+        self.current_bet = 0
         self.hand = Hand([])
+        self.position = position
 
     def add_card(self, card):
         self.hand.cards.append(card)
@@ -45,16 +47,37 @@ class Player:
 class Game:
     def __init__(self, starting_chips=100):
         self.players = []
+        self.client_sockets = []
         self.available_positions = ["top_left", "top_middle", "top_right", "bottom_left", "bottom_middle", "bottom_right"]
 
         self.pot = Pot()
         self.board = []
         self.deck = Deck()
         self.deck.shuffle()
+        self.current_player_turn = None
 
-    def add_player(self, player: Player):
-        position = self.available_positions.pop(0)
+    def get_initial_state(self):
+        state = {
+            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'position': p.position} for p in
+                        self.players],
+            'pot': self.pot.chips,
+            'board': [str(card) for card in self.board],
+        }
+        return state
+
+    def get_game_state(self):
+        state = {
+            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet} for p in
+                        self.players],
+            'pot': self.pot.chips,
+            'board': [str(card) for card in self.board],
+            'current_player_turn': self.current_player_turn,
+        }
+        return state
+
+    def add_player(self, player: Player, client_socket):
         self.players.append(player)
+        self.client_sockets.append(client_socket)
 
     def deal_cards(self, num_cards, player):
         for i in range(num_cards):
@@ -83,6 +106,9 @@ class Game:
         # Send the current game state to all connected clients
         pass
 
+    def remove_player(self, user_id):
+        self.players = [player for player in self.players if player.user_id != user_id]
+
 
 class Pot:
     def __init__(self):
@@ -104,7 +130,3 @@ class Hand:
 
     def evaluate_strength(self):
         pass
-
-
-game = Game(["Player1", "Player2", "Player3", "Player4", "Player5", "Player6"])
-game.start_round()

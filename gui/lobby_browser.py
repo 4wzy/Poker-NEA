@@ -75,11 +75,6 @@ class LobbyBrowser(tk.Tk):
                                    command=self.refresh_lobby_list)
         refresh_button.pack(side="left", fill="x", expand=True)
 
-        join_lobby_button = tk.Button(button_frame, text="Join Lobby", font=tkfont.Font(family="Cambria", size=16),
-                                      fg="#FFFFFF", bg="#444444", bd=0, padx=20, pady=10, borderwidth=1,
-                                      command=self.join_selected_lobby)
-        join_lobby_button.pack(side="left", fill="x", expand=True)
-
         back_button = tk.Button(container, text="Back", font=tkfont.Font(family="Cambria", size=16), fg="#FFFFFF",
                                 bg="#444444", bd=0, padx=20, pady=10, command=lambda: self.controller.open_main_menu(
                 self.user_id))
@@ -118,7 +113,9 @@ class LobbyBrowser(tk.Tk):
         row = 0
         col = 0
         for lobby in lobbies:
-            lobby_card = LobbyCard(self.lobby_container_frame, lobby, self.join_selected_lobby)
+            lobby_card = LobbyCard(container=self.lobby_container_frame, lobby_info=lobby,
+                                   join_command=lambda lobby=lobby: self.join_selected_lobby(lobby))
+
             lobby_card.grid(row=row, column=col, padx=10, pady=5, sticky="nsew")
 
             col += 1
@@ -134,12 +131,7 @@ class LobbyBrowser(tk.Tk):
         self.lobby_container_canvas.yview_moveto(0)
 
     def join_selected_lobby(self, lobby_info):
-        response_data = self.controller.network_manager.join_lobby(self.user_id, lobby_info['name'])
-        if response_data["success"]:
-            self.controller.join_lobby(self.user_id, lobby_info['name'])
-        else:
-            print(f"Error while joining lobby: {response_data['error']}")
-            messagebox.showinfo("Error", response_data['error'])
+        response_data = self.controller.join_lobby(self.user_id, lobby_info['name'])
 
 
 class LobbyCard(tk.Frame):
@@ -162,7 +154,7 @@ class LobbyCard(tk.Frame):
                                       font=tkfont.Font(family="Cambria", size=10), fg="#FFFFFF", bg="#444444")
         player_count_label.pack(side="top", fill="x", padx=5, pady=2)
 
-        join_button = tk.Button(self, text="Join", command=lambda: self.join_command(lobby_info["name"]))
+        join_button = tk.Button(self, text="Join", command=self.join_command)
         join_button.pack(side="bottom", padx=5, pady=5)
 
 

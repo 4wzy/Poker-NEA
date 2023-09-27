@@ -16,8 +16,10 @@ class NetworkManager:
 
     def send_message(self, message):
         try:
+            print(f"1. {message}")
             self.client_socket.sendall(json.dumps(message).encode('utf-8'))
-            response = self.client_socket.recv(1024)
+            response = self.client_socket.recv(4096)
+            print(f"2. {response}")
             if response:
                 return json.loads(response.decode('utf-8'))
         except BrokenPipeError:
@@ -25,8 +27,10 @@ class NetworkManager:
             print("Connection to the server is broken")
 
     def join_lobby(self, user_id, lobby_name):
+        print("starting to join lobby")
         message = {"type": "join_lobby", "user_id": user_id, "lobby_name": lobby_name}
         response_data = self.send_message(message)
+        print(f"2. {response_data}")
         return response_data
 
     def close_connection(self):

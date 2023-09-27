@@ -110,3 +110,21 @@ class DatabaseInteraction:
                 connection.close()
 
         return response["success"], response["error"]
+
+    def remove_player_from_lobby(self, user_id, lobby_name):
+        try:
+            connection = mysql.connector.connect(**self.config)
+            cursor = connection.cursor()
+
+            query = "DELETE FROM player_lobbies WHERE user_id = %s AND lobby_id = (SELECT lobby_id FROM lobbies WHERE name = %s)"
+            cursor.execute(query, (user_id, lobby_name))
+            connection.commit()
+
+        except Exception as e:
+            print(f"Error removing player from lobby database: {e}")
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+
+
