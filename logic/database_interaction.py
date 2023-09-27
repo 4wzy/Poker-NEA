@@ -88,3 +88,25 @@ class DatabaseInteraction:
                 connection.close()
 
         return response
+
+    def join_lobby(self, user_id, lobby_name):
+        response = {"success": True, "error": None}
+        try:
+            connection = mysql.connector.connect(**self.config)
+            cursor = connection.cursor()
+
+            # Update the lobby to include the new player
+            sql = """INSERT INTO player_lobbies (user_id, lobby_id) VALUES (%s, (SELECT lobby_id FROM lobbies WHERE 
+            name = %s))"""
+            cursor.execute(sql, (user_id, lobby_name))
+            connection.commit()
+
+        except Exception as e:
+            response["success"] = False
+            response["error"] = f"Error: {e}"
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+
+        return response["success"], response["error"]

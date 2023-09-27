@@ -31,8 +31,10 @@ class Deck:
 
 
 class Player:
-    def __init__(self, name, chips):
+    def __init__(self, name, user_id, chips):
         self.name = name
+        self.user_id = user_id
+        self.profile_picture = None
         self.chips = chips
         self.hand = Hand([])
 
@@ -41,12 +43,18 @@ class Player:
 
 
 class Game:
-    def __init__(self, player_names, starting_chips=100):
-        self.players = [Player(name, starting_chips) for name in player_names]
+    def __init__(self, starting_chips=100):
+        self.players = []
+        self.available_positions = ["top_left", "top_middle", "top_right", "bottom_left", "bottom_middle", "bottom_right"]
+
         self.pot = Pot()
         self.board = []
         self.deck = Deck()
         self.deck.shuffle()
+
+    def add_player(self, player: Player):
+        position = self.available_positions.pop(0)
+        self.players.append(player)
 
     def deal_cards(self, num_cards, player):
         for i in range(num_cards):
@@ -66,6 +74,14 @@ class Game:
     def turn_river(self):
         card = self.deck.deal_card()
         self.board.append(card)
+
+    def process_player_action(self, player_id, action):
+        # Process a player action (fold, call, raise) and update the game state
+        pass
+
+    def send_game_state(self):
+        # Send the current game state to all connected clients
+        pass
 
 
 class Pot:

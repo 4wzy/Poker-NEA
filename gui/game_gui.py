@@ -1,8 +1,9 @@
+import threading
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageDraw, ImageTk
 from logic.database_interaction import DatabaseInteraction
-
+import socket
 
 class GameGUI(tk.Tk):
     def __init__(self, controller, user_id, lobby_name):
@@ -15,6 +16,10 @@ class GameGUI(tk.Tk):
         self.username = self.database_interaction.get_username(self.user_id)
         self.lobby_name = lobby_name
         self.chat_messages = []
+
+        self.network_thread = threading.Thread(target=self.network_loop)
+        self.network_thread.daemon = True  # Daemonize thread to exit when main program exits
+        self.network_thread.start()
 
         self.title("Poker Game")
 
@@ -71,7 +76,54 @@ class GameGUI(tk.Tk):
 
         # Initialize default view
         self.show_chat()
-        self.initialise_game_area()
+
+        self.game_canvas = tk.Canvas(self.game_area, bg="#228B22", highlightthickness=0)
+        self.game_canvas.pack(fill="both", expand=True)
+
+        # Draw Poker Table
+        table_x, table_y, table_radius = 420, 360, 170  # adjust the position, size as needed
+        self.game_canvas.create_oval(table_x - table_radius * 1.5, table_y - table_radius * 0.95, table_x + table_radius * 1.5,
+                                     table_y + table_radius * 0.95, fill="#006400", outline="#8B4513",
+                                     width=2)  # Green oval for the table
+
+        # Arrange Players
+        self.place_player(420, 190, "Top Middle Player", "top")  # adjust the positions as needed
+        self.place_player(650, 200, "Top Right Player", "right")
+        self.place_player(190, 200, "Top Left Player", "left")
+        self.place_player(420, 530, "Bottom Middle Player", "bottom")
+        self.place_player(710, 440, "Bottom Right Player", "bottom")
+        self.place_player(130, 440, "Bottom Left Player", "bottom")
+
+        # Define the buttons
+        buttons = [
+            tk.Button(self.game_area, text="Call/Check", command=lambda: self.send_player_action("call"), bg="#555555", fg="#FFFFFF",
+                      font=("Cambria", 12), relief="flat", height=2, width=10),
+            tk.Button(self.game_area, text="Raise", command=lambda: self.send_player_action("raise"), bg="#555555", fg="#FFFFFF",
+                      font=("Cambria", 12), relief="flat", height=2, width=10),
+            tk.Button(self.game_area, text="Fold", command=lambda: self.send_player_action("fold"), bg="#555555", fg="#FFFFFF",
+                      font=("Cambria", 12), relief="flat", height=2, width=10),
+        ]
+
+        for i, button in enumerate(buttons):
+            button.place(relx=0.9, rely=0.2 * (2 * i + 5) / len(buttons), anchor='center')
+
+
+    def network_loop(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect(('localhost', 12345))  # Connect to the server
+            while True:
+                data = s.recv(1024)
+                if not data:
+                    break  # Server has closed the connection
+                self.process_server_message(data)
+
+    def process_server_message(self, data):
+        # Update game state and GUI based on the message received from the server
+        pass
+
+    def send_player_action(self, action):
+        # Send a player action (fold, call, raise) to the server
+        pass
 
     def show_chat(self):
         for widget in self.display_frame.winfo_children():
@@ -132,52 +184,50 @@ class GameGUI(tk.Tk):
     def open_main_menu(self):
         print("Go back to the main menu")
 
-    def initialise_game_area(self):
-        # Player Areas
-        for i in range(6):  # 6 players
-            player_frame = tk.Frame(self.game_area, bg="#228B22", bd=2, relief="ridge")
-            if i < 3:
-                player_frame.pack(side="top", padx=10, pady=10)
-            else:
-                player_frame.pack(side="bottom", padx=10, pady=10)
+    def place_player(self, x, y, name, position):
+        # Create a frame to hold the player components
+        player_frame = tk.Frame(self.game_canvas, bg="#228B22")
 
-            # Placeholder for Player Name
-            player_name_label = tk.Label(player_frame, text=f"Player {i + 1}", bg="#228B22", fg="#FFFFFF")
-            player_name_label.pack()
+        # Add profile picture
+        profile_photo = Image.open("Images/default.png")
+        profile_photo = profile_photo.resize((50, 50))
+        profile_photo = ImageTk.PhotoImage(profile_photo)
+        profile_label = tk.Label(player_frame, image=profile_photo, bg="#228B22")
+        profile_label.photo = profile_photo  # keep a reference to avoid garbage collection
+        profile_label.pack()
 
-            # Placeholder for Cards and Chips
-            card1_label = tk.Label(player_frame, text="Card 1", bg="#FFFFFF", width=10, height=5)
-            card1_label.pack(side="left", padx=5)
-            card2_label = tk.Label(player_frame, text="Card 2", bg="#FFFFFF", width=10, height=5)
-            card2_label.pack(side="left", padx=5)
-            chips_label = tk.Label(player_frame, text="Chips", bg="#FFFF00", width=10, height=5)
-            chips_label.pack(side="left", padx=5)
+        # Add name label
+        name_label = tk.Label(player_frame, text=name, bg="#228B22", fg="#FFFFFF")
+        name_label.pack()
 
-        # Community Card Area
-        community_frame = tk.Frame(self.game_area, bg="#228B22")
-        community_frame.pack(side="top", pady=20)
+        # Add card images
+        card1_photo = Image.open("Images/Cards/black_joker.png")
+        card1_photo = card1_photo.resize((60, 90))
+        card1_photo = ImageTk.PhotoImage(card1_photo)
+        card1_label = tk.Label(player_frame, image=card1_photo, bg="#228B22")
+        card1_label.photo = card1_photo  # keep a reference to avoid garbage collection
+        card1_label.pack(side="left", padx=2)
 
-        # Placeholder for Community Cards and Pot
-        for i in range(5):  # 5 community cards
-            community_card_label = tk.Label(community_frame, text=f"Card {i + 1}", bg="#FFFFFF", width=10, height=5)
-            community_card_label.pack(side="left", padx=5)
-        pot_label = tk.Label(community_frame, text="Pot", bg="#FFFF00", width=10, height=5)
-        pot_label.pack(side="left", padx=5)
+        card2_photo = Image.open("Images/Cards/black_joker.png")
+        card2_photo = card2_photo.resize((60, 90))
+        card2_photo = ImageTk.PhotoImage(card2_photo)
+        card2_label = tk.Label(player_frame, image=card2_photo, bg="#228B22")
+        card2_label.photo = card2_photo  # keep a reference to avoid garbage collection
+        card2_label.pack(side="left", padx=2)
 
-        # Button Area
-        button_frame = tk.Frame(self.game_area, bg="#228B22")
-        button_frame.pack(side="bottom", pady=20)
+        # Positioning the player frame on the canvas
+        anchor_point = "center"
+        if position == "top":
+            anchor_point = "s"
+        elif position == "bottom":
+            anchor_point = "n"
+        elif position == "left":
+            anchor_point = "e"
+        elif position == "right":
+            anchor_point = "w"
 
-        # Game Action Buttons
-        fold_button = tk.Button(button_frame, text="Fold", bg="#FF0000", fg="#FFFFFF", command=self.fold_action)
-        fold_button.pack(side="left", padx=10)
-        raise_button = tk.Button(button_frame, text="Raise", bg="#00FF00", fg="#FFFFFF", command=self.raise_action)
-        raise_button.pack(side="left", padx=10)
-        call_check_button = tk.Button(button_frame, text="Call/Check", bg="#0000FF", fg="#FFFFFF",
-                                      command=self.call_check_action)
-        call_check_button.pack(side="left", padx=10)
+        self.game_canvas.create_window(x, y, window=player_frame, anchor=anchor_point)
 
-    # Placeholder command methods
     def fold_action(self):
         pass
 

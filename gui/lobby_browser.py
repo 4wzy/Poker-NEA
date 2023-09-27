@@ -100,9 +100,11 @@ class LobbyBrowser(tk.Tk):
         odds_filter = self.odds_var.get()
 
         try:
-            self.controller.client_socket.sendall(
+            self.controller.network_manager.client_socket.sendall(
                 json.dumps({"type": "get_all_lobbies", "status": status_filter, "odds": odds_filter}).encode('utf-8'))
-            response = self.controller.client_socket.recv(1024)
+            response = self.controller.network_manager.client_socket.recv(16384)
+            # In case of an "expecting value" error, increase the number of bits being received
+            # as the entire list of lobbies is not being received
             if not response:
                 print("No response from server")
                 return
@@ -132,7 +134,12 @@ class LobbyBrowser(tk.Tk):
         self.lobby_container_canvas.yview_moveto(0)
 
     def join_selected_lobby(self, lobby_info):
-        self.controller.join_lobby(self.user_id, lobby_info['name'])
+        response_data = self.controller.network_manager.join_lobby(self.user_id, lobby_info['name'])
+        if response_data["success"]:
+            self.controller.join_lobby(self.user_id, lobby_info['name'])
+        else:
+            print(f"Error while joining lobby: {response_data['error']}")
+            messagebox.showinfo("Error", response_data['error'])
 
 
 class LobbyCard(tk.Frame):
@@ -216,19 +223,15 @@ class CreateLobbyWindow(tk.Toplevel):
         }
 
         try:
-            self.controller.client_socket.sendall(json.dumps(lobby_data).encode('utf-8'))
-            response = self.controller.client_socket.recv(1024)
-            if not response:
+            response_data = self.controller.network_manager.send_message(lobby_data)
+            if not response_data:
                 messagebox.showinfo("Error", "No response from server")
                 return
-            response_data = json.loads(response.decode('utf-8'))
 
-            print(response_data['success'])
             # Checks for errors when creating a lobby and make sure that lobbies with duplicate names can not be created
             if 'error' in response_data and not response_data['success']:
                 messagebox.showinfo("Error", response_data['error'])
                 return
-
             self.controller.join_lobby(self.user_id, lobby_name)
 
         except Exception as e:
