@@ -119,7 +119,6 @@ class GameGUI(tk.Tk):
             data = s.recv(4096)
             if not data:
                 break
-                print("no data, disconnecting")
             self.process_server_message(data)
 
     def process_initial_state(self, initial_state):
