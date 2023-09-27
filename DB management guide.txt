@@ -1,0 +1,18 @@
+1. Go to MySQL directory (bin) in programfiles.
+2. Open up CMD at that directory and type in "mysqldump -u root -p poker_game > poker_game.sql
+3. Transfer file to other computer
+4. Create database on other computer if not already created
+5. Open up CMD in same directory on other computer and type in "mysql -u root -p poker_game < poker_game.sql"
+
+
+Basic MySQL commands that will be useful:
+show databases;
+
+CREATE DATABASE database_name;
+
+use [database];
+
+show tables;
+
+select * FROM table;
+

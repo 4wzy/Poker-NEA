@@ -99,3 +99,4 @@ class MainMenu(tk.Tk):
         quit_button = tk.Button(container, text="Quit", font=tkfont.Font(family="Cambria", size=16), fg="#FFFFFF",
                                 bg="#444444", bd=0, padx=20, pady=10, command=self.destroy)
         quit_button.grid(row=7, column=3, sticky="se", pady=10, padx=10)
+

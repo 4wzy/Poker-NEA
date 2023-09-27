@@ -8,7 +8,7 @@ from datetime import datetime
 
 # To do:
 # Handle joining and creating lobbies properly
-# The join command should take in a user_id, and a lobby_id, and should open a new GUI for the player joining
+# The join command should take in a user_id, and a lobby_name, and should open a new GUI for the player joining
 
 class LobbyBrowser(tk.Tk):
     def __init__(self, controller, user_id, *args, **kwargs):
