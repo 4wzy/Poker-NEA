@@ -112,15 +112,16 @@ DROP TABLE IF EXISTS `lobbies`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `lobbies` (
   `lobby_id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
+  `name` varchar(16) NOT NULL,
   `host_user_id` int DEFAULT NULL,
   `status` enum('waiting','in_progress','completed') DEFAULT 'waiting',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `show_odds` tinyint(1) DEFAULT '1',
   PRIMARY KEY (`lobby_id`),
+  UNIQUE KEY `name` (`name`),
   KEY `host_user_id` (`host_user_id`),
   CONSTRAINT `lobbies_ibfk_1` FOREIGN KEY (`host_user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -129,7 +130,7 @@ CREATE TABLE `lobbies` (
 
 LOCK TABLES `lobbies` WRITE;
 /*!40000 ALTER TABLE `lobbies` DISABLE KEYS */;
-INSERT INTO `lobbies` VALUES (1,'lobby',2,'waiting','2023-09-26 22:18:43',1),(2,'test',2,'waiting','2023-09-26 22:22:15',1),(3,'summer\'s lobby',13,'waiting','2023-09-26 22:38:57',0),(4,'test',13,'waiting','2023-09-26 22:40:36',1);
+INSERT INTO `lobbies` VALUES (18,'test1',2,'waiting','2023-09-27 14:00:23',1);
 /*!40000 ALTER TABLE `lobbies` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -251,4 +252,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-09-26 23:51:37
+-- Dump completed on 2023-09-27 17:27:39
