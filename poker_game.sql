@@ -121,7 +121,7 @@ CREATE TABLE `lobbies` (
   UNIQUE KEY `name` (`name`),
   KEY `host_user_id` (`host_user_id`),
   CONSTRAINT `lobbies_ibfk_1` FOREIGN KEY (`host_user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=68 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -130,7 +130,7 @@ CREATE TABLE `lobbies` (
 
 LOCK TABLES `lobbies` WRITE;
 /*!40000 ALTER TABLE `lobbies` DISABLE KEYS */;
-INSERT INTO `lobbies` VALUES (18,'test1',2,'waiting','2023-09-27 14:00:23',1);
+INSERT INTO `lobbies` VALUES (18,'test1',2,'waiting','2023-09-27 14:00:23',1),(19,'test2',2,'waiting','2023-09-27 16:31:20',1),(20,'test3',2,'waiting','2023-09-27 16:31:49',1),(21,'test4',2,'waiting','2023-09-27 17:54:44',1),(22,'test5',2,'waiting','2023-09-27 18:08:08',1),(23,'test6',2,'waiting','2023-09-27 18:10:29',1),(24,'test7',2,'waiting','2023-09-27 18:11:18',1),(25,'test8',2,'waiting','2023-09-27 18:23:29',1),(26,'test9',2,'waiting','2023-09-27 18:26:15',1),(27,'test10',2,'waiting','2023-09-27 18:29:37',1),(28,'test11',2,'waiting','2023-09-27 18:32:41',1),(30,'test12',2,'waiting','2023-09-27 18:34:46',1),(31,'test13',2,'waiting','2023-09-27 18:37:49',1),(32,'test14',2,'waiting','2023-09-27 18:39:52',1),(33,'test15',2,'waiting','2023-09-27 18:42:56',1),(34,'test16',2,'waiting','2023-09-27 18:46:37',1),(35,'test17',2,'waiting','2023-09-27 18:55:07',1),(36,'test18',2,'waiting','2023-09-27 18:59:51',1),(37,'test19',2,'waiting','2023-09-27 19:09:21',1),(38,'test20',2,'waiting','2023-09-27 19:11:37',1),(39,'test21',2,'waiting','2023-09-27 19:17:42',1),(40,'test22',2,'waiting','2023-09-27 19:19:20',1),(41,'test23',2,'waiting','2023-09-27 19:20:16',1),(42,'test24',2,'waiting','2023-09-27 19:21:40',1),(43,'test25',2,'waiting','2023-09-27 19:22:58',1),(44,'test26',2,'waiting','2023-09-27 19:36:01',1),(45,'test27',2,'waiting','2023-09-27 19:50:38',1),(46,'test28',2,'waiting','2023-09-27 19:52:59',1),(47,'test29',2,'waiting','2023-09-27 19:56:11',1),(48,'test30',2,'waiting','2023-09-27 19:58:22',1),(49,'test31',2,'waiting','2023-09-27 20:01:48',1),(50,'test32',2,'waiting','2023-09-27 20:08:06',1),(51,'test33',2,'waiting','2023-09-27 20:10:58',1),(52,'test34',2,'waiting','2023-09-27 20:11:37',1),(53,'test35',2,'waiting','2023-09-27 20:16:21',1),(54,'test36',2,'waiting','2023-09-27 20:18:53',1),(55,'test37',2,'waiting','2023-09-27 20:23:49',1),(56,'test38',2,'waiting','2023-09-27 20:33:10',1),(57,'test39',2,'waiting','2023-09-27 20:34:32',1),(58,'test40',2,'waiting','2023-09-27 20:41:24',1),(59,'test41',2,'waiting','2023-09-27 20:45:45',1),(60,'test42',2,'waiting','2023-09-27 21:11:51',1),(61,'test43',2,'waiting','2023-09-27 21:59:01',1),(62,'test44',2,'waiting','2023-09-27 22:09:16',1),(63,'test45',2,'waiting','2023-09-27 22:16:50',1),(64,'test46',13,'waiting','2023-09-27 22:17:46',1),(65,'test47',13,'waiting','2023-09-27 22:18:42',1),(66,'test48',2,'waiting','2023-09-27 22:21:43',1),(67,'test49',2,'waiting','2023-09-27 22:22:57',1);
 /*!40000 ALTER TABLE `lobbies` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -252,4 +252,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-09-27 17:27:39
+-- Dump completed on 2023-09-27 23:28:51
