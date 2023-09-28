@@ -12,8 +12,8 @@ class Controller:
         self.network_manager = NetworkManager()
 
     def run(self):
-        self.open_login_menu()
-        # self.open_main_menu(2)
+        # self.open_login_menu()
+        self.open_main_menu(13)
         tk.mainloop()
 
     def open_login_menu(self):
@@ -37,12 +37,18 @@ class Controller:
         self.current_menu = LobbyBrowser(self, user_id)
 
     def join_lobby(self, user_id, lobby_name):
+        # This starts the GUI and loads it up with the "initial data" received from the lobby being joined.
         response_data = self.network_manager.join_lobby(user_id, lobby_name)
-        print(f"CONTROLLER: {response_data}")
+        print(f"RESPONSE FROM JOINING LOBBY: {response_data}")
         if response_data and response_data.get("success", True):
             if self.current_menu:
                 self.current_menu.destroy()
             self.current_menu = GameGUI(self, user_id, lobby_name, response_data['game_state'])
         else:
             return response_data  # Or handle the error appropriately here.
+
+    def process_received_message(self, message_type, message_content):
+        if message_type == 'lobby_list':
+            if isinstance(self.current_menu, LobbyBrowser):
+                self.current_menu.populate_lobby_list(message_content)
 

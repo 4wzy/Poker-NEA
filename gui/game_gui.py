@@ -1,10 +1,7 @@
 import json
-import threading
 import tkinter as tk
-from tkinter import ttk
 from PIL import Image, ImageDraw, ImageTk
 from logic.database_interaction import DatabaseInteraction
-import socket
 
 
 class GameGUI(tk.Tk):
@@ -18,6 +15,10 @@ class GameGUI(tk.Tk):
         self.username = self.database_interaction.get_username(self.user_id)
         self.lobby_name = lobby_name
         self.chat_messages = []
+        self.canvas_items = []
+        self.is_leaving_game = False
+        self.scheduled_tasks = []
+        self.should_be_destroyed = False
 
         self.title("Poker Game")
 
@@ -101,14 +102,18 @@ class GameGUI(tk.Tk):
 
         self.controller.network_manager.client_socket.setblocking(0)
         self.network_loop()
+        print(self.controller.network_manager.client_socket)
 
         self.process_initial_state(initial_state)
 
     def network_loop(self):
+        if self.should_be_destroyed:
+            print(f"Stopping network_loop on {self} as it should be destroyed.")
+            return
         s = self.controller.network_manager.client_socket
         try:
             # Try to receive data from the server
-            data = s.recv(4096)
+            data = s.recv(16384)
 
             # If data is received, process it
             if data:
@@ -118,13 +123,46 @@ class GameGUI(tk.Tk):
             pass
 
         # Schedule the next call to the network_loop method
-        self.after(100, self.network_loop)
+        task_id = self.after(100, self.network_loop)
+        self.scheduled_tasks.append(task_id)
+
+    def destroy(self) -> None:
+        print(f"Destroying {self}")
+        self.should_be_destroyed = True
+        for task_id in self.scheduled_tasks:
+            print(f"Cancelling task {task_id}")
+            self.after_cancel(task_id)
+        super().destroy()
 
     def process_initial_state(self, initial_state):
-        print("processing initial state")
         for player_info in initial_state['players']:
             x, y = self.get_coordinates_for_position(player_info['position'])
-            self.after(0, self.place_player, x, y, player_info['name'], player_info['position'])
+            task_id = self.after(0, self.place_player, x, y, player_info['name'], player_info['position'])
+            self.scheduled_tasks.append(task_id)
+
+
+    def process_player_left_game_state(self, player_left_state):
+        print("game_gui.py: PROCESSING PLAYER LEFT STATE")
+        # check if the player who is leaving is the current player
+        if self.is_leaving_game:
+            print("current player is leaving")
+            self.is_leaving_game = False  # reset the flag
+            self.controller.open_main_menu(self.user_id)  # open the main menu after the acknowledgment is received
+        else:
+
+            # Delete old items from the canvas
+            for item_id in self.canvas_items:
+                self.game_canvas.delete(item_id)
+            self.canvas_items.clear()  # Clear the list of stored IDs
+            print("game_gui.py: CANVAS CLEARED")
+
+
+            # Now place the new players
+            for player_info in player_left_state['players']:
+                x, y = self.get_coordinates_for_position(player_info['position'])
+                task_id = self.after(0, self.place_player, x, y, player_info['name'], player_info['position'])
+                self.scheduled_tasks.append(task_id)
+            print("game_gui.py: PLAYERS PLACED AGAIN")
 
     def get_coordinates_for_position(self, position):
         positions = {
@@ -138,13 +176,28 @@ class GameGUI(tk.Tk):
         return positions.get(position, (0, 0))
 
     def process_server_message(self, data):
+        print(f"process_server_message called on {self}")
+        if self.should_be_destroyed:
+            print(f"process_server_message called on a destroyed instance {self}")
+            return
         message = json.loads(data.decode('utf-8'))
         print(f"server_message: {message}")
-        if message['type'] == 'initial_state':
-            print(f"Initial state message TYPE: {message}")
-            self.after(0, self.process_initial_state, message['game_state'])
-        elif message['type'] == 'update_game_state':
-            self.after(0, self.update_game_state, message['game_state'])
+        if isinstance(message, dict):
+            if message['type'] == 'initial_state':
+                print(f"Initial state message TYPE: {message}")
+                task_id = self.after(0, self.process_initial_state, message['game_state'])
+                self.scheduled_tasks.append(task_id)
+            elif message['type'] == 'update_game_state':
+                task_id = self.after(0, self.update_game_state, message['game_state'])
+                self.scheduled_tasks.append(task_id)
+            elif message['type'] == "player_left_game_state":
+                task_id = self.after(0, self.process_player_left_game_state(message['game_state']))
+                self.scheduled_tasks.append(task_id)
+        elif isinstance(message, list):
+            self.controller.process_received_message('lobby_list', message)
+
+    def process_lobby_list(self):
+        pass
 
     def update_game_state(self, game_state):
         # Update the game GUI based on the received game_state
@@ -217,12 +270,13 @@ class GameGUI(tk.Tk):
         print("Open settings window")
 
     def leave_game(self):
-        self.controller.network_manager.send_message({
+        player_left = self.controller.network_manager.send_message({
             'type': 'leave_lobby',
             'user_id': self.user_id,
             'lobby_name': self.lobby_name
         })
-        self.controller.open_main_menu(self.user_id)
+        self.is_leaving_game = True
+        print(f"(leave game from game_gui): {player_left}")
 
     def place_player(self, x, y, name, position):
         # Create a frame to hold the player components
@@ -280,7 +334,8 @@ class GameGUI(tk.Tk):
         elif position == "right":
             anchor_point = "w"
 
-        self.game_canvas.create_window(x, y, window=player_frame, anchor=anchor_point)
+        item_id = self.game_canvas.create_window(x, y, window=player_frame, anchor=anchor_point)
+        self.canvas_items.append(item_id)
 
     def fold_action(self):
         pass
@@ -289,7 +344,7 @@ class GameGUI(tk.Tk):
         pass
 
     def call_check_action(self):
-        pass
+        print("Player checked locally")
 
 
 # if __name__ == "__main__":

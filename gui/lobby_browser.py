@@ -15,6 +15,7 @@ class LobbyBrowser(tk.Tk):
         super().__init__(*args, **kwargs)
         self.controller = controller
         self.user_id = user_id
+        print(f"USING LOBBY BROWSER WITH USER_ID: {self.user_id}")
         self.database_interaction = DatabaseInteraction()
         self.username = self.database_interaction.get_username(self.user_id)
 
@@ -89,8 +90,8 @@ class LobbyBrowser(tk.Tk):
     def open_create_lobby_window(self):
         CreateLobbyWindow(self.controller, self.user_id)
 
-    def populate_lobby_list(self):
-        print("Populating lobby list...")
+    def fetch_and_populate_lobby_list(self):
+        print("Fetching lobby list...")
         status_filter = self.status_var.get()
         odds_filter = self.odds_var.get()
 
@@ -103,12 +104,19 @@ class LobbyBrowser(tk.Tk):
             if not response:
                 print("No response from server")
                 return
+
             lobbies = json.loads(response.decode('utf-8'))
+            print(lobbies)
         except Exception as e:
             print(f"Error while populating lobby list: {e}")
             return
 
         print(f"Received lobbies: {lobbies}")
+        self.populate_lobby_list(lobbies)
+
+
+    def populate_lobby_list(self, lobbies):
+        print("Populating lobby list...")
 
         row = 0
         col = 0
@@ -127,7 +135,7 @@ class LobbyBrowser(tk.Tk):
         for widget in self.lobby_container_frame.winfo_children():
             widget.destroy()
 
-        self.populate_lobby_list()
+        self.fetch_and_populate_lobby_list()
         self.lobby_container_canvas.yview_moveto(0)
 
     def join_selected_lobby(self, lobby_info):
@@ -138,7 +146,6 @@ class LobbyCard(tk.Frame):
     def __init__(self, container, lobby_info, join_command, *args, **kwargs):
         super().__init__(container, *args, **kwargs)
         self.join_command = join_command
-
         self.configure(bg="#444444", bd=2, relief="groove")
 
         # You can replace the labels with images or other widgets as needed

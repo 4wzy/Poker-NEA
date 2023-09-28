@@ -75,9 +75,23 @@ class Game:
         }
         return state
 
+    def get_player_left_state(self):
+        state = {
+            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'position': p.position} for p in
+                        self.players],
+            'pot': self.pot.chips,
+            'board': [str(card) for card in self.board],
+            'current_player_turn': self.current_player_turn,
+        }
+        return state
+
     def add_player(self, player: Player, client_socket):
         self.players.append(player)
         self.client_sockets.append(client_socket)
+
+    def remove_player(self, user_id, client_left_socket):
+        self.players = [player for player in self.players if player.user_id != user_id]
+        self.client_sockets = [client_socket for client_socket in self.client_sockets if client_socket != client_left_socket]
 
     def deal_cards(self, num_cards, player):
         for i in range(num_cards):
@@ -105,9 +119,6 @@ class Game:
     def send_game_state(self):
         # Send the current game state to all connected clients
         pass
-
-    def remove_player(self, user_id):
-        self.players = [player for player in self.players if player.user_id != user_id]
 
 
 class Pot:

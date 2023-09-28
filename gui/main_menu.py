@@ -9,6 +9,7 @@ class MainMenu(tk.Tk):
         super().__init__(*args, **kwargs)
         self.controller = controller
         self.user_id = user_id
+        print(f"USING MAIN MENU WITH USER_ID: {self.user_id}")
         self.database_interaction = DatabaseInteraction()
         self.username = self.database_interaction.get_username(self.user_id)
 

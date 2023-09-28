@@ -18,9 +18,15 @@ class NetworkManager:
         try:
             print(f"1. {message}")
             self.client_socket.sendall(json.dumps(message).encode('utf-8'))
-            response = self.client_socket.recv(4096)
-            print(f"2. {response}")
+            response = False
+            try:
+                response = self.client_socket.recv(16384)
+            except BlockingIOError:
+                print(f"(network_manager): Player has left the game - stopped receiving game state updates (or "
+                      f"BlockingIOError has occured)")
+                pass
             if response:
+                print(f"2. {response}")
                 return json.loads(response.decode('utf-8'))
         except BrokenPipeError:
             # Handle the error, e.g., by attempting to reconnect to the server
