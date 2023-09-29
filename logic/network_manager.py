@@ -31,11 +31,20 @@ class NetworkManager:
         except BrokenPipeError:
             # Handle the error, e.g., by attempting to reconnect to the server
             print("Connection to the server is broken")
+        except json.JSONDecodeError as e:
+            print(f"JSON Decode Error: {e}")
+            print(f"Data causing the error: {response}")
+        except Exception as e:
+            print(f"Other exception: {e}")
+            print(f"Data causing the error: {response}")
 
     def join_lobby(self, user_id, lobby_name):
         print("starting to join lobby")
         message = {"type": "join_lobby", "user_id": user_id, "lobby_name": lobby_name}
         response_data = self.send_message(message)
+        if response_data['type'] == "game_starting":
+            ack_message = {"type": "acknowledgment", "lobby_name": lobby_name}
+            self.send_message(ack_message)
         print(f"2. {response_data}")
         return response_data
 

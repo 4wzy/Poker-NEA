@@ -115,6 +115,7 @@ class GameGUI(tk.Tk):
         try:
             # Try to receive data from the server
             data = s.recv(16384)
+            print(f"received data: {data}")
 
             # If data is received, process it
             if data:
@@ -135,7 +136,13 @@ class GameGUI(tk.Tk):
             self.after_cancel(task_id)
         super().destroy()
 
+    def send_acknowledgment(self):
+        ack_message = {"type": "acknowledgment", "lobby_name": self.lobby_name}
+        self.controller.network_manager.send_message(ack_message)
+        print("Acknowledgment sent.")
+
     def process_initial_state(self, initial_state):
+        print("(game_gui): processing initial state")
         for player_info in initial_state['players']:
             x, y = self.get_coordinates_for_position(player_info['position'])
             task_id = self.after(0, self.place_player, x, y, player_info['name'], player_info['position'],
@@ -143,6 +150,7 @@ class GameGUI(tk.Tk):
             self.scheduled_tasks.append(task_id)
         if len(initial_state['players']) == 6:
             print("(game_gui): START GAME!!")
+            self.send_acknowledgment()
 
     def process_player_left_game_state(self, player_left_state):
         print("game_gui.py: PROCESSING PLAYER LEFT STATE")
@@ -190,7 +198,7 @@ class GameGUI(tk.Tk):
                 print(f"Initial state message TYPE: {message}")
                 task_id = self.after(0, self.process_initial_state, message['game_state'])
                 self.scheduled_tasks.append(task_id)
-            elif message['type'] == 'update_game_state':
+            elif message['type'] == 'update_game_state' or message['type'] == 'game_starting':
                 task_id = self.after(0, self.update_game_state, message['game_state'])
                 self.scheduled_tasks.append(task_id)
             elif message['type'] == "player_left_game_state":
@@ -203,7 +211,6 @@ class GameGUI(tk.Tk):
         pass
 
     def get_card_image_path(self, card: str):
-        # Split the card string into rank and suit
         parts = card.split(' ')
         rank = parts[0]
         suit = parts[1]
@@ -227,6 +234,7 @@ class GameGUI(tk.Tk):
 
     def update_game_state(self, game_state):
         user_id = game_state['user_id']  # Assuming the user_id is sent in the game_state for the specific player
+        print(f"(game_gui.py): updating game state for {user_id}")
 
         # Get the components for the player
         components = self.player_components.get(user_id)
@@ -240,6 +248,7 @@ class GameGUI(tk.Tk):
         # Update card images if they are in the game_state
         for idx, card_str in enumerate(game_state.get('hand', [])):
             card_image_path = self.get_card_image_path(card_str)
+            print(f"(game_gui): card_image_path: {card_image_path}")
             card_photo = Image.open(card_image_path)
             card_photo = card_photo.resize((60, 90))
             card_photo = ImageTk.PhotoImage(card_photo)
@@ -247,7 +256,7 @@ class GameGUI(tk.Tk):
             card_label.config(image=card_photo)
             card_label.photo = card_photo  # keep a reference to avoid garbage collection
 
-        # Update other components like community cards, pot, etc. based on your GUI structure and game_state contents
+        # Update other components like community cards, pot, ...
 
     def send_player_action(self, action):
         # Send a player action (fold, call, raise) to the server

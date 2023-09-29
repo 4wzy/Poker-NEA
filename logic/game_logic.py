@@ -55,6 +55,7 @@ class Game:
         self.deck = Deck()
         self.deck.shuffle()
         self.current_player_turn = None
+        self.is_game_starting = False
 
     def get_initial_state(self):
         state = {
@@ -77,7 +78,7 @@ class Game:
         return state
 
     def get_game_state_for_player(self, player):
-        # The state of the game to be sent to a specific player.
+        # The state of the game to be sent to a specific player
         state = {
             'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet} for p in
                         self.players],
@@ -86,6 +87,7 @@ class Game:
             'current_player_turn': self.current_player_turn,
             'hand': [str(card) for card in player.hand.cards]
         }
+        print(f"(game_logic.py): returning {state} to {player}")
         return state
 
     def send_game_state(self):
