@@ -19,6 +19,7 @@ class GameGUI(tk.Tk):
         self.is_leaving_game = False
         self.scheduled_tasks = []
         self.should_be_destroyed = False
+        self.player_components = {}
 
         self.title("Poker Game")
 
@@ -137,9 +138,11 @@ class GameGUI(tk.Tk):
     def process_initial_state(self, initial_state):
         for player_info in initial_state['players']:
             x, y = self.get_coordinates_for_position(player_info['position'])
-            task_id = self.after(0, self.place_player, x, y, player_info['name'], player_info['position'])
+            task_id = self.after(0, self.place_player, x, y, player_info['name'], player_info['position'],
+                                 player_info['user_id'])
             self.scheduled_tasks.append(task_id)
-
+        if len(initial_state['players']) == 6:
+            print("(game_gui): START GAME!!")
 
     def process_player_left_game_state(self, player_left_state):
         print("game_gui.py: PROCESSING PLAYER LEFT STATE")
@@ -199,10 +202,52 @@ class GameGUI(tk.Tk):
     def process_lobby_list(self):
         pass
 
+    def get_card_image_path(self, card: str):
+        # Split the card string into rank and suit
+        parts = card.split(' ')
+        rank = parts[0]
+        suit = parts[1]
+
+        # Construct the file name
+        if rank == "Ace":
+            rank = "ace"
+        elif rank == "Jack":
+            rank = "jack"
+        elif rank == "Queen":
+            rank = "queen"
+        elif rank == "King":
+            rank = "king"
+        else:
+            rank = rank.lower()
+
+        suit = suit.lower()
+
+        file_name = f"gui/Images/Cards/{rank}_of_{suit}.png"
+        return file_name
+
     def update_game_state(self, game_state):
-        # Update the game GUI based on the received game_state
-        # For example, update player positions, chips, cards, etc.
-        pass
+        user_id = game_state['user_id']  # Assuming the user_id is sent in the game_state for the specific player
+
+        # Get the components for the player
+        components = self.player_components.get(user_id)
+        if not components:
+            print(f"No components found for user_id {user_id}")
+            return
+
+        # Update the name label with the new chip count
+        components['name_label'].config(text=f"{game_state['name']}: {game_state['chips']} chips")
+
+        # Update card images if they are in the game_state
+        for idx, card_str in enumerate(game_state.get('hand', [])):
+            card_image_path = self.get_card_image_path(card_str)
+            card_photo = Image.open(card_image_path)
+            card_photo = card_photo.resize((60, 90))
+            card_photo = ImageTk.PhotoImage(card_photo)
+            card_label = components[f'card{idx + 1}_label']
+            card_label.config(image=card_photo)
+            card_label.photo = card_photo  # keep a reference to avoid garbage collection
+
+        # Update other components like community cards, pot, etc. based on your GUI structure and game_state contents
 
     def send_player_action(self, action):
         # Send a player action (fold, call, raise) to the server
@@ -278,7 +323,7 @@ class GameGUI(tk.Tk):
         self.is_leaving_game = True
         print(f"(leave game from game_gui): {player_left}")
 
-    def place_player(self, x, y, name, position):
+    def place_player(self, x, y, name, position, user_id):
         # Create a frame to hold the player components
         player_frame = tk.Frame(self.game_canvas, bg="#302525")
 
@@ -299,7 +344,7 @@ class GameGUI(tk.Tk):
         profile_label.pack()
 
         # Add name label
-        name_label = tk.Label(player_frame, text=name, bg="#302525", fg="#FFFFFF")
+        name_label = tk.Label(player_frame, text=f"{name}: 0 chips", bg="#302525", fg="#FFFFFF")
         name_label.pack()
 
         # Add card images
@@ -316,12 +361,18 @@ class GameGUI(tk.Tk):
         card1_label.photo = card1_photo  # keep a reference to avoid garbage collection
         card1_label.pack(side="left", padx=2)
 
-
         card2_photo = card2_photo.resize((60, 90))
         card2_photo = ImageTk.PhotoImage(card2_photo)
         card2_label = tk.Label(player_frame, image=card2_photo, bg="#302525")
         card2_label.photo = card2_photo  # keep a reference to avoid garbage collection
         card2_label.pack(side="left", padx=2)
+
+        self.player_components[user_id] = {
+            'profile_label': profile_label,
+            'name_label': name_label,
+            'card1_label': card1_label,
+            'card2_label': card2_label,
+        }
 
         # Positioning the player frame on the canvas
         anchor_point = "center"

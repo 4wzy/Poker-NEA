@@ -54,6 +54,13 @@ class LobbyServer:
 
         client_socket.close()
 
+    def process_player_action(self, player_id, action, lobby_name):
+        # Process a player action (fold, call, raise) and update the game state
+
+        # ... (any logic to process the action and update game state)
+
+        self.broadcast_game_state(lobby_name)
+
     def leave_lobby(self, user_id, lobby_name, client_socket):
         if lobby_name in self.lobbies:
             game = self.lobbies[lobby_name]
@@ -75,11 +82,13 @@ class LobbyServer:
 
     def broadcast_game_state(self, lobby_name):
         print("BROADCASTING GAME STATE")
-        game_state = self.get_game_state(lobby_name)
-        print(f"Game state to broadcast: {game_state}")
-        for client_socket in self.get_clients_in_lobby(lobby_name):
-            client_socket.sendall(json.dumps({"type": "update_game_state", "game_state": game_state}).encode('utf-8'))
-        print("sent game state..")
+        if lobby_name in self.lobbies:
+            game = self.lobbies[lobby_name]
+            game_states = game.send_game_state()
+            for player, client_socket in zip(game.players, game.client_sockets):
+                user_id = player.user_id
+                client_socket.sendall(json.dumps({"type": "update_game_state", "game_state": game_states[user_id]}).encode('utf-8'))
+            print("sent game state..")
 
     def broadcast_initial_game_state(self, lobby_name):
         print("BROADCASTING INITIAL GAME STATE")
@@ -119,6 +128,11 @@ class LobbyServer:
             initial_state = self.get_initial_state(lobby_name)
             print(f"INITIAL STATE: {initial_state}")
             self.broadcast_initial_game_state(lobby_name)
+            if len(game.players) == 6:
+                game.start_round()
+                print("(server.py): starting round!")
+                # After starting a round and dealing cards, broadcast the updated game state to all players
+                self.broadcast_game_state(lobby_name)
             return {"success": True, "type": "initial_state", "game_state": initial_state}
         else:
             error_message = "Lobby not found"

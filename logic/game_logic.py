@@ -66,6 +66,7 @@ class Game:
         return state
 
     def get_game_state(self):
+        # The general state of the game
         state = {
             'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet} for p in
                         self.players],
@@ -75,7 +76,27 @@ class Game:
         }
         return state
 
+    def get_game_state_for_player(self, player):
+        # The state of the game to be sent to a specific player.
+        state = {
+            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet} for p in
+                        self.players],
+            'pot': self.pot.chips,
+            'board': [str(card) for card in self.board],
+            'current_player_turn': self.current_player_turn,
+            'hand': [str(card) for card in player.hand.cards]
+        }
+        return state
+
+    def send_game_state(self):
+        # Prepare the game state for each player and return it
+        game_states = {}
+        for player in self.players:
+            game_states[player.user_id] = self.get_game_state_for_player(player)
+        return game_states
+
     def get_player_left_state(self):
+        # The state of a game after a player has left
         state = {
             'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'position': p.position} for p in
                         self.players],
@@ -114,10 +135,6 @@ class Game:
 
     def process_player_action(self, player_id, action):
         # Process a player action (fold, call, raise) and update the game state
-        pass
-
-    def send_game_state(self):
-        # Send the current game state to all connected clients
         pass
 
 
