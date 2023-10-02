@@ -95,25 +95,36 @@ class LobbyBrowser(tk.Tk):
         status_filter = self.status_var.get()
         odds_filter = self.odds_var.get()
 
+        buffer = ""
         try:
+            # Sending the message with a newline character as a delimiter
             self.controller.network_manager.client_socket.sendall(
-                json.dumps({"type": "get_all_lobbies", "status": status_filter, "odds": odds_filter}).encode('utf-8'))
-            response = self.controller.network_manager.client_socket.recv(16384)
-            # In case of an "expecting value" error, increase the number of bits being received
-            # as the entire list of lobbies is not being received
-            if not response:
+                (json.dumps({"type": "get_all_lobbies", "status": status_filter, "odds": odds_filter}) + '\n').encode(
+                    'utf-8')
+            )
+
+            # Receiving data and appending it to the buffer
+            data = self.controller.network_manager.client_socket.recv(16384)
+            if not data:
                 print("No response from server")
                 return
+            buffer += data.decode('utf-8')
 
-            lobbies = json.loads(response.decode('utf-8'))
-            print(lobbies)
+            # Checking if a complete message is available in the buffer
+            if '\n' in buffer:
+                message, buffer = buffer.split('\n', 1)
+                lobbies = json.loads(message)
+                print(lobbies)
+            else:
+                print("Incomplete message received")
+                return
+
         except Exception as e:
             print(f"Error while populating lobby list: {e}")
             return
 
         print(f"Received lobbies: {lobbies}")
         self.populate_lobby_list(lobbies)
-
 
     def populate_lobby_list(self, lobbies):
         print("Populating lobby list...")

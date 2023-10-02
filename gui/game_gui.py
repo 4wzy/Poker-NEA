@@ -191,21 +191,31 @@ class GameGUI(tk.Tk):
         if self.should_be_destroyed:
             print(f"process_server_message called on a destroyed instance {self}")
             return
-        message = json.loads(data.decode('utf-8'))
-        print(f"server_message: {message}")
-        if isinstance(message, dict):
-            if message['type'] == 'initial_state':
-                print(f"Initial state message TYPE: {message}")
-                task_id = self.after(0, self.process_initial_state, message['game_state'])
-                self.scheduled_tasks.append(task_id)
-            elif message['type'] == 'update_game_state' or message['type'] == 'game_starting':
-                task_id = self.after(0, self.update_game_state, message['game_state'])
-                self.scheduled_tasks.append(task_id)
-            elif message['type'] == "player_left_game_state":
-                task_id = self.after(0, self.process_player_left_game_state(message['game_state']))
-                self.scheduled_tasks.append(task_id)
-        elif isinstance(message, list):
-            self.controller.process_received_message('lobby_list', message)
+
+        data_str = data.decode('utf-8')
+        messages = data_str.strip().split('\n')  # split by newline and strip to handle trailing newlines
+
+        for message_str in messages:
+            try:
+                message = json.loads(message_str)
+                print(f"server_message: {message}")
+                if isinstance(message, dict):
+                    message_type = message.get('type')
+                    if message_type == 'initial_state':
+                        print(f"Initial state message TYPE: {message}")
+                        task_id = self.after(0, self.process_initial_state, message['game_state'])
+                        self.scheduled_tasks.append(task_id)
+                    elif message_type in ['update_game_state', 'game_starting']:
+                        task_id = self.after(0, self.update_game_state, message['game_state'])
+                        self.scheduled_tasks.append(task_id)
+                    elif message_type == "player_left_game_state":
+                        task_id = self.after(0, self.process_player_left_game_state, message['game_state'])
+                        self.scheduled_tasks.append(task_id)
+                elif isinstance(message, list):
+                    self.controller.process_received_message('lobby_list', message)
+            except json.JSONDecodeError as e:
+                print(f"JSON Decode Error: {e}")
+                print(f"Data causing the error: {message_str}")
 
     def process_lobby_list(self):
         pass

@@ -23,37 +23,50 @@ class LobbyServer:
             client_handler.start()
 
     def handle_client(self, client_socket):
+        buffer = ""
         while True:
             data = client_socket.recv(16384)
             if not data:
                 break
 
-            request = json.loads(data.decode('utf-8'))
-            print(f"Request: {request}")
-            print(f"Client socket: {client_socket}")
+            # Decoding the received bytes to a string before appending to the buffer
+            buffer += data.decode('utf-8')
 
-            response = None
-            if request["type"] == "get_all_lobbies":
-                print("getting lobbies")
-                response = self.get_all_lobbies(request)
-            elif request["type"] == "create_lobby":
-                print("creating lobby")
-                response = self.create_lobby(request)
-            elif request["type"] == "join_lobby":
-                print("joining lobby")
-                response = self.join_lobby(request, client_socket)
-            elif request["type"] == 'leave_lobby':
-                print(f"PLAYER LEAVING LOBBY: {client_socket}")
-                response = self.leave_lobby(request['user_id'], request['lobby_name'], client_socket)
-            elif request["type"] == "start_game":
-                self.handle_start_game(request["lobby_name"])
-                continue
+            # Processing each message in the buffer
+            while '\n' in buffer:
+                message, buffer = buffer.split('\n', 1)
+                try:
+                    # Parsing the message instead of the whole data
+                    request = json.loads(message)
+                    print(f"Request: {request}")
+                    print(f"Client socket: {client_socket}")
 
-            print(f"(handle client): Response: {response}")
-            # Note: this response is not sent to all clients, only the client that made the request
-            # for leave_lobby, this may have to be sent to all clients
-            client_socket.sendall(json.dumps(response).encode('utf-8'))
-            print(f"Sent response to {client_socket}")
+                    response = None
+                    if request["type"] == "get_all_lobbies":
+                        print("getting lobbies")
+                        response = self.get_all_lobbies(request)
+                    elif request["type"] == "create_lobby":
+                        print("creating lobby")
+                        response = self.create_lobby(request)
+                    elif request["type"] == "join_lobby":
+                        print("joining lobby")
+                        response = self.join_lobby(request, client_socket)
+                    elif request["type"] == 'leave_lobby':
+                        print(f"PLAYER LEAVING LOBBY: {client_socket}")
+                        response = self.leave_lobby(request['user_id'], request['lobby_name'], client_socket)
+                    elif request["type"] == "start_game":
+                        self.handle_start_game(request["lobby_name"])
+                        continue
+
+                    if response is not None:
+                        client_socket.sendall((json.dumps(response) + '\n').encode('utf-8'))
+                        print(f"(handle client): Response: {response}")
+                        print(f"Sent response to {client_socket}")
+
+                except json.JSONDecodeError as e:
+                    print(f"JSON Decode Error: {e}")
+                    print(f"Data causing the error: {message}")
+                    buffer = ""  # Clear the buffer to avoid parsing the same invalid data again
 
         client_socket.close()
 
@@ -90,7 +103,7 @@ class LobbyServer:
             game_states = game.send_game_state()
             for player, client_socket in zip(game.players, game.client_sockets):
                 user_id = player.user_id
-                client_socket.sendall(json.dumps({"type": "update_game_state", "game_state": game_states[user_id]}).encode('utf-8'))
+                client_socket.sendall((json.dumps({"type": "update_game_state", "game_state": game_states[user_id]}) + '\n').encode('utf-8'))
                 print(f"sent game states {game_states[user_id]} to user {user_id}")
             print("sent game state..")
 
@@ -100,7 +113,7 @@ class LobbyServer:
         print(f"Initial game state to broadcast: {game_state}")
         for client_socket in self.get_clients_in_lobby(lobby_name):
             if client_socket != current_client:
-                client_socket.sendall(json.dumps({"type": "initial_state", "game_state": game_state}).encode('utf-8'))
+                client_socket.sendall((json.dumps({"type": "initial_state", "game_state": game_state}) + '\n').encode('utf-8'))
                 print(f"sent initial game state data to f{client_socket}")
 
     def broadcast_player_left_game_state(self, lobby_name, current_client):
@@ -109,7 +122,7 @@ class LobbyServer:
         print(f"Initial game state to broadcast: {game_state}")
         for client_socket in self.get_clients_in_lobby(lobby_name):
             if client_socket != current_client:
-                client_socket.sendall(json.dumps({"type": "player_left_game_state", "game_state": game_state}).encode('utf-8'))
+                client_socket.sendall((json.dumps({"type": "player_left_game_state", "game_state": game_state}) + '\n').encode('utf-8'))
                 print(f"sent initial game state data to f{client_socket}")
 
     def get_game_state(self, lobby_name):
