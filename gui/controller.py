@@ -6,6 +6,8 @@ from gui.main_menu import MainMenu
 from gui.game_gui import GameGUI
 from logic.network_manager import NetworkManager
 
+
+
 class Controller:
     def __init__(self):
         self.current_menu = None
@@ -13,7 +15,7 @@ class Controller:
 
     def run(self):
         # self.open_login_menu()
-        self.open_main_menu(14)
+        self.open_main_menu(19)
         tk.mainloop()
 
     def open_login_menu(self):

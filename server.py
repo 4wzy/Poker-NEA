@@ -10,7 +10,7 @@ class LobbyServer:
     def __init__(self, host='localhost', port=12345):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((host, port))
-        self.server_socket.listen(5)
+        self.server_socket.listen(0)
 
         self.database_interaction = DatabaseInteraction()
         self.lobbies: Dict[str, Game] = {}  # I have explicitly used type hinting for easier development
@@ -152,6 +152,7 @@ class LobbyServer:
         return {"success": False, "error": error_message}
 
     def handle_start_game(self, lobby_name):
+        print("running handle_start_game")
         game = self.lobbies[lobby_name]
         if game.is_game_starting:  # Check if the game is ready to start
             self.broadcast_game_state(lobby_name)
