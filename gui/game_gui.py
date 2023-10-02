@@ -271,28 +271,23 @@ class GameGUI(tk.Tk):
         chat_frame = tk.Frame(self.display_frame, bg="#444444")
         chat_frame.pack(fill="both", expand=True)
 
-        # Chatbox
         chatbox = tk.Text(chat_frame, bg="#555555", fg="#FFFFFF", state="disabled", wrap="word", height=10, width=20,
                           font=("Cambria", 10))
         chatbox.grid(row=0, column=0, sticky="nsew")
 
-        # Scrollbar
         scrollbar = tk.Scrollbar(chat_frame, command=chatbox.yview, bg="#555555", troughcolor="#444444")
         scrollbar.grid(row=0, column=1, sticky="ns")
         chatbox.config(yscrollcommand=scrollbar.set)
 
-        # Message Entry
         message_entry = tk.Entry(chat_frame, bg="#555555", fg="#FFFFFF", width=20, font=("Cambria", 10),
                                  insertbackground="white")
         message_entry.grid(row=1, column=0, sticky="ew")
         message_entry.bind("<Return>", lambda event: self.send_message(chatbox, message_entry))
 
-        # Send Button
         send_button = tk.Button(chat_frame, text="Send", command=lambda: self.send_message(chatbox, message_entry),
                                 bg="#555555", fg="#FFFFFF", font=("Cambria", 10), relief="flat", padx=5, pady=5)
         send_button.grid(row=1, column=1, sticky="e")
 
-        # Configure grid
         chat_frame.grid_rowconfigure(0, weight=1)
         chat_frame.grid_columnconfigure(0, weight=1)
 

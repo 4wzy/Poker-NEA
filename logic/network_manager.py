@@ -11,7 +11,6 @@ class NetworkManager:
             self.client_socket.connect(("localhost", 12345))
             print("Connected to server")
         except ConnectionRefusedError:
-            # Handle the error, e.g., by showing an error message in the GUI
             print("Couldn't connect to the server")
 
     def send_message(self, message):
@@ -29,8 +28,8 @@ class NetworkManager:
                 print(f"2. {response}")
                 return json.loads(response.decode('utf-8'))
         except BrokenPipeError:
-            # Handle the error, e.g., by attempting to reconnect to the server
             print("Connection to the server is broken")
+            # Possibly attempt to reconnect to the server
         except json.JSONDecodeError as e:
             print(f"JSON Decode Error: {e}")
             print(f"Data causing the error: {response}")
@@ -46,7 +45,7 @@ class NetworkManager:
         if response_data['type'] == "game_starting":
             start_game_message = {"type": "start_game", "lobby_name": lobby_name}
             start_game_response = self.send_message(start_game_message)
-            print(f"(network_manager): {start_game_response}")
+            print(f"(network_manager): start_game_response: {start_game_response}")
         print(f"2. {response_data}")
         return response_data
 
