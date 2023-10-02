@@ -42,9 +42,11 @@ class NetworkManager:
         print("starting to join lobby")
         message = {"type": "join_lobby", "user_id": user_id, "lobby_name": lobby_name}
         response_data = self.send_message(message)
+        print(f"(network_manager): {response_data}")
         if response_data['type'] == "game_starting":
-            ack_message = {"type": "acknowledgment", "lobby_name": lobby_name}
-            self.send_message(ack_message)
+            start_game_message = {"type": "start_game", "lobby_name": lobby_name}
+            start_game_response = self.send_message(start_game_message)
+            print(f"(network_manager): {start_game_response}")
         print(f"2. {response_data}")
         return response_data
 

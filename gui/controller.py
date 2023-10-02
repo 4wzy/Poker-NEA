@@ -39,7 +39,7 @@ class Controller:
     def join_lobby(self, user_id, lobby_name):
         # This starts the GUI and loads it up with the "initial data" received from the lobby being joined.
         response_data = self.network_manager.join_lobby(user_id, lobby_name)
-        print(f"RESPONSE FROM JOINING LOBBY: {response_data}")
+        print(f"(controller): RESPONSE FROM JOINING LOBBY: {response_data}")
         if response_data and response_data.get("success", True):
             if self.current_menu:
                 self.current_menu.destroy()

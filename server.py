@@ -45,8 +45,8 @@ class LobbyServer:
             elif request["type"] == 'leave_lobby':
                 print(f"PLAYER LEAVING LOBBY: {client_socket}")
                 response = self.leave_lobby(request['user_id'], request['lobby_name'], client_socket)
-            elif request["type"] == "acknowledgement":
-                self.handle_acknowledgment(request["lobby_name"])
+            elif request["type"] == "start_game":
+                self.handle_start_game(request["lobby_name"])
                 continue
 
             print(f"(handle client): Response: {response}")
@@ -77,14 +77,14 @@ class LobbyServer:
             print("Database interaction - removing player from lobby")
 
             player_left_game_state = self.get_player_left_state(lobby_name)
-            self.broadcast_player_left_game_state(lobby_name)
+            self.broadcast_player_left_game_state(lobby_name, client_socket)
             print("broadcasted player left game state")
             return {"success": True, "type": "player_left_game_state", "game_state": player_left_game_state}
         else:
             return {"success": False, "error": "Could not find lobby to remove player from"}
 
     def broadcast_game_state(self, lobby_name):
-        print("BROADCASTING GAME STATE")
+        print("BROADCASTING GAME STATE TO EVERYONE")
         if lobby_name in self.lobbies:
             game = self.lobbies[lobby_name]
             game_states = game.send_game_state()
@@ -94,21 +94,23 @@ class LobbyServer:
                 print(f"sent game states {game_states[user_id]} to user {user_id}")
             print("sent game state..")
 
-    def broadcast_initial_game_state(self, lobby_name):
-        print("BROADCASTING INITIAL GAME STATE")
+    def broadcast_initial_game_state(self, lobby_name, current_client):
+        print("BROADCASTING INITIAL GAME STATE NOT TO EVERYONE")
         game_state = self.get_initial_state(lobby_name)
         print(f"Initial game state to broadcast: {game_state}")
         for client_socket in self.get_clients_in_lobby(lobby_name):
-            client_socket.sendall(json.dumps({"type": "initial_state", "game_state": game_state}).encode('utf-8'))
-            print(f"sent initial game state data to f{client_socket}")
+            if client_socket != current_client:
+                client_socket.sendall(json.dumps({"type": "initial_state", "game_state": game_state}).encode('utf-8'))
+                print(f"sent initial game state data to f{client_socket}")
 
-    def broadcast_player_left_game_state(self, lobby_name):
-        print("BROADCASTING PLAYER LEFT GAME STATE")
+    def broadcast_player_left_game_state(self, lobby_name, current_client):
+        print("BROADCASTING PLAYER LEFT GAME STATE NOT TO EVERYONE")
         game_state = self.get_player_left_state(lobby_name)
         print(f"Initial game state to broadcast: {game_state}")
         for client_socket in self.get_clients_in_lobby(lobby_name):
-            client_socket.sendall(json.dumps({"type": "player_left_game_state", "game_state": game_state}).encode('utf-8'))
-            print(f"sent initial game state data to f{client_socket}")
+            if client_socket != current_client:
+                client_socket.sendall(json.dumps({"type": "player_left_game_state", "game_state": game_state}).encode('utf-8'))
+                print(f"sent initial game state data to f{client_socket}")
 
     def get_game_state(self, lobby_name):
         return self.lobbies[lobby_name].get_game_state()
@@ -131,14 +133,14 @@ class LobbyServer:
             game.add_player(player, client_socket)
             initial_state = self.get_initial_state(lobby_name)
             print(f"INITIAL STATE: {initial_state}")
-            self.broadcast_initial_game_state(lobby_name)
+            self.broadcast_initial_game_state(lobby_name, client_socket)
+            print(f"(server.py): broadcasted initial game state to everyone apart from {client_socket}")
             data_type = "initial_state"
             if len(game.players) == 6:
                 game.start_round()
                 data_type = "game_starting"  # Inform the client that the game is starting
                 game.is_game_starting = True  # Set a flag to denote that the game is ready to start
                 print("(server.py): set game._is_game_starting to True so that the round can start")
-                # self.broadcast_game_state(lobby_name)
 
             data_to_return = {"success": True, "type": data_type, "game_state": initial_state}
             print(data_to_return)
@@ -149,7 +151,7 @@ class LobbyServer:
         print(f"could not return data. error: {error_message}")
         return {"success": False, "error": error_message}
 
-    def handle_acknowledgment(self, lobby_name):
+    def handle_start_game(self, lobby_name):
         game = self.lobbies[lobby_name]
         if game.is_game_starting:  # Check if the game is ready to start
             self.broadcast_game_state(lobby_name)

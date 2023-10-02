@@ -233,7 +233,7 @@ class GameGUI(tk.Tk):
         return file_name
 
     def update_game_state(self, game_state):
-        user_id = game_state['user_id']  # Assuming the user_id is sent in the game_state for the specific player
+        user_id = game_state['user_id']
         print(f"(game_gui.py): updating game state for {user_id}")
 
         # Get the components for the player
@@ -246,7 +246,9 @@ class GameGUI(tk.Tk):
         components['name_label'].config(text=f"{game_state['name']}: {game_state['chips']} chips")
 
         # Update card images if they are in the game_state
+        # ONLY UPDATE THIS ONCE IN A GAME, WHEN ALL THE PLAYERS HAVE JOINED IF THIS IS THE "START GAME STATE"
         for idx, card_str in enumerate(game_state.get('hand', [])):
+            print(f"(game_gui): DEBUG idx: {idx} card_str: {card_str}")
             card_image_path = self.get_card_image_path(card_str)
             print(f"(game_gui): card_image_path: {card_image_path}")
             card_photo = Image.open(card_image_path)
