@@ -1,3 +1,4 @@
+import time
 import tkinter as tk
 from gui.login_menu import LoginMenu
 from gui.register_menu import RegisterMenu
@@ -39,15 +40,19 @@ class Controller:
         self.current_menu = LobbyBrowser(self, user_id)
 
     def join_lobby(self, user_id, lobby_name):
-        # This starts the GUI and loads it up with the "initial data" received from the lobby being joined
         response_data = self.network_manager.join_lobby(user_id, lobby_name)
         print(f"(controller): RESPONSE FROM JOINING LOBBY: {response_data}")
         if response_data and response_data.get("success", True):
             if self.current_menu:
                 self.current_menu.destroy()
-            self.current_menu = GameGUI(self, user_id, lobby_name, response_data['game_state'])
+            if response_data.get('type') == "game_starting":
+                self.current_menu = GameGUI(self, user_id, lobby_name, response_data['game_state'], True)
+            else:
+                self.current_menu = GameGUI(self, user_id, lobby_name, response_data['game_state'], False)
+
+
         else:
-            return response_data  # Or handle the error appropriately
+            return response_data
 
     def process_received_message(self, message_type, message_content):
         if message_type == 'lobby_list':

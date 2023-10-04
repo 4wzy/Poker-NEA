@@ -4,6 +4,7 @@ import json
 from logic.database_interaction import DatabaseInteraction
 from logic.game_logic import Game, Player
 from typing import Dict
+import time
 
 
 class LobbyServer:
@@ -150,6 +151,7 @@ class LobbyServer:
             print(f"(server.py): broadcasted initial game state to everyone apart from {client_socket}")
             data_type = "initial_state"
             if len(game.players) == 6:
+                # time.sleep(0.1)
                 game.start_round()
                 data_type = "game_starting"  # Inform the client that the game is starting
                 game.is_game_starting = True  # Set a flag to denote that the game is ready to start

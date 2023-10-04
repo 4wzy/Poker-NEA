@@ -1,5 +1,6 @@
 import socket
 import json
+import time
 
 
 class NetworkManager:
@@ -53,16 +54,17 @@ class NetworkManager:
                 print(f"Unexpected error: {e}")
                 break
 
+    def send_start_game_message(self, lobby_name):
+        start_game_message = {"type": "start_game", "lobby_name": lobby_name}
+        start_game_response = self.send_message(start_game_message)
+        print(f"(network_manager): start_game_response: {start_game_response}")
+        return start_game_response
+
     def join_lobby(self, user_id, lobby_name):
         print("starting to join lobby")
         message = {"type": "join_lobby", "user_id": user_id, "lobby_name": lobby_name}
         response_data = self.send_message(message)
         print(f"(network_manager): {response_data}")
-        if response_data and response_data.get('type') == "game_starting":
-            start_game_message = {"type": "start_game", "lobby_name": lobby_name}
-            start_game_response = self.send_message(start_game_message)
-            print(f"(network_manager): start_game_response: {start_game_response}")
-        print(f"2. {response_data}")
         return response_data
 
     def close_connection(self):
