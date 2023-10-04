@@ -1,6 +1,8 @@
 import json
 import time
 import tkinter as tk
+from tkinter import simpledialog, messagebox
+
 from PIL import Image, ImageDraw, ImageTk
 from logic.database_interaction import DatabaseInteraction
 
@@ -8,6 +10,7 @@ from logic.database_interaction import DatabaseInteraction
 class GameGUI(tk.Tk):
     def __init__(self, controller, user_id, lobby_name, initial_state, player_starts_game):
         super().__init__()
+        self.last_highlighted_player_id = None
         self.geometry("1280x720")
         self.configure(bg="#333333")
         self.controller = controller
@@ -65,7 +68,7 @@ class GameGUI(tk.Tk):
         settings_button.pack(side="bottom", fill="x", pady=5, padx=10)
 
         leave_button = tk.Button(self.sidebar, text="Leave", command=self.leave_game, bg="#555555",
-                                     fg="#FFFFFF", font=("Cambria", 12), relief="flat", padx=10, pady=10)
+                                 fg="#FFFFFF", font=("Cambria", 12), relief="flat", padx=10, pady=10)
         leave_button.pack(side="bottom", fill="x", pady=5, padx=10)
 
         self.game_area = tk.Frame(main_pane, bg="#302525")
@@ -88,7 +91,7 @@ class GameGUI(tk.Tk):
                                      width=2)
 
         # Define the buttons
-        buttons = [
+        self.buttons = [
             tk.Button(self.game_area, text="Call/Check", command=lambda: self.send_player_action("call"), bg="#555555",
                       fg="#FFFFFF",
                       font=("Cambria", 12), relief="flat", height=2, width=10),
@@ -100,8 +103,8 @@ class GameGUI(tk.Tk):
                       font=("Cambria", 12), relief="flat", height=2, width=10),
         ]
 
-        for i, button in enumerate(buttons):
-            button.place(relx=0.9, rely=0.2 * (2 * i + 5) / len(buttons), anchor='center')
+        for i, button in enumerate(self.buttons):
+            button.place(relx=0.9, rely=0.2 * (2 * i + 5) / len(self.buttons), anchor='center')
 
         self.controller.network_manager.client_socket.setblocking(0)
         self.network_loop()
@@ -150,15 +153,22 @@ class GameGUI(tk.Tk):
         for player_info in initial_state['players']:
             x, y = self.get_coordinates_for_position(player_info['position'])
             task_id = self.after(0, self.place_player, x, y, player_info['name'], player_info['position'],
-                                 player_info['user_id'])
+                                 player_info['user_id'], player_info['chips'])
             self.scheduled_tasks.append(task_id)
         if len(initial_state['players']) == 6:
             print("(game_gui): START GAME!!")
             # self.send_acknowledgment()
             if self.player_starts_game:
                 print("updating game state")
-                self.update_game_state(self.controller.network_manager.send_start_game_message(self.lobby_name))
-                self.player_starts_game = False
+                # The following call to self.after() is necessary so that the players are placed first before the
+                # game attempts to update game components which don't exist yet
+                self.after(50, self.start_game_update)
+
+    # Could be made as a private method
+    def start_game_update(self):
+        print("starting game update")
+        self.update_game_state(self.controller.network_manager.send_start_game_message(self.lobby_name))
+        self.player_starts_game = False
 
     def process_player_left_game_state(self, player_left_state):
         print("game_gui.py: PROCESSING PLAYER LEFT STATE")
@@ -175,11 +185,11 @@ class GameGUI(tk.Tk):
             self.canvas_items.clear()  # Clear the list of stored IDs
             print("game_gui.py: CANVAS CLEARED")
 
-
             # Now place the new players
             for player_info in player_left_state['players']:
                 x, y = self.get_coordinates_for_position(player_info['position'])
-                task_id = self.after(0, self.place_player, x, y, player_info['name'], player_info['position'])
+                task_id = self.after(0, self.place_player, x, y, player_info['name'], player_info['position'],
+                                     player_info['chips'])
                 self.scheduled_tasks.append(task_id)
             print("game_gui.py: PLAYERS PLACED AGAIN")
 
@@ -256,25 +266,35 @@ class GameGUI(tk.Tk):
         user_id = game_state['user_id']
         print(f"(game_gui.py): updating game state for {user_id}")
 
-        # Get the components for the player
+        print(f"old game_state: {game_state}")
+        game_state = game_state["game_state"]
+        print(f"(game_gui): new game_state: {game_state}")
+
+        # Get the components for each player, and update accordingly
+        for player_data in game_state["players"]:
+            print(f"using data: {player_data}")
+            components = self.player_components.get(player_data["user_id"])
+            if not components:
+                print(f"No components found for user_id {user_id}")
+                print(f"components: {components}")
+                return
+            print(f"PLAYER DATA: {player_data}")
+            if player_data:
+                time.sleep(0.1)
+                components['name_label'].config(text=f"{player_data['name']}: {player_data['chips']} chips")
+            else:
+                print(f"No player data found for user_id {user_id}")
+
+        self.show_current_player(game_state)
+
+        # Update card images if they are in the game_state
+        # ONLY UPDATE THIS ONCE IN A GAME, WHEN ALL THE PLAYERS HAVE JOINED IF THIS IS THE "START GAME STATE"
+        print(f"hand: {game_state.get('hand')}")
         components = self.player_components.get(user_id)
         if not components:
             print(f"No components found for user_id {user_id}")
             print(f"components: {components}")
             return
-
-        # Update the name label with the new chip count
-        game_state = game_state["game_state"]
-        print(f"(game_gui): new game_state: {game_state}")
-        player_data = next((player for player in game_state['players'] if player['user_id'] == user_id), None)
-        if player_data:
-            components['name_label'].config(text=f"{player_data['name']}: {player_data['chips']} chips")
-        else:
-            print(f"No player data found for user_id {user_id}")
-        # Update card images if they are in the game_state
-        # ONLY UPDATE THIS ONCE IN A GAME, WHEN ALL THE PLAYERS HAVE JOINED IF THIS IS THE "START GAME STATE"
-        print(f"hand: {game_state.get('hand')}")
-        # time.sleep(0.1)
         for idx, card_str in enumerate(game_state.get('hand', [])):
             print(f"(game_gui): DEBUG idx: {idx} card_str: {card_str}")
             card_image_path = self.get_card_image_path(card_str)
@@ -287,14 +307,77 @@ class GameGUI(tk.Tk):
             card_label.config(image=card_photo)
             card_label.photo = card_photo  # keep a reference to avoid garbage collection
             print(f"(game_gui): card_label after change: {card_label}")
-            self.update()
-
 
         # Update other components like community cards, pot, ...
 
-    def send_player_action(self, action):
-        # Send a player action (fold, call, raise) to the server
+    def show_current_player(self, game_state):
+        current_turn_player_id = game_state["players"][game_state['current_player_turn']]['user_id']
+
+        # Unhighlight the last player's frame
+        if self.last_highlighted_player_id:
+            last_player_components = self.player_components.get(self.last_highlighted_player_id)
+            if last_player_components:
+                last_player_frame = last_player_components[
+                    'profile_label'].master  # Assuming the label's master is the frame.
+                last_player_frame.config(bg="#302525")  # Resetting to original background color.
+
+        # Highlight the current player's frame
+        current_player_components = self.player_components.get(current_turn_player_id)
+        if current_player_components:
+            current_player_frame = current_player_components['profile_label'].master
+            current_player_frame.config(bg="#FFD700")  # Highlighting with a gold color.
+            self.last_highlighted_player_id = current_turn_player_id
+
+        # Enable/Disable action buttons based on whose turn it is
+        if current_turn_player_id == self.user_id:
+            # Enable the buttons
+            for button in self.buttons:
+                button.config(state=tk.NORMAL)
+        else:
+            # Disable the buttons
+            for button in self.buttons:
+                button.config(state=tk.DISABLED)
+
+    def raise_action(self):
         pass
+
+    def send_player_action(self, action):
+        if action == "raise":
+            raise_amount = simpledialog.askinteger(f"Raise Amount", "Enter the amount you want to raise):",
+                                                   parent=self)
+            while not raise_amount:
+                raise_amount = simpledialog.askinteger("Raise Amount", "Enter the amount you want to raise:",
+                                                       parent=self)
+            if raise_amount:
+                message = {"type": "bet", "action": action, "amount": raise_amount, "user_id": self.user_id, "lobby_name": \
+                    self.lobby_name}
+        else:
+            message = {"type": "bet", "action": action, "user_id": self.user_id, "lobby_name": self.lobby_name}
+
+        response = self.controller.network_manager.send_message(message)
+        if response.get("success") or response.get("type") == "update_game_state":
+            self.update_game_state(response)
+        else:
+            error_message = response.get("error", "An unknown error occurred.")
+            messagebox.showerror("Error", error_message)
+        print(f"send_player_action response: {response}")
+
+    def place_community_cards(self, cards):
+        card_x, card_y = 640, 360  # Center of the screen
+        gap = 20  # Gap between cards
+
+        for idx, card_str in enumerate(cards):
+            card_image_path = self.get_card_image_path(card_str)
+            card_photo = Image.open(card_image_path)
+            card_photo = card_photo.resize((60, 90))
+            card_photo = ImageTk.PhotoImage(card_photo)
+
+            card_label = tk.Label(self.game_canvas, image=card_photo, bg="#302525")
+            card_label.photo = card_photo  # keep a reference to avoid garbage collection
+
+            card_x_offset = (idx - 2) * (60 + gap)  # -2 to center the cards
+            item_id = self.game_canvas.create_window(card_x + card_x_offset, card_y, window=card_label)
+            self.canvas_items.append(item_id)
 
     def show_chat(self):
         for widget in self.display_frame.winfo_children():
@@ -361,8 +444,8 @@ class GameGUI(tk.Tk):
         self.is_leaving_game = True
         print(f"(leave game from game_gui): {player_left}")
 
-    def place_player(self, x, y, name, position, user_id):
-        print(f"placing player: {name}")
+    def place_player(self, x, y, name, position, user_id, chips):
+        # print(f"placing player: {name}")
         try:
             # Create a frame to hold the player components
             player_frame = tk.Frame(self.game_canvas, bg="#302525")
@@ -384,7 +467,7 @@ class GameGUI(tk.Tk):
             profile_label.pack()
 
             # Add name label
-            name_label = tk.Label(player_frame, text=f"{name}: 0 chips", bg="#302525", fg="#FFFFFF")
+            name_label = tk.Label(player_frame, text=f"{name}: {chips} chips", bg="#302525", fg="#FFFFFF")
             name_label.pack()
 
             # Add card images
@@ -413,7 +496,7 @@ class GameGUI(tk.Tk):
                 'card1_label': card1_label,
                 'card2_label': card2_label,
             }
-            print(f"PLAYER COMPONENTS: {self.player_components}")
+            # print(f"PLAYER COMPONENTS: {self.player_components}")
 
             # Positioning the player frame on the canvas
             anchor_point = "center"
@@ -434,12 +517,8 @@ class GameGUI(tk.Tk):
     def fold_action(self):
         pass
 
-    def raise_action(self):
-        pass
-
     def call_check_action(self):
         print("Player checked locally")
-
 
 # if __name__ == "__main__":
 #     app = GameGUI(None, 2, None)

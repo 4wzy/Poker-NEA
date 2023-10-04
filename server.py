@@ -8,7 +8,7 @@ import time
 
 
 class LobbyServer:
-    def __init__(self, host='localhost', port=12345):
+    def __init__(self, host='127.0.0.1', port=12345):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((host, port))
         self.server_socket.listen(0)
@@ -58,6 +58,8 @@ class LobbyServer:
                     elif request["type"] == "start_game":
                         self.handle_start_game(request["lobby_name"])
                         continue
+                    elif request["type"] == "bet":
+                        response = self.process_player_action(request)
 
                     if response is not None:
                         client_socket.sendall((json.dumps(response) + '\n').encode('utf-8'))
@@ -71,12 +73,52 @@ class LobbyServer:
 
         client_socket.close()
 
-    def process_player_action(self, player_id, action, lobby_name):
-        # Process a player action (fold, call, raise) and update the game state
+    def process_player_action(self, request):
+        user_id = request["user_id"]
+        action = request["action"]
+        lobby_name = request["lobby_name"]
+        game = self.lobbies[lobby_name]
+        player = next((p for p in game.players if p.user_id == user_id), None)
 
-        # (any logic to process the action and update game state)
+        if action == 'fold':
+            message = f"{player} folds"
+            print(message)
+            # Handle fold logic. Remove the player from the current round.
+        elif action == 'call':
+            message = f"{player} calls"
+            print(message)
+            # The player matches the current highest bet
+            bet_amount = game.current_highest_bet - player.current_bet
+            if player.chips >= bet_amount:
+                player.chips -= bet_amount
+                game.pot.add_chips(bet_amount)
+            else:
+                return {"success": False, "error": "You do not have enough chips to call"}
+                # Possibly gray out the button instead
+        elif action == 'raise':
+            # The player raises over the current highest bet
+            bet_amount = request['amount']
+            # CHECK ERROR LOGIC
+            if bet_amount + player.current_bet < game.current_highest_bet:
+                return {"success": False, "error": f"You need to raise more than {game.current_highest_bet - bet_amount} "
+                                                   f"chips!"}
+            if bet_amount + player.current_bet < player.chips:
+                return {"success": False, "error": "You don't have enough chips to raise this amount."}
+            else:
+                print("ALLOW BET!")
+                player.chips -= bet_amount
+                game.pot.add_chips(bet_amount)
+                game.current_highest_bet = bet_amount
+                message = f"{player} raises {bet_amount} chips"
+                print(message)
 
+        # Move to the next player's turn
+        game.current_player_turn = (game.current_player_turn + 1) % 6
+        print(f"Next player's turn: {game.current_player_turn}")
+
+        # Broadcast the updated game state to all clients
         self.broadcast_game_state(lobby_name)
+        return {"success": True, "message": message}
 
     def leave_lobby(self, user_id, lobby_name, client_socket):
         if lobby_name in self.lobbies:
@@ -143,7 +185,7 @@ class LobbyServer:
 
         if lobby_name in self.lobbies:
             game = self.lobbies[lobby_name]
-            player = Player(user_name, user_id, chips=100, position=game.available_positions.pop(0))
+            player = Player(user_name, user_id, chips=200, position=game.available_positions.pop(0))
             game.add_player(player, client_socket)
             initial_state = self.get_initial_state(lobby_name)
             print(f"INITIAL STATE: {initial_state}")

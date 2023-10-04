@@ -16,7 +16,7 @@ class Controller:
 
     def run(self):
         # self.open_login_menu()
-        self.open_main_menu(19)
+        self.open_main_menu(14)
         tk.mainloop()
 
     def open_login_menu(self):
@@ -49,8 +49,6 @@ class Controller:
                 self.current_menu = GameGUI(self, user_id, lobby_name, response_data['game_state'], True)
             else:
                 self.current_menu = GameGUI(self, user_id, lobby_name, response_data['game_state'], False)
-
-
         else:
             return response_data
 

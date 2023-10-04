@@ -1,4 +1,6 @@
 from random import randint
+from typing import List
+
 
 class Card:
     def __init__(self, suit, rank):
@@ -32,6 +34,7 @@ class Deck:
 
 class Player:
     def __init__(self, name, user_id, chips, position):
+        self.client_socket = None
         self.name = name
         self.user_id = user_id
         self.profile_picture = None
@@ -39,23 +42,32 @@ class Player:
         self.current_bet = 0
         self.hand = Hand([])
         self.position = position
+        self.blinds = []
+        self.dealer = False
 
     def add_card(self, card):
         self.hand.cards.append(card)
 
 
 class Game:
-    def __init__(self, starting_chips=100):
-        self.players = []
+    def __init__(self, starting_chips=200):
+        self.players: List[Player] = []
         self.client_sockets = []
-        self.available_positions = ["top_left", "top_middle", "top_right", "bottom_left", "bottom_middle", "bottom_right"]
+        self.available_positions = ["top_left", "top_middle", "top_right", "bottom_right", "bottom_middle",
+                                    "bottom_left"]
 
         self.pot = Pot()
         self.board = []
         self.deck = Deck()
         self.deck.shuffle()
-        self.current_player_turn = None
+        self.current_player_turn = -1
         self.is_game_starting = False
+        self.small_blind = 5
+        self.big_blind = 10
+        self.dealer_position = -1
+        self.small_blind_position = -1
+        self.big_blind_position = -1
+        self.current_highest_bet = self.big_blind
 
     def get_initial_state(self):
         state = {
@@ -69,8 +81,8 @@ class Game:
     def get_game_state(self):
         # The general state of the game
         state = {
-            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet} for p in
-                        self.players],
+            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet,
+                         "blinds": p.blinds} for p in self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board],
             'current_player_turn': self.current_player_turn,
@@ -80,8 +92,8 @@ class Game:
     def get_game_state_for_player(self, player):
         # The state of the game to be sent to a specific player
         state = {
-            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet} for p in
-                        self.players],
+            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet,
+                         "blinds": p.blinds} for p in self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board],
             'current_player_turn': self.current_player_turn,
@@ -125,6 +137,25 @@ class Game:
         self.board = []
         for player in self.players:
             self.deal_cards(2, player)
+
+        # Clear any players of any previous attributes if there are any
+        if self.small_blind_position != -1 and self.big_blind_position != -1 and self.dealer_position != -1:
+            self.players[self.small_blind_position].blinds = []
+            self.players[self.big_blind_position].blinds = []
+            self.players[self.dealer_position].dealer = False
+
+        self.dealer_position = (self.dealer_position + 1) % 6
+        self.small_blind_position = (self.dealer_position + 1) % 6
+        self.big_blind_position = (self.dealer_position + 2) % 6
+        self.current_player_turn = (self.big_blind_position + 1) % len(self.players)
+        self.players[self.small_blind_position].chips -= self.small_blind
+        self.players[self.big_blind_position].chips -= self.big_blind
+        self.players[self.small_blind_position].current_bet = self.small_blind
+        self.players[self.big_blind_position].current_bet = self.big_blind
+        self.players[self.small_blind_position].blinds.append("SB")
+        self.players[self.big_blind_position].blinds.append("BB")
+        self.players[self.dealer_position].dealer = True
+        self.pot.add_chips(self.small_blind + self.big_blind)
 
     def flop(self):
         for i in range(3):

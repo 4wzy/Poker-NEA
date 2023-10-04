@@ -1,3 +1,11 @@
+CALLING AND RAISING DONE!
+IMPLEMENT ROUNDS, FLOP, TURN, RIVER, ETC..
+
+
+1. Implement player.client_socket instead of current client_socket list system
+2. Change background for folded players to grey, similar to how background changed to gold for current player indication
+3. Implement folding
+
 This exception handling from the sockets
 Add decorator to controller.py lines 22 and 23
 

@@ -11,7 +11,7 @@ class NetworkManager:
 
     def connect_to_server(self):
         try:
-            self.client_socket.connect(("localhost", 12345))
+            self.client_socket.connect(("127.0.0.1", 12345))
             print("Connected to server")
         except ConnectionRefusedError:
             print("Couldn't connect to the server")
