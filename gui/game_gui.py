@@ -137,9 +137,10 @@ class GameGUI(tk.Tk):
         super().destroy()
 
     def send_acknowledgment(self):
-        ack_message = {"type": "acknowledgment", "lobby_name": self.lobby_name}
-        self.controller.network_manager.send_message(ack_message)
-        print("Acknowledgment sent.")
+        # ack_message = {"type": "acknowledgment", "lobby_name": self.lobby_name}
+        # self.controller.network_manager.send_message(ack_message)
+        # print("Acknowledgment sent.")
+        print("Acknowledgement not sent.")
 
     def process_initial_state(self, initial_state):
         print("(game_gui): processing initial state")
@@ -202,10 +203,11 @@ class GameGUI(tk.Tk):
                 if isinstance(message, dict):
                     message_type = message.get('type')
                     if message_type == 'initial_state':
-                        print(f"Initial state message TYPE: {message}")
+                        print(f"(game gui): Initial state message TYPE: {message}")
                         task_id = self.after(0, self.process_initial_state, message['game_state'])
                         self.scheduled_tasks.append(task_id)
                     elif message_type in ['update_game_state', 'game_starting']:
+                        print(f"(game_gui): UPDATING GAME STATE or GAME STARTING")
                         task_id = self.after(0, self.update_game_state, message['game_state'])
                         self.scheduled_tasks.append(task_id)
                     elif message_type == "player_left_game_state":
@@ -257,6 +259,7 @@ class GameGUI(tk.Tk):
 
         # Update card images if they are in the game_state
         # ONLY UPDATE THIS ONCE IN A GAME, WHEN ALL THE PLAYERS HAVE JOINED IF THIS IS THE "START GAME STATE"
+        print(f"hand: {game_state.get('hand')}")
         for idx, card_str in enumerate(game_state.get('hand', [])):
             print(f"(game_gui): DEBUG idx: {idx} card_str: {card_str}")
             card_image_path = self.get_card_image_path(card_str)

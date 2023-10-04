@@ -103,7 +103,7 @@ class LobbyServer:
             game_states = game.send_game_state()
             for player, client_socket in zip(game.players, game.client_sockets):
                 user_id = player.user_id
-                client_socket.sendall((json.dumps({"type": "update_game_state", "game_state": game_states[user_id]}) + '\n').encode('utf-8'))
+                client_socket.sendall((json.dumps({"type": "update_game_state", "user_id": user_id, "game_state": game_states[user_id]}) + '\n').encode('utf-8'))
                 print(f"sent game states {game_states[user_id]} to user {user_id}")
             print("sent game state..")
 

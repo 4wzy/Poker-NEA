@@ -200,6 +200,7 @@ class CreateLobbyWindow(tk.Toplevel):
         self.lobby_name_entry = tk.Entry(container, font=tkfont.Font(family="Cambria", size=16), width=32,
                                          fg="#FFFFFF", bg="#555555", insertbackground='white')
         self.lobby_name_entry.grid(row=1, column=1, sticky="w")
+        self.lobby_name_entry.focus()
 
         # Show Odds
         self.show_odds_var = tk.BooleanVar(value=True)
