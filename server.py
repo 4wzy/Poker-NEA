@@ -80,10 +80,15 @@ class LobbyServer:
         game = self.lobbies[lobby_name]
         player = next((p for p in game.players if p.user_id == user_id), None)
 
+        # Check if it's the player's turn
+        # if player.position != game.current_player_turn:
+        #     return {"success": False, "error": "It's not your turn!"}
+
         if action == 'fold':
             message = f"{player} folds"
             print(message)
-            # Handle fold logic. Remove the player from the current round.
+            # Handle fold logic here (e.g., remove player from current round)
+
         elif action == 'call':
             message = f"{player} calls"
             print(message)
@@ -92,28 +97,29 @@ class LobbyServer:
             if player.chips >= bet_amount:
                 player.chips -= bet_amount
                 game.pot.add_chips(bet_amount)
+                player.current_bet = game.current_highest_bet
             else:
                 return {"success": False, "error": "You do not have enough chips to call"}
-                # Possibly gray out the button instead
+
         elif action == 'raise':
             # The player raises over the current highest bet
-            bet_amount = request['amount']
-            # CHECK ERROR LOGIC
-            if bet_amount + player.current_bet < game.current_highest_bet:
-                return {"success": False, "error": f"You need to raise more than {game.current_highest_bet - bet_amount} "
-                                                   f"chips!"}
-            if bet_amount + player.current_bet < player.chips:
+            raise_amount = request['amount']
+            total_bet = raise_amount + player.current_bet
+            if total_bet <= game.current_highest_bet or raise_amount <= 0:
+                return {"success": False,
+                        "error": f"You need to raise more than the current highest bet of {game.current_highest_bet} chips!"}
+            if raise_amount > player.chips:
                 return {"success": False, "error": "You don't have enough chips to raise this amount."}
             else:
-                print("ALLOW BET!")
-                player.chips -= bet_amount
-                game.pot.add_chips(bet_amount)
-                game.current_highest_bet = bet_amount
-                message = f"{player} raises {bet_amount} chips"
+                player.chips -= raise_amount
+                game.pot.add_chips(raise_amount)
+                player.current_bet = total_bet
+                game.current_highest_bet = total_bet
+                message = f"{player} raises by {raise_amount} chips to a total of {total_bet} chips"
                 print(message)
 
-        # Move to the next player's turn
-        game.current_player_turn = (game.current_player_turn + 1) % 6
+        # Move to the next player's turn (This can be enhanced with more advanced logic as suggested)
+        game.current_player_turn = (game.current_player_turn + 1) % len(game.players)
         print(f"Next player's turn: {game.current_player_turn}")
 
         # Broadcast the updated game state to all clients

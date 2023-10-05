@@ -90,6 +90,10 @@ class GameGUI(tk.Tk):
                                      table_y + table_radius * 0.95, fill="#006400", outline="#8B4513",
                                      width=2)
 
+        self.pot_label = tk.Label(self.game_canvas, text="Pot: 0", bg="#006400", fg="#FFFFFF",
+                                  font=("Cambria", 12, "bold"))
+        self.pot_label.place(x=420, y=450, anchor="center")
+
         # Define the buttons
         self.buttons = [
             tk.Button(self.game_area, text="Call/Check", command=lambda: self.send_player_action("call"), bg="#555555",
@@ -280,10 +284,27 @@ class GameGUI(tk.Tk):
                 return
             print(f"PLAYER DATA: {player_data}")
             if player_data:
+                roles = []
+                if "SB" in player_data['blinds']:
+                    roles.append("Small Blind")
+                if "BB" in player_data['blinds']:
+                    roles.append("Big Blind")
+                if player_data['dealer']:
+                    roles.append("Dealer")
+
+                role_text = ", ".join(roles)
+
+                bet = player_data['current_bet']
+                components['bet_label'].config(text=f"Bet: {bet}")
+
                 time.sleep(0.1)
                 components['name_label'].config(text=f"{player_data['name']}: {player_data['chips']} chips")
+                components['role_label'].config(text=role_text)
             else:
                 print(f"No player data found for user_id {user_id}")
+
+        pot_amount = game_state.get('pot', 0)
+        self.pot_label.config(text=f"Pot: {pot_amount}")
 
         self.show_current_player(game_state)
 
@@ -470,6 +491,14 @@ class GameGUI(tk.Tk):
             name_label = tk.Label(player_frame, text=f"{name}: {chips} chips", bg="#302525", fg="#FFFFFF")
             name_label.pack()
 
+            # Role label (for blinds/dealer)
+            role_label = tk.Label(player_frame, text="", bg="#302525", fg="#FFFFFF")
+            role_label.pack()
+
+            # Current bet label
+            bet_label = tk.Label(player_frame, text=f"Bet: 0", bg="#302525", fg="#FFFFFF")
+            bet_label.pack()
+
             # Add card images
             if self.username == name:
                 card1_photo = Image.open("gui/Images/Cards/black_joker.png")
@@ -495,6 +524,8 @@ class GameGUI(tk.Tk):
                 'name_label': name_label,
                 'card1_label': card1_label,
                 'card2_label': card2_label,
+                'role_label': role_label,
+                'bet_label': bet_label
             }
             # print(f"PLAYER COMPONENTS: {self.player_components}")
 

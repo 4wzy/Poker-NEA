@@ -93,7 +93,7 @@ class Game:
         # The state of the game to be sent to a specific player
         state = {
             'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet,
-                         "blinds": p.blinds} for p in self.players],
+                         "blinds": p.blinds, "dealer": p.dealer} for p in self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board],
             'current_player_turn': self.current_player_turn,
