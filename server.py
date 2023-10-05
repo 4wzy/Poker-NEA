@@ -107,7 +107,7 @@ class LobbyServer:
             total_bet = raise_amount + player.current_bet
             if total_bet <= game.current_highest_bet or raise_amount <= 0:
                 return {"success": False,
-                        "error": f"You need to raise more than the current highest bet of {game.current_highest_bet} chips!"}
+                        "error": f"You need to raise more than the current highest bet of {game.current_highest_bet} chips instead of {total_bet} chips"}
             if raise_amount > player.chips:
                 return {"success": False, "error": "You don't have enough chips to raise this amount."}
             else:
