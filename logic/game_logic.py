@@ -124,6 +124,7 @@ class Game:
         player.client_socket = client_socket
         self.players.append(player)
         # self.client_sockets.append(client_socket)
+        # Edit
 
     def remove_player(self, user_id, client_left_socket):
         self.players = [player for player in self.players if player.user_id != user_id]
