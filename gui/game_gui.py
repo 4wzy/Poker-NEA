@@ -92,7 +92,7 @@ class GameGUI(tk.Tk):
 
         self.pot_label = tk.Label(self.game_canvas, text="Pot: 0", bg="#006400", fg="#FFFFFF",
                                   font=("Cambria", 12, "bold"))
-        self.pot_label.place(x=420, y=450, anchor="center")
+        self.pot_label.place(x=420, y=350, anchor="center")
 
         # Define the buttons
         self.buttons = [
@@ -304,7 +304,9 @@ class GameGUI(tk.Tk):
                 print(f"No player data found for user_id {user_id}")
 
         pot_amount = game_state.get('pot', 0)
+        print(f"Pot amount: {pot_amount}")
         self.pot_label.config(text=f"Pot: {pot_amount}")
+        print(f"pot_label: {self.process_lobby_list()}")
 
         self.show_current_player(game_state)
 

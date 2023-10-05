@@ -150,9 +150,9 @@ class LobbyServer:
         if lobby_name in self.lobbies:
             game = self.lobbies[lobby_name]
             game_states = game.send_game_state()
-            for player, client_socket in zip(game.players, game.client_sockets):
+            for player in game.players:
                 user_id = player.user_id
-                client_socket.sendall((json.dumps({"type": "update_game_state", "user_id": user_id, "game_state": game_states[user_id]}) + '\n').encode('utf-8'))
+                player.client_socket.sendall((json.dumps({"type": "update_game_state", "user_id": user_id, "game_state": game_states[user_id]}) + '\n').encode('utf-8'))
                 print(f"sent game states {game_states[user_id]} to user {user_id}")
             print("sent game state..")
 
@@ -237,7 +237,10 @@ class LobbyServer:
         return response
 
     def get_clients_in_lobby(self, lobby_name):
-        return self.lobbies[lobby_name].client_sockets
+        client_sockets = []
+        for player in self.lobbies[lobby_name].players:
+            client_sockets.append(player.client_socket)
+        return client_sockets
 
 
 if __name__ == "__main__":

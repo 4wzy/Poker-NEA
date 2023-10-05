@@ -128,7 +128,7 @@ class Game:
 
     def remove_player(self, user_id, client_left_socket):
         self.players = [player for player in self.players if player.user_id != user_id]
-        self.client_sockets = [client_socket for client_socket in self.client_sockets if client_socket != client_left_socket]
+        # self.client_sockets = [client_socket for client_socket in self.client_sockets if client_socket != client_left_socket]
 
     def deal_cards(self, num_cards, player):
         for i in range(num_cards):
