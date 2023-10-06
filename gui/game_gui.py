@@ -291,6 +291,8 @@ class GameGUI(tk.Tk):
                     roles.append("Big Blind")
                 if player_data['dealer']:
                     roles.append("Dealer")
+                if player_data['folded']:
+                    roles.append("Folded")
 
                 role_text = ", ".join(roles)
 

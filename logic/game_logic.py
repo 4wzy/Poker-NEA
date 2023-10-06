@@ -44,6 +44,7 @@ class Player:
         self.position = position
         self.blinds = []
         self.dealer = False
+        self.folded = False
 
     def add_card(self, card):
         self.hand.cards.append(card)
@@ -93,7 +94,7 @@ class Game:
         # The state of the game to be sent to a specific player
         state = {
             'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet,
-                         "blinds": p.blinds, "dealer": p.dealer} for p in self.players],
+                         "blinds": p.blinds, "dealer": p.dealer, "folded": p.folded} for p in self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board],
             'current_player_turn': self.current_player_turn,
@@ -139,6 +140,7 @@ class Game:
         self.board = []
         for player in self.players:
             self.deal_cards(2, player)
+            player.folded = False
 
         # Clear any players of any previous attributes if there are any
         if self.small_blind_position != -1 and self.big_blind_position != -1 and self.dealer_position != -1:
@@ -146,10 +148,44 @@ class Game:
             self.players[self.big_blind_position].blinds = []
             self.players[self.dealer_position].dealer = False
 
-        self.dealer_position = (self.dealer_position + 1) % 6
-        self.small_blind_position = (self.dealer_position + 1) % 6
-        self.big_blind_position = (self.dealer_position + 2) % 6
+        self.dealer_position = (self.dealer_position + 1) % len(self.players)
+        self.small_blind_position = (self.dealer_position + 1) % len(self.players)
+        self.big_blind_position = (self.small_blind_position + 1) % len(self.players)
         self.current_player_turn = (self.big_blind_position + 1) % len(self.players)
+
+        fold = False
+        while self.players[self.dealer_position].folded:
+            fold = True
+            print(f"(game logic): {self.players[self.dealer_position].name} has folded so")
+            self.dealer_position = (self.dealer_position + 1) % len(self.players)
+            print(f"(game logic 2): {self.players[self.dealer_position].name}")
+
+        if fold:
+            self.small_blind_position = (self.dealer_position + 1) % len(self.players)
+            self.big_blind_position = (self.small_blind_position + 1) % len(self.players)
+            self.current_player_turn = (self.big_blind_position + 1) % len(self.players)
+            fold = False
+
+        while self.players[self.small_blind_position].folded:
+            fold = True
+            self.small_blind_position = (self.small_blind_position + 1) % len(self.players)
+
+        if fold:
+            self.big_blind_position = (self.small_blind_position + 1) % len(self.players)
+            self.current_player_turn = (self.big_blind_position + 1) % len(self.players)
+            fold = False
+
+        while self.players[self.big_blind_position].folded:
+            fold = True
+            self.big_blind_position = (self.big_blind_position + 1) % len(self.players)
+
+        if fold:
+            self.current_player_turn = (self.big_blind_position + 1) % len(self.players)
+            fold = False
+
+        while self.players[self.current_player_turn].folded:
+            self.current_player_turn = (self.current_player_turn + 1) % len(self.players)
+
         self.players[self.small_blind_position].chips -= self.small_blind
         self.players[self.big_blind_position].chips -= self.big_blind
         self.players[self.small_blind_position].current_bet = self.small_blind

@@ -83,10 +83,13 @@ class LobbyServer:
         # Check if it's the player's turn
         # if player.position != game.current_player_turn:
         #     return {"success": False, "error": "It's not your turn!"}
-
+        if player.folded:
+            return {"success": False, "error": "This player has folded."}
         if action == 'fold':
             message = f"{player} folds"
             print(message)
+            player.folded = True
+            print(f"{player} folded: {player.folded}")
             # Handle fold logic here (e.g., remove player from current round)
 
         elif action == 'call':
@@ -107,7 +110,8 @@ class LobbyServer:
             total_bet = raise_amount + player.current_bet
             if total_bet <= game.current_highest_bet or raise_amount <= 0:
                 return {"success": False,
-                        "error": f"You need to raise more than the current highest bet of {game.current_highest_bet} chips instead of {total_bet} chips"}
+                        "error": f"You need to raise more than the current highest bet of {game.current_highest_bet - player.current_bet} chips instead of {total_bet} chips"}
+            # Previously only game.current_highest_bet above instead of taking away player.current_bet
             if raise_amount > player.chips:
                 return {"success": False, "error": "You don't have enough chips to raise this amount."}
             else:
@@ -120,6 +124,9 @@ class LobbyServer:
 
         # Move to the next player's turn (This can be enhanced with more advanced logic as suggested)
         game.current_player_turn = (game.current_player_turn + 1) % len(game.players)
+        while game.players[game.current_player_turn].folded:
+            print(f"{game.players[game.current_player_turn]} has folded so moving to next player")
+            game.current_player_turn = (game.current_player_turn + 1) % len(game.players)
         print(f"Next player's turn: {game.current_player_turn}")
 
         # Broadcast the updated game state to all clients
