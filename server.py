@@ -83,17 +83,19 @@ class LobbyServer:
         # Check if it's the player's turn
         # if player.position != game.current_player_turn:
         #     return {"success": False, "error": "It's not your turn!"}
+
+        # IF THERE IS ONLY 1 PLAYER LEFT, EVALULATE THE WIN CONDITION OR ELSE THERE WILL BE AN INFINITE LOOP
         if player.folded:
             return {"success": False, "error": "This player has folded."}
         if action == 'fold':
-            message = f"{player} folds"
+            message = f"{player.name} folds"
             print(message)
             player.folded = True
-            print(f"{player} folded: {player.folded}")
+            print(f"{player.name} folded: {player.folded}")
             # Handle fold logic here (e.g., remove player from current round)
 
         elif action == 'call':
-            message = f"{player} calls"
+            message = f"{player.name} calls"
             print(message)
             # The player matches the current highest bet
             bet_amount = game.current_highest_bet - player.current_bet
@@ -110,7 +112,7 @@ class LobbyServer:
             total_bet = raise_amount + player.current_bet
             if total_bet <= game.current_highest_bet or raise_amount <= 0:
                 return {"success": False,
-                        "error": f"You need to raise more than the current highest bet of {game.current_highest_bet - player.current_bet} chips instead of {total_bet} chips"}
+                        "error": f"You need to raise by at least {game.current_highest_bet - player.current_bet}."}
             # Previously only game.current_highest_bet above instead of taking away player.current_bet
             if raise_amount > player.chips:
                 return {"success": False, "error": "You don't have enough chips to raise this amount."}
@@ -119,20 +121,30 @@ class LobbyServer:
                 game.pot.add_chips(raise_amount)
                 player.current_bet = total_bet
                 game.current_highest_bet = total_bet
-                message = f"{player} raises by {raise_amount} chips to a total of {total_bet} chips"
+                message = f"{player.name} raises by {raise_amount} chips to a total of {total_bet} chips"
                 print(message)
 
-        # Move to the next player's turn (This can be enhanced with more advanced logic as suggested)
-        game.current_player_turn = (game.current_player_turn + 1) % len(game.players)
-        while game.players[game.current_player_turn].folded:
-            print(f"{game.players[game.current_player_turn]} has folded so moving to next player")
+        if game.only_one_player_active():
+            # The remaining active player wins the pot
+            remaining_player = game.get_active_players()[0]
+            remaining_player.chips += game.pot.chips
+            game.pot.chips = 0
+            message = f"{remaining_player.name} wins the pot as everyone else folded!"
+            game.start_round()
+
+        if game.is_betting_round_over():
+            print(f"{game.current_round} round over!")
+            game.progress_to_next_round()
+        else:
             game.current_player_turn = (game.current_player_turn + 1) % len(game.players)
+            game.set_next_available_player()
         print(f"Next player's turn: {game.current_player_turn}")
 
         # Broadcast the updated game state to all clients
         self.broadcast_game_state(lobby_name)
         return {"success": True, "message": message}
 
+    # TO DO: FIX LEAVING LOBBY, no need to return the game state. a success message will do.
     def leave_lobby(self, user_id, lobby_name, client_socket):
         if lobby_name in self.lobbies:
             game = self.lobbies[lobby_name]

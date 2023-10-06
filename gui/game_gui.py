@@ -92,7 +92,7 @@ class GameGUI(tk.Tk):
 
         self.pot_label = tk.Label(self.game_canvas, text="Pot: 0", bg="#006400", fg="#FFFFFF",
                                   font=("Cambria", 12, "bold"))
-        self.pot_label.place(x=420, y=350, anchor="center")
+        self.pot_label.place(x=420, y=430, anchor="center")
 
         # Define the buttons
         self.buttons = [
@@ -203,7 +203,7 @@ class GameGUI(tk.Tk):
             'top_middle': (420, 190),
             'top_right': (650, 200),
             'bottom_left': (130, 440),
-            'bottom_middle': (420, 530),
+            'bottom_middle': (420, 550),
             'bottom_right': (710, 440),
         }
         return positions.get(position, (0, 0))
@@ -311,6 +311,7 @@ class GameGUI(tk.Tk):
         print(f"pot_label: {self.process_lobby_list()}")
 
         self.show_current_player(game_state)
+        self.show_folded_players(game_state)
 
         # Update card images if they are in the game_state
         # ONLY UPDATE THIS ONCE IN A GAME, WHEN ALL THE PLAYERS HAVE JOINED IF THIS IS THE "START GAME STATE"
@@ -334,6 +335,34 @@ class GameGUI(tk.Tk):
             print(f"(game_gui): card_label after change: {card_label}")
 
         # Update other components like community cards, pot, ...
+
+        print(f"BOARD: {game_state['board']}")
+        if len(game_state["board"]) > 0:
+            self.place_community_cards(game_state["board"])
+
+        # if len(player_data["board"]) == 3:
+        #     self.community_card1
+        # elif len(player_data["board"]) == 4:
+        #     pass
+        # elif len(player_data["board"]) == 5:
+        #     pass
+
+
+        # for card_str in player_data["board"]:
+        #     print(f"UPDATING BOARD: card_str: {card_str}")
+        #     card_image_path = self.get_card_image_path(card_str)
+        #     card_photo = Image.open(card_image_path)
+        #     card_photo = card_photo.resize((60, 90))
+        #     card_photo = ImageTk.PhotoImage(card_photo)
+        #     card_label = components[f'card{idx + 1}_label']
+        #     card_label.config(image=card_photo)
+        #     card_label.photo = card_photo  # keep a reference to avoid garbage collection
+
+
+    def new_round(self):
+        # RESET THE COMMUNITY CARDS
+        # REDRAW FOLDED PLAYERS AS UNFOLDED PLAYERS
+        pass
 
     def show_current_player(self, game_state):
         current_turn_player_id = game_state["players"][game_state['current_player_turn']]['user_id']
@@ -363,6 +392,17 @@ class GameGUI(tk.Tk):
             for button in self.buttons:
                 button.config(state=tk.DISABLED)
 
+    def show_folded_players(self, game_state):
+        print(f"game_state of players: {game_state['players']}")
+        folded_players = [p for p in game_state["players"] if p["folded"]]
+        for player in folded_players:
+            print(player)
+            current_player_components = self.player_components.get(player["user_id"])
+            if current_player_components:
+                current_player_frame = current_player_components['profile_label'].master
+                current_player_frame.config(bg="#5A4E4B")  # Highlighting with a gold color.
+
+
     def raise_action(self):
         pass
 
@@ -388,11 +428,12 @@ class GameGUI(tk.Tk):
         print(f"send_player_action response: {response}")
 
     def place_community_cards(self, cards):
-        card_x, card_y = 640, 360  # Center of the screen
+        card_x, card_y = 420, 360  # Center of the screen
         gap = 20  # Gap between cards
 
         for idx, card_str in enumerate(cards):
             card_image_path = self.get_card_image_path(card_str)
+            print(f"card_image_path: {card_image_path}")
             card_photo = Image.open(card_image_path)
             card_photo = card_photo.resize((60, 90))
             card_photo = ImageTk.PhotoImage(card_photo)

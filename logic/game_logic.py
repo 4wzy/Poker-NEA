@@ -13,14 +13,18 @@ class Card:
 
 class Deck:
     def __init__(self):
-        self.cards = [Card(suit, rank)
-                      for suit in ["Clubs", "Diamonds", "Spades", "Hearts"] for rank in
-                      ["2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King", "Ace"]]
+        self.cards = []
+        self.reset_deck()
 
     def shuffle(self):
         for i in range(len(self.cards)):
             swap_number = randint(0, len(self.cards) - 1)
             self.cards[swap_number], self.cards[i] = self.cards[i], self.cards[swap_number]
+
+    def reset_deck(self):
+        self.cards = [Card(suit, rank)
+                      for suit in ["Clubs", "Diamonds", "Spades", "Hearts"] for rank in
+                      ["2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King", "Ace"]]
 
     # Debug method
     def print_cards(self):
@@ -60,7 +64,6 @@ class Game:
         self.pot = Pot()
         self.board = []
         self.deck = Deck()
-        self.deck.shuffle()
         self.current_player_turn = -1
         self.is_game_starting = False
         self.small_blind = 5
@@ -69,6 +72,65 @@ class Game:
         self.small_blind_position = -1
         self.big_blind_position = -1
         self.current_highest_bet = self.big_blind
+        self.current_round = "preflop"
+
+    def is_betting_round_over(self):
+        # Check if all active players have bet the same amount
+        active_players = self.get_active_players()
+        if len(set(p.current_bet for p in active_players)) > 1:
+            print("Current betting round not over as not all players have gone")
+            return False
+
+        # Check if every player has had an opportunity to act
+        if self.current_round == "preflop":
+            last_player = self.get_last_player(self.big_blind_position)
+            if self.current_player_turn != last_player:
+                print("Current betting round not over as the current player is not the big blind player")
+                return False
+        else:
+            last_player = self.get_last_player(self.dealer_position)
+            if self.current_player_turn != last_player:
+                print("Current betting round not over as the current player is not the dealer button player")
+                return False
+
+        self.current_player_turn = self.small_blind_position
+        self.set_next_available_player()
+
+        return True
+
+    def set_next_available_player(self):
+        while self.players[self.current_player_turn].folded:
+            print(f"{self.players[self.current_player_turn]} has folded so moving to next player")
+            self.current_player_turn = (self.current_player_turn + 1) % len(self.players)
+
+    def get_last_player(self, last_player):
+        while self.players[last_player].folded:
+            last_player = (last_player - 1) % len(self.players)
+        return last_player
+
+    def get_active_players(self):
+        return [p for p in self.players if not p.folded]
+
+    def only_one_player_active(self):
+        active_players = self.get_active_players()
+        return len(active_players) == 1
+
+    def progress_to_next_round(self):
+
+        if self.current_round == "preflop":
+            self.flop()
+            self.current_round = "flop"
+        elif self.current_round == "flop":
+            self.turn_river()
+            self.current_round = "turn"
+        elif self.current_round == "turn":
+            self.turn_river()
+            self.current_round = "river"
+        elif self.current_round == "river":
+            self.showdown()
+
+    def showdown(self):
+        print("showdown has been reached")
 
     def get_initial_state(self):
         state = {
@@ -124,12 +186,9 @@ class Game:
     def add_player(self, player: Player, client_socket):
         player.client_socket = client_socket
         self.players.append(player)
-        # self.client_sockets.append(client_socket)
-        # Edit
 
     def remove_player(self, user_id, client_left_socket):
         self.players = [player for player in self.players if player.user_id != user_id]
-        # self.client_sockets = [client_socket for client_socket in self.client_sockets if client_socket != client_left_socket]
 
     def deal_cards(self, num_cards, player):
         for i in range(num_cards):
@@ -137,6 +196,15 @@ class Game:
             player.add_card(card)
 
     def start_round(self):
+        for player in self.players:
+            player.current_bet = 0
+            player.hand.cards = []
+            player.folded = False
+        self.deck.reset_deck()
+        self.deck.shuffle()
+        self.current_highest_bet = self.big_blind
+        self.current_round = "preflop"
+
         self.board = []
         for player in self.players:
             self.deal_cards(2, player)
@@ -153,46 +221,15 @@ class Game:
         self.big_blind_position = (self.small_blind_position + 1) % len(self.players)
         self.current_player_turn = (self.big_blind_position + 1) % len(self.players)
 
-        fold = False
-        while self.players[self.dealer_position].folded:
-            fold = True
-            print(f"(game logic): {self.players[self.dealer_position].name} has folded so")
-            self.dealer_position = (self.dealer_position + 1) % len(self.players)
-            print(f"(game logic 2): {self.players[self.dealer_position].name}")
-
-        if fold:
-            self.small_blind_position = (self.dealer_position + 1) % len(self.players)
-            self.big_blind_position = (self.small_blind_position + 1) % len(self.players)
-            self.current_player_turn = (self.big_blind_position + 1) % len(self.players)
-            fold = False
-
-        while self.players[self.small_blind_position].folded:
-            fold = True
-            self.small_blind_position = (self.small_blind_position + 1) % len(self.players)
-
-        if fold:
-            self.big_blind_position = (self.small_blind_position + 1) % len(self.players)
-            self.current_player_turn = (self.big_blind_position + 1) % len(self.players)
-            fold = False
-
-        while self.players[self.big_blind_position].folded:
-            fold = True
-            self.big_blind_position = (self.big_blind_position + 1) % len(self.players)
-
-        if fold:
-            self.current_player_turn = (self.big_blind_position + 1) % len(self.players)
-            fold = False
-
-        while self.players[self.current_player_turn].folded:
-            self.current_player_turn = (self.current_player_turn + 1) % len(self.players)
-
         self.players[self.small_blind_position].chips -= self.small_blind
         self.players[self.big_blind_position].chips -= self.big_blind
         self.players[self.small_blind_position].current_bet = self.small_blind
         self.players[self.big_blind_position].current_bet = self.big_blind
+
         self.players[self.small_blind_position].blinds.append("SB")
         self.players[self.big_blind_position].blinds.append("BB")
         self.players[self.dealer_position].dealer = True
+
         self.pot.add_chips(self.small_blind + self.big_blind)
 
     def flop(self):
