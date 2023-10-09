@@ -90,6 +90,10 @@ class LobbyServer:
         if action == 'fold':
             message = f"{player.name} folds"
             print(message)
+            if game.is_betting_round_over():
+                print(f"{game.current_round} round over!")
+                player.folded = True
+                game.progress_to_next_round()
             player.folded = True
             print(f"{player.name} folded: {player.folded}")
             # Handle fold logic here (e.g., remove player from current round)

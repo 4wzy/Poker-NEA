@@ -25,6 +25,7 @@ class GameGUI(tk.Tk):
         self.should_be_destroyed = False
         self.player_components = {}
         self.player_starts_game = player_starts_game
+        self.community_card_items = []
 
         self.title("Poker Game")
 
@@ -145,12 +146,6 @@ class GameGUI(tk.Tk):
             print(f"Cancelling task {task_id}")
             self.after_cancel(task_id)
         super().destroy()
-
-    def send_acknowledgment(self):
-        # ack_message = {"type": "acknowledgment", "lobby_name": self.lobby_name}
-        # self.controller.network_manager.send_message(ack_message)
-        # print("Acknowledgment sent.")
-        print("Acknowledgement not sent.")
 
     def process_initial_state(self, initial_state):
         print("(game_gui): processing initial state")
@@ -310,8 +305,9 @@ class GameGUI(tk.Tk):
         self.pot_label.config(text=f"Pot: {pot_amount}")
         print(f"pot_label: {self.process_lobby_list()}")
 
+        self.indicate_active_players(game_state)
+        self.indicate_folded_players(game_state)
         self.show_current_player(game_state)
-        self.show_folded_players(game_state)
 
         # Update card images if they are in the game_state
         # ONLY UPDATE THIS ONCE IN A GAME, WHEN ALL THE PLAYERS HAVE JOINED IF THIS IS THE "START GAME STATE"
@@ -334,9 +330,8 @@ class GameGUI(tk.Tk):
             card_label.photo = card_photo  # keep a reference to avoid garbage collection
             print(f"(game_gui): card_label after change: {card_label}")
 
-        # Update other components like community cards, pot, ...
-
         print(f"BOARD: {game_state['board']}")
+        self.clear_community_cards()
         if len(game_state["board"]) > 0:
             self.place_community_cards(game_state["board"])
 
@@ -346,7 +341,6 @@ class GameGUI(tk.Tk):
         #     pass
         # elif len(player_data["board"]) == 5:
         #     pass
-
 
         # for card_str in player_data["board"]:
         #     print(f"UPDATING BOARD: card_str: {card_str}")
@@ -358,10 +352,9 @@ class GameGUI(tk.Tk):
         #     card_label.config(image=card_photo)
         #     card_label.photo = card_photo  # keep a reference to avoid garbage collection
 
-
     def new_round(self):
         # RESET THE COMMUNITY CARDS
-        # REDRAW FOLDED PLAYERS AS UNFOLDED PLAYERS
+        self.clear_community_cards()
         pass
 
     def show_current_player(self, game_state):
@@ -392,7 +385,7 @@ class GameGUI(tk.Tk):
             for button in self.buttons:
                 button.config(state=tk.DISABLED)
 
-    def show_folded_players(self, game_state):
+    def indicate_folded_players(self, game_state):
         print(f"game_state of players: {game_state['players']}")
         folded_players = [p for p in game_state["players"] if p["folded"]]
         for player in folded_players:
@@ -400,8 +393,17 @@ class GameGUI(tk.Tk):
             current_player_components = self.player_components.get(player["user_id"])
             if current_player_components:
                 current_player_frame = current_player_components['profile_label'].master
-                current_player_frame.config(bg="#5A4E4B")  # Highlighting with a gold color.
+                current_player_frame.config(bg="#5A4E4B")  # Highlighting with a grey color.
 
+    def indicate_active_players(self, game_state):
+        print(f"game_state of players: {game_state['players']}")
+        active_players = [p for p in game_state["players"] if not p["folded"]]
+        for player in active_players:
+            print(player)
+            current_player_components = self.player_components.get(player["user_id"])
+            if current_player_components:
+                current_player_frame = current_player_components['profile_label'].master
+                current_player_frame.config(bg="#302525")
 
     def raise_action(self):
         pass
@@ -414,8 +416,9 @@ class GameGUI(tk.Tk):
                 raise_amount = simpledialog.askinteger("Raise Amount", "Enter the amount you want to raise:",
                                                        parent=self)
             if raise_amount:
-                message = {"type": "bet", "action": action, "amount": raise_amount, "user_id": self.user_id, "lobby_name": \
-                    self.lobby_name}
+                message = {"type": "bet", "action": action, "amount": raise_amount, "user_id": self.user_id,
+                           "lobby_name": \
+                               self.lobby_name}
         else:
             message = {"type": "bet", "action": action, "user_id": self.user_id, "lobby_name": self.lobby_name}
 
@@ -426,6 +429,11 @@ class GameGUI(tk.Tk):
             error_message = response.get("error", "An unknown error occurred.")
             messagebox.showerror("Error", error_message)
         print(f"send_player_action response: {response}")
+
+    def clear_community_cards(self):
+        for item_id in self.community_card_items:
+            self.game_canvas.delete(item_id)
+        self.community_card_items = []
 
     def place_community_cards(self, cards):
         card_x, card_y = 420, 360  # Center of the screen
@@ -443,6 +451,7 @@ class GameGUI(tk.Tk):
 
             card_x_offset = (idx - 2) * (60 + gap)  # -2 to center the cards
             item_id = self.game_canvas.create_window(card_x + card_x_offset, card_y, window=card_label)
+            self.community_card_items.append(item_id)
             self.canvas_items.append(item_id)
 
     def show_chat(self):
