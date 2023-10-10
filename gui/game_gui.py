@@ -380,6 +380,8 @@ class GameGUI(tk.Tk):
                 print("Making current player frame grey")
                 current_player_frame = current_player_components['profile_label'].master
                 current_player_frame.config(bg="#5A4E4B")  # Highlighting with a grey color.
+                # Update GUI
+                time.sleep(0.01)
 
     def indicate_active_players(self, game_state):
         print(f"game_state of players: {game_state['players']}")

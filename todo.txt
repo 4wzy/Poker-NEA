@@ -1,10 +1,9 @@
-CALLING AND RAISING DONE!
-IMPLEMENT ROUNDS, FLOP, TURN, RIVER, ETC..
-
-
-1. Implement player.client_socket instead of current client_socket list system
-2. Change background for folded players to grey, similar to how background changed to gold for current player indication
-3. Implement folding
+1. Make lobbies display player count correctly
+2. Only display active lobbies
+3. Visually update GUI in time for players who have folded (player frame to grey) instead of on next turn
+4. Update game statistics tables after poker game finished
+5. Detect when poker game fully finished
+6. Add to user statistics tables
 
 This exception handling from the sockets
 Add decorator to controller.py lines 22 and 23
