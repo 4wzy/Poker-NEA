@@ -84,7 +84,7 @@ class LobbyServer:
         # if player.position != game.current_player_turn:
         #     return {"success": False, "error": "It's not your turn!"}
 
-        # IF THERE IS ONLY 1 PLAYER LEFT, EVALULATE THE WIN CONDITION OR ELSE THERE WILL BE AN INFINITE LOOP
+        # IF THERE IS ONLY 1 PLAYER LEFT, EVALUATE THE WIN CONDITION OR ELSE THERE WILL BE AN INFINITE LOOP
         last_player_folded = False
         if player.folded:
             return {"success": False, "error": "This player has folded."}
@@ -191,6 +191,7 @@ class LobbyServer:
                 print(f"sent initial game state data to f{client_socket}")
 
     def broadcast_player_left_game_state(self, lobby_id, current_client):
+        # BROADCAST INITIAL GAME STATE THEN GAME STATE (NOT TO CURRENT CLIENT THOUGH!)
         print("BROADCASTING PLAYER LEFT GAME STATE NOT TO EVERYONE")
         game_state = self.get_player_left_state(lobby_id)
         print(f"Initial game state to broadcast: {game_state}")

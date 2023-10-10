@@ -49,6 +49,7 @@ class Player:
         self.blinds = []
         self.dealer = False
         self.folded = False
+        self.all_in = False
 
     def add_card(self, card):
         self.hand.cards.append(card)

@@ -16,7 +16,7 @@ class Controller:
 
     def run(self):
         # self.open_login_menu()
-        self.open_main_menu(15)
+        self.open_main_menu(19)
         tk.mainloop()
 
     def open_login_menu(self):

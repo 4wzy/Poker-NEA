@@ -1,9 +1,22 @@
+WARNING: NO DUPLICATED ENTRIES IN PLAYER_LOBBIES MAY LEAD TO PLAYER COUNT NOT UPDATING PROPERLY
+
+0. handle players leaving! this works to an extent but the current player needs to be updated to the next one after a
+player leaves, and update the game state properly to show the current players
+
 1. Detect when poker game fully finished (1 player has won)
 2. When the poker game has finished, remove the poker game from the lobbies dict in server.py
 3. Change the lobby status to "completed" in the db when the game has finished
 4. Allow users to make games with this name as it is now a completed game
 5. Reflect this in create_lobby in database_interaction.py by adding "in_progress" as the note in the method reads
 6. If a game is abandoned before it is started, delete it from the database and from lobbies (I suppose)??
+
+HANDLE 6 IN THE FOLLOWING WAY (SIMILAR ISH):
+When a player leaves a lobby in server.py, check if the lobby has 0 players in it and then set it as abandoned in the db
+then remove that lobby from the lobbies dict.
+
+Make sure that this happens even when a player terminates the process using the x in the top right instead of the leave
+game button.
+
 
 FEEDBACK FROM CHATGPT ABOUT 6:
 Incomplete Lobbies: It's common in online games to have lobbies that never fill up or games that start but never finish due to various reasons, such as players leaving prematurely.
@@ -30,6 +43,8 @@ Remember, when designing systems like this, always consider the player experienc
 
 7. Update game statistics tables after poker game finished
 8. Add to user statistics tables
+9. Allow players to go all in (player has self.all_in already set up)
+10. Implement showdowns (what happens when there are more than 1 players remaining at the end.. e.g. win conditions)
 
 
 

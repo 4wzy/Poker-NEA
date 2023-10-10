@@ -109,6 +109,7 @@ class DatabaseInteraction:
         return response
 
     def join_lobby(self, user_id, lobby_id):
+        print("(database interaction): joining lobby")
         response = {"success": True, "error": None}
 
         try:
