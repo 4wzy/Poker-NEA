@@ -136,7 +136,7 @@ class GameGUI(tk.Tk):
             pass
 
         # Schedule the next call to the network_loop method
-        task_id = self.after(100, self.network_loop)
+        task_id = self.after(20, self.network_loop)
         self.scheduled_tasks.append(task_id)
 
     def destroy(self) -> None:
@@ -161,7 +161,7 @@ class GameGUI(tk.Tk):
                 print("updating game state")
                 # The following call to self.after() is necessary so that the players are placed first before the
                 # game attempts to update game components which don't exist yet
-                self.after(50, self.start_game_update)
+                self.after(20, self.start_game_update)
 
     # Could be made as a private method
     def start_game_update(self):
@@ -294,7 +294,7 @@ class GameGUI(tk.Tk):
                 bet = player_data['current_bet']
                 components['bet_label'].config(text=f"Bet: {bet}")
 
-                time.sleep(0.1)
+                time.sleep(0.05)
                 components['name_label'].config(text=f"{player_data['name']}: {player_data['chips']} chips")
                 components['role_label'].config(text=role_text)
             else:
@@ -306,8 +306,8 @@ class GameGUI(tk.Tk):
         print(f"pot_label: {self.process_lobby_list()}")
 
         self.indicate_active_players(game_state)
-        self.indicate_folded_players(game_state)
         self.show_current_player(game_state)
+        self.indicate_folded_players(game_state)
 
         # Update card images if they are in the game_state
         # ONLY UPDATE THIS ONCE IN A GAME, WHEN ALL THE PLAYERS HAVE JOINED IF THIS IS THE "START GAME STATE"
@@ -348,14 +348,14 @@ class GameGUI(tk.Tk):
             last_player_components = self.player_components.get(self.last_highlighted_player_id)
             if last_player_components:
                 last_player_frame = last_player_components[
-                    'profile_label'].master  # Assuming the label's master is the frame.
-                last_player_frame.config(bg="#302525")  # Resetting to original background color.
+                    'profile_label'].master
+                last_player_frame.config(bg="#302525")  # Resetting to original background colour.
 
         # Highlight the current player's frame
         current_player_components = self.player_components.get(current_turn_player_id)
         if current_player_components:
             current_player_frame = current_player_components['profile_label'].master
-            current_player_frame.config(bg="#FFD700")  # Highlighting with a gold color.
+            current_player_frame.config(bg="#FFD700")  # Highlighting with a gold colour.
             self.last_highlighted_player_id = current_turn_player_id
 
         # Enable/Disable action buttons based on whose turn it is
@@ -369,25 +369,19 @@ class GameGUI(tk.Tk):
                 button.config(state=tk.DISABLED)
 
     def indicate_folded_players(self, game_state):
-        print(f"game_state of players: {game_state['players']}")
+        # print(f"game_state of players: {game_state['players']}")
         folded_players = [p for p in game_state["players"] if p["folded"]]
-        print(f"Current players who have folded: {folded_players}")
         for player in folded_players:
-            print(f"Current folded player: {player}")
             current_player_components = self.player_components.get(player["user_id"])
-            print(f"Current_player_components: {current_player_components}")
             if current_player_components:
-                print("Making current player frame grey")
                 current_player_frame = current_player_components['profile_label'].master
                 current_player_frame.config(bg="#5A4E4B")  # Highlighting with a grey color.
-                # Update GUI
-                time.sleep(0.01)
 
     def indicate_active_players(self, game_state):
-        print(f"game_state of players: {game_state['players']}")
+        # print(f"game_state of players: {game_state['players']}")
         active_players = [p for p in game_state["players"] if not p["folded"]]
         for player in active_players:
-            print(player)
+            # print(player)
             current_player_components = self.player_components.get(player["user_id"])
             if current_player_components:
                 current_player_frame = current_player_components['profile_label'].master
@@ -429,7 +423,6 @@ class GameGUI(tk.Tk):
 
         for idx, card_str in enumerate(cards):
             card_image_path = self.get_card_image_path(card_str)
-            print(f"card_image_path: {card_image_path}")
             card_photo = Image.open(card_image_path)
             card_photo = card_photo.resize((60, 90))
             card_photo = ImageTk.PhotoImage(card_photo)

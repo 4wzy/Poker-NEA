@@ -127,13 +127,18 @@ class LobbyBrowser(tk.Tk):
         self.populate_lobby_list(lobbies)
 
     def populate_lobby_list(self, lobbies):
-        print("Populating lobby list...")
+        print(f"Populating lobby list with {lobbies}")
 
         row = 0
         col = 0
         for lobby in lobbies:
+            if lobby["status"] == "waiting":
+                allow_join = True
+            else:
+                allow_join = False
             lobby_card = LobbyCard(container=self.lobby_container_frame, lobby_info=lobby,
-                                   join_command=lambda lobby=lobby: self.join_selected_lobby(lobby))
+                                   join_command=lambda lobby=lobby: self.join_selected_lobby(lobby),
+                                   allow_join=allow_join)
 
             lobby_card.grid(row=row, column=col, padx=10, pady=5, sticky="nsew")
 
@@ -153,8 +158,9 @@ class LobbyBrowser(tk.Tk):
         response_data = self.controller.join_lobby(self.user_id, lobby_info['name'])
 
 
+
 class LobbyCard(tk.Frame):
-    def __init__(self, container, lobby_info, join_command, *args, **kwargs):
+    def __init__(self, container, lobby_info, join_command, allow_join, *args, **kwargs):
         super().__init__(container, *args, **kwargs)
         self.join_command = join_command
         self.configure(bg="#444444", bd=2, relief="groove")
@@ -172,8 +178,9 @@ class LobbyCard(tk.Frame):
                                       font=tkfont.Font(family="Cambria", size=10), fg="#FFFFFF", bg="#444444")
         player_count_label.pack(side="top", fill="x", padx=5, pady=2)
 
-        join_button = tk.Button(self, text="Join", command=self.join_command)
-        join_button.pack(side="bottom", padx=5, pady=5)
+        if allow_join:
+            join_button = tk.Button(self, text="Join", command=self.join_command)
+            join_button.pack(side="bottom", padx=5, pady=5)
 
 
 class CreateLobbyWindow(tk.Toplevel):

@@ -1,6 +1,5 @@
 1. Make lobbies display player count correctly
 2. Only display active lobbies
-3. Visually update GUI in time for players who have folded (player frame to grey) instead of on next turn
 4. Update game statistics tables after poker game finished
 5. Detect when poker game fully finished
 6. Add to user statistics tables

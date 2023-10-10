@@ -89,6 +89,30 @@ class DatabaseInteraction:
 
         return response
 
+    def start_lobby(self, lobby_name):
+        response = {"success": True, "error": None}
+        try:
+            connection = mysql.connector.connect(**self.config)
+            cursor = connection.cursor()
+
+            sql = """
+            UPDATE lobbies 
+            SET status = %s 
+            WHERE name = %s
+            """
+            cursor.execute(sql, ('in_progress', lobby_name))
+            connection.commit()
+
+        except Exception as e:
+            response["success"] = False
+            response["error"] = f"Error: {e}"
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+
+        return response
+
     def join_lobby(self, user_id, lobby_name):
         response = {"success": True, "error": None}
         try:
@@ -96,8 +120,10 @@ class DatabaseInteraction:
             cursor = connection.cursor()
 
             # Update the lobby to include the new player
-            sql = """INSERT INTO player_lobbies (user_id, lobby_id) VALUES (%s, (SELECT lobby_id FROM lobbies WHERE 
-            name = %s))"""
+            sql = """
+            INSERT INTO player_lobbies (user_id, lobby_id) 
+            VALUES (%s, (SELECT lobby_id FROM lobbies WHERE name = %s AND status = 'waiting'))
+            """
             cursor.execute(sql, (user_id, lobby_name))
             connection.commit()
 

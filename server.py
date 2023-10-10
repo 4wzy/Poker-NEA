@@ -219,16 +219,18 @@ class LobbyServer:
             game = self.lobbies[lobby_name]
             player = Player(user_name, user_id, chips=200, position=game.available_positions.pop(0))
             game.add_player(player, client_socket)
+            self.database_interaction.join_lobby(user_id, lobby_name)
+
             initial_state = self.get_initial_state(lobby_name)
             print(f"INITIAL STATE: {initial_state}")
             self.broadcast_initial_game_state(lobby_name, client_socket)
             print(f"(server.py): broadcasted initial game state to everyone apart from {client_socket}")
             data_type = "initial_state"
             if len(game.players) == 6:
-                # time.sleep(0.1)
                 game.start_round()
                 data_type = "game_starting"  # Inform the client that the game is starting
                 game.is_game_starting = True  # Set a flag to denote that the game is ready to start
+                self.database_interaction.start_lobby(lobby_name)
                 print("(server.py): set game._is_game_starting to True so that the round can start")
 
             data_to_return = {"success": True, "type": data_type, "game_state": initial_state}
