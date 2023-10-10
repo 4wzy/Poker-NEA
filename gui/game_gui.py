@@ -335,23 +335,6 @@ class GameGUI(tk.Tk):
         if len(game_state["board"]) > 0:
             self.place_community_cards(game_state["board"])
 
-        # if len(player_data["board"]) == 3:
-        #     self.community_card1
-        # elif len(player_data["board"]) == 4:
-        #     pass
-        # elif len(player_data["board"]) == 5:
-        #     pass
-
-        # for card_str in player_data["board"]:
-        #     print(f"UPDATING BOARD: card_str: {card_str}")
-        #     card_image_path = self.get_card_image_path(card_str)
-        #     card_photo = Image.open(card_image_path)
-        #     card_photo = card_photo.resize((60, 90))
-        #     card_photo = ImageTk.PhotoImage(card_photo)
-        #     card_label = components[f'card{idx + 1}_label']
-        #     card_label.config(image=card_photo)
-        #     card_label.photo = card_photo  # keep a reference to avoid garbage collection
-
     def new_round(self):
         # RESET THE COMMUNITY CARDS
         self.clear_community_cards()
@@ -388,10 +371,13 @@ class GameGUI(tk.Tk):
     def indicate_folded_players(self, game_state):
         print(f"game_state of players: {game_state['players']}")
         folded_players = [p for p in game_state["players"] if p["folded"]]
+        print(f"Current players who have folded: {folded_players}")
         for player in folded_players:
-            print(player)
+            print(f"Current folded player: {player}")
             current_player_components = self.player_components.get(player["user_id"])
+            print(f"Current_player_components: {current_player_components}")
             if current_player_components:
+                print("Making current player frame grey")
                 current_player_frame = current_player_components['profile_label'].master
                 current_player_frame.config(bg="#5A4E4B")  # Highlighting with a grey color.
 

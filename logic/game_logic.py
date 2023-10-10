@@ -74,7 +74,7 @@ class Game:
         self.current_highest_bet = self.big_blind
         self.current_round = "preflop"
 
-    def is_betting_round_over(self):
+    def is_betting_round_over(self, last_player_folded):
         # Check if all active players have bet the same amount
         active_players = self.get_active_players()
         if len(set(p.current_bet for p in active_players)) > 1:
@@ -84,11 +84,18 @@ class Game:
         # Check if every player has had an opportunity to act
         if self.current_round == "preflop":
             last_player = self.get_last_player(self.big_blind_position)
+            # If the last player folded, and they were supposed to be the last one to bet,
+            # the last player variable will currently hold the first player who hasn't folded before the last player
+            # adding one to this gets us the actual last player who we are looking for (with modulus)
+            if last_player_folded:
+                last_player = (last_player + 1) % len(self.players)
             if self.current_player_turn != last_player:
                 print("Current betting round not over as the current player is not the big blind player")
                 return False
         else:
             last_player = self.get_last_player(self.dealer_position)
+            if last_player_folded:
+                last_player = (last_player + 1) % len(self.players)
             if self.current_player_turn != last_player:
                 print("Current betting round not over as the current player is not the dealer button player")
                 return False
@@ -220,6 +227,7 @@ class Game:
         self.small_blind_position = (self.dealer_position + 1) % len(self.players)
         self.big_blind_position = (self.small_blind_position + 1) % len(self.players)
         self.current_player_turn = (self.big_blind_position + 1) % len(self.players)
+        print(f"Current player turn: {self.current_player_turn}")
 
         self.players[self.small_blind_position].chips -= self.small_blind
         self.players[self.big_blind_position].chips -= self.big_blind

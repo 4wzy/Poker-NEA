@@ -85,15 +85,13 @@ class LobbyServer:
         #     return {"success": False, "error": "It's not your turn!"}
 
         # IF THERE IS ONLY 1 PLAYER LEFT, EVALULATE THE WIN CONDITION OR ELSE THERE WILL BE AN INFINITE LOOP
+        last_player_folded = False
         if player.folded:
             return {"success": False, "error": "This player has folded."}
         if action == 'fold':
             message = f"{player.name} folds"
             print(message)
-            if game.is_betting_round_over():
-                print(f"{game.current_round} round over!")
-                player.folded = True
-                game.progress_to_next_round()
+            last_player_folded = True
             player.folded = True
             print(f"{player.name} folded: {player.folded}")
             # Handle fold logic here (e.g., remove player from current round)
@@ -128,21 +126,26 @@ class LobbyServer:
                 message = f"{player.name} raises by {raise_amount} chips to a total of {total_bet} chips"
                 print(message)
 
+        print(f"About to check if only one player active in list of active players: {game.get_active_players()}")
+        # Check if everyone has folded apart from one player
         if game.only_one_player_active():
+            print("Only one player active!")
             # The remaining active player wins the pot
             remaining_player = game.get_active_players()[0]
             remaining_player.chips += game.pot.chips
             game.pot.chips = 0
             message = f"{remaining_player.name} wins the pot as everyone else folded!"
             game.start_round()
-
-        if game.is_betting_round_over():
-            print(f"{game.current_round} round over!")
-            game.progress_to_next_round()
         else:
-            game.current_player_turn = (game.current_player_turn + 1) % len(game.players)
-            game.set_next_available_player()
-        print(f"Next player's turn: {game.current_player_turn}")
+            # If not, the current Poker round is still in action, so check if the betting round is over
+            if game.is_betting_round_over(last_player_folded):
+                print(f"{game.current_round} round over!")
+                game.progress_to_next_round()
+            else:
+                # If the betting round is not over, go to next player's turn
+                game.current_player_turn = (game.current_player_turn + 1) % len(game.players)
+                game.set_next_available_player()
+            print(f"Next player's turn: Player {(game.current_player_turn + 1) % len(game.players)}, {game.players[game.current_player_turn]}")
 
         # Broadcast the updated game state to all clients
         self.broadcast_game_state(lobby_name)
