@@ -194,7 +194,7 @@ class Game:
         player.client_socket = client_socket
         self.players.append(player)
 
-    def remove_player(self, user_id, client_left_socket):
+    def remove_player(self, user_id):
         self.players = [player for player in self.players if player.user_id != user_id]
 
     def deal_cards(self, num_cards, player):

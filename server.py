@@ -54,9 +54,9 @@ class LobbyServer:
                         response = self.join_lobby(request, client_socket)
                     elif request["type"] == 'leave_lobby':
                         print(f"PLAYER LEAVING LOBBY: {client_socket}")
-                        response = self.leave_lobby(request['user_id'], request['lobby_name'], client_socket)
+                        response = self.leave_lobby(request['user_id'], request['lobby_id'], client_socket)
                     elif request["type"] == "start_game":
-                        self.handle_start_game(request["lobby_name"])
+                        self.handle_start_game(request["lobby_id"])
                         continue
                     elif request["type"] == "bet":
                         response = self.process_player_action(request)
@@ -76,8 +76,8 @@ class LobbyServer:
     def process_player_action(self, request):
         user_id = request["user_id"]
         action = request["action"]
-        lobby_name = request["lobby_name"]
-        game = self.lobbies[lobby_name]
+        lobby_id = request["lobby_id"]
+        game = self.lobbies[lobby_id]
         player = next((p for p in game.players if p.user_id == user_id), None)
 
         # Check if it's the player's turn
@@ -148,33 +148,32 @@ class LobbyServer:
             print(f"Next player's turn: Player {(game.current_player_turn + 1) % len(game.players)}, {game.players[game.current_player_turn]}")
 
         # Broadcast the updated game state to all clients
-        self.broadcast_game_state(lobby_name)
+        self.broadcast_game_state(lobby_id)
         return {"success": True, "message": message}
 
     # TO DO: FIX LEAVING LOBBY, no need to return the game state. a success message will do.
-    def leave_lobby(self, user_id, lobby_name, client_socket):
-        if lobby_name in self.lobbies:
-            game = self.lobbies[lobby_name]
+    def leave_lobby(self, user_id, lobby_id, client_socket):
+        if lobby_id in self.lobbies:
+            game = self.lobbies[lobby_id]
             print("Got game")
-            game.remove_player(user_id, client_socket)
+            game.remove_player(user_id)
             print("removed player")
 
             print(f"New player list: {game.players}")
 
-            self.database_interaction.remove_player_from_lobby(user_id, lobby_name)
+            self.database_interaction.remove_player_from_lobby(user_id, lobby_id)
             print("Database interaction - removing player from lobby")
 
-            player_left_game_state = self.get_player_left_state(lobby_name)
-            self.broadcast_player_left_game_state(lobby_name, client_socket)
+            self.broadcast_player_left_game_state(lobby_id, client_socket)
             print("broadcasted player left game state")
-            return {"success": True, "type": "player_left_game_state", "game_state": player_left_game_state}
+            return {"success": True}
         else:
             return {"success": False, "error": "Could not find lobby to remove player from"}
 
-    def broadcast_game_state(self, lobby_name):
+    def broadcast_game_state(self, lobby_id):
         print("BROADCASTING GAME STATE TO EVERYONE")
-        if lobby_name in self.lobbies:
-            game = self.lobbies[lobby_name]
+        if lobby_id in self.lobbies:
+            game = self.lobbies[lobby_id]
             game_states = game.send_game_state()
             for player in game.players:
                 user_id = player.user_id
@@ -182,55 +181,55 @@ class LobbyServer:
                 print(f"sent game states {game_states[user_id]} to user {user_id}")
             print("sent game state..")
 
-    def broadcast_initial_game_state(self, lobby_name, current_client):
+    def broadcast_initial_game_state(self, lobby_id, current_client):
         print("BROADCASTING INITIAL GAME STATE NOT TO EVERYONE")
-        game_state = self.get_initial_state(lobby_name)
+        game_state = self.get_initial_state(lobby_id)
         print(f"Initial game state to broadcast: {game_state}")
-        for client_socket in self.get_clients_in_lobby(lobby_name):
+        for client_socket in self.get_clients_in_lobby(lobby_id):
             if client_socket != current_client:
                 client_socket.sendall((json.dumps({"type": "initial_state", "game_state": game_state}) + '\n').encode('utf-8'))
                 print(f"sent initial game state data to f{client_socket}")
 
-    def broadcast_player_left_game_state(self, lobby_name, current_client):
+    def broadcast_player_left_game_state(self, lobby_id, current_client):
         print("BROADCASTING PLAYER LEFT GAME STATE NOT TO EVERYONE")
-        game_state = self.get_player_left_state(lobby_name)
+        game_state = self.get_player_left_state(lobby_id)
         print(f"Initial game state to broadcast: {game_state}")
-        for client_socket in self.get_clients_in_lobby(lobby_name):
+        for client_socket in self.get_clients_in_lobby(lobby_id):
             if client_socket != current_client:
                 client_socket.sendall((json.dumps({"type": "player_left_game_state", "game_state": game_state}) + '\n').encode('utf-8'))
                 print(f"sent initial game state data to f{client_socket}")
 
-    def get_game_state(self, lobby_name):
-        return self.lobbies[lobby_name].get_game_state()
+    def get_game_state(self, lobby_id):
+        return self.lobbies[lobby_id].get_game_state()
 
-    def get_player_left_state(self, lobby_name):
-        return self.lobbies[lobby_name].get_player_left_state()
+    def get_player_left_state(self, lobby_id):
+        return self.lobbies[lobby_id].get_player_left_state()
 
-    def get_initial_state(self, lobby_name):
-        return self.lobbies[lobby_name].get_initial_state()
+    def get_initial_state(self, lobby_id):
+        return self.lobbies[lobby_id].get_initial_state()
 
     def join_lobby(self, request, client_socket):
         print(f"JOINING LOBBY REQUEST: {request}")
         user_id = request["user_id"]
-        lobby_name = request["lobby_name"]
+        lobby_id = request["lobby_id"]
         user_name = self.database_interaction.get_username(user_id)
 
-        if lobby_name in self.lobbies:
-            game = self.lobbies[lobby_name]
+        if lobby_id in self.lobbies:
+            game = self.lobbies[lobby_id]
             player = Player(user_name, user_id, chips=200, position=game.available_positions.pop(0))
             game.add_player(player, client_socket)
-            self.database_interaction.join_lobby(user_id, lobby_name)
+            self.database_interaction.join_lobby(user_id, lobby_id)
 
-            initial_state = self.get_initial_state(lobby_name)
+            initial_state = self.get_initial_state(lobby_id)
             print(f"INITIAL STATE: {initial_state}")
-            self.broadcast_initial_game_state(lobby_name, client_socket)
+            self.broadcast_initial_game_state(lobby_id, client_socket)
             print(f"(server.py): broadcasted initial game state to everyone apart from {client_socket}")
             data_type = "initial_state"
             if len(game.players) == 6:
                 game.start_round()
                 data_type = "game_starting"  # Inform the client that the game is starting
                 game.is_game_starting = True  # Set a flag to denote that the game is ready to start
-                self.database_interaction.start_lobby(lobby_name)
+                self.database_interaction.start_lobby(lobby_id)
                 print("(server.py): set game._is_game_starting to True so that the round can start")
 
             data_to_return = {"success": True, "type": data_type, "game_state": initial_state}
@@ -242,31 +241,32 @@ class LobbyServer:
         print(f"could not return data. error: {error_message}")
         return {"success": False, "error": error_message}
 
-    def handle_start_game(self, lobby_name):
+    def handle_start_game(self, lobby_id):
         print("running handle_start_game")
-        game = self.lobbies[lobby_name]
+        game = self.lobbies[lobby_id]
         if game.is_game_starting:  # Check if the game is ready to start
-            self.broadcast_game_state(lobby_name)
+            self.broadcast_game_state(lobby_id)
 
     def get_all_lobbies(self, request):
         status_filter = request["status"]
         odds_filter = request["odds"]
-        lobbies = self.database_interaction.get_all_lobbies("waiting", odds_filter)
+        lobbies = []
         if "in_progress" in status_filter:
             lobbies += self.database_interaction.get_all_lobbies("in_progress", odds_filter)
+        lobbies += self.database_interaction.get_all_lobbies("waiting", odds_filter)
 
         return lobbies
 
     def create_lobby(self, request):
         response = self.database_interaction.create_lobby(request)
         if response["success"]:
-            lobby_name = request["name"]
-            self.lobbies[lobby_name] = Game()
+            lobby_id = response["lobby_id"]
+            self.lobbies[lobby_id] = Game()
         return response
 
-    def get_clients_in_lobby(self, lobby_name):
+    def get_clients_in_lobby(self, lobby_id):
         client_sockets = []
-        for player in self.lobbies[lobby_name].players:
+        for player in self.lobbies[lobby_id].players:
             client_sockets.append(player.client_socket)
         return client_sockets
 

@@ -155,7 +155,7 @@ class LobbyBrowser(tk.Tk):
         self.lobby_container_canvas.yview_moveto(0)
 
     def join_selected_lobby(self, lobby_info):
-        response_data = self.controller.join_lobby(self.user_id, lobby_info['name'])
+        response_data = self.controller.join_lobby(self.user_id, lobby_info['lobby_id'])
 
 
 
@@ -250,7 +250,8 @@ class CreateLobbyWindow(tk.Toplevel):
             if 'error' in response_data and not response_data['success']:
                 messagebox.showinfo("Error", response_data['error'])
                 return
-            self.controller.join_lobby(self.user_id, lobby_name)
+            lobby_id = response_data["lobby_id"]
+            self.controller.join_lobby(self.user_id, lobby_id)
 
         except Exception as e:
             print(f"Error while creating lobby: {e}")

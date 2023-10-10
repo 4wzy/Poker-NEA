@@ -16,7 +16,7 @@ class Controller:
 
     def run(self):
         # self.open_login_menu()
-        self.open_main_menu(17)
+        self.open_main_menu(15)
         tk.mainloop()
 
     def open_login_menu(self):
@@ -39,16 +39,16 @@ class Controller:
             self.current_menu.destroy()
         self.current_menu = LobbyBrowser(self, user_id)
 
-    def join_lobby(self, user_id, lobby_name):
-        response_data = self.network_manager.join_lobby(user_id, lobby_name)
+    def join_lobby(self, user_id, lobby_id):
+        response_data = self.network_manager.join_lobby(user_id, lobby_id)
         print(f"(controller): RESPONSE FROM JOINING LOBBY: {response_data}")
         if response_data and response_data.get("success", True):
             if self.current_menu:
                 self.current_menu.destroy()
             if response_data.get('type') == "game_starting":
-                self.current_menu = GameGUI(self, user_id, lobby_name, response_data['game_state'], True)
+                self.current_menu = GameGUI(self, user_id, lobby_id, response_data['game_state'], True)
             else:
-                self.current_menu = GameGUI(self, user_id, lobby_name, response_data['game_state'], False)
+                self.current_menu = GameGUI(self, user_id, lobby_id, response_data['game_state'], False)
         else:
             return response_data
 

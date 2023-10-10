@@ -8,7 +8,7 @@ from logic.database_interaction import DatabaseInteraction
 
 
 class GameGUI(tk.Tk):
-    def __init__(self, controller, user_id, lobby_name, initial_state, player_starts_game):
+    def __init__(self, controller, user_id, lobby_id, initial_state, player_starts_game):
         super().__init__()
         self.last_highlighted_player_id = None
         self.geometry("1280x720")
@@ -17,7 +17,7 @@ class GameGUI(tk.Tk):
         self.database_interaction = DatabaseInteraction()
         self.user_id = user_id
         self.username = self.database_interaction.get_username(self.user_id)
-        self.lobby_name = lobby_name
+        self.lobby_id = lobby_id
         self.chat_messages = []
         self.canvas_items = []
         self.is_leaving_game = False
@@ -147,13 +147,17 @@ class GameGUI(tk.Tk):
             self.after_cancel(task_id)
         super().destroy()
 
-    def process_initial_state(self, initial_state):
-        print("(game_gui): processing initial state")
-        for player_info in initial_state['players']:
+    def place_players(self, game_state):
+        print(f"Placing players from {game_state}")
+        for player_info in game_state['players']:
             x, y = self.get_coordinates_for_position(player_info['position'])
             task_id = self.after(0, self.place_player, x, y, player_info['name'], player_info['position'],
                                  player_info['user_id'], player_info['chips'])
             self.scheduled_tasks.append(task_id)
+
+    def process_initial_state(self, initial_state):
+        print("(game_gui): processing initial state")
+        self.place_players(initial_state)
         if len(initial_state['players']) == 6:
             print("(game_gui): START GAME!!")
             # self.send_acknowledgment()
@@ -166,7 +170,7 @@ class GameGUI(tk.Tk):
     # Could be made as a private method
     def start_game_update(self):
         print("starting game update")
-        self.update_game_state(self.controller.network_manager.send_start_game_message(self.lobby_name))
+        self.update_game_state(self.controller.network_manager.send_start_game_message(self.lobby_id))
         self.player_starts_game = False
 
     def process_player_left_game_state(self, player_left_state):
@@ -185,12 +189,10 @@ class GameGUI(tk.Tk):
             print("game_gui.py: CANVAS CLEARED")
 
             # Now place the new players
-            for player_info in player_left_state['players']:
-                x, y = self.get_coordinates_for_position(player_info['position'])
-                task_id = self.after(0, self.place_player, x, y, player_info['name'], player_info['position'],
-                                     player_info['chips'])
-                self.scheduled_tasks.append(task_id)
+            self.place_players(player_left_state)
             print("game_gui.py: PLAYERS PLACED AGAIN")
+            # Update the rest of the game state
+            # self.update_game_state(player_left_state)
 
     def get_coordinates_for_position(self, position):
         positions = {
@@ -399,10 +401,10 @@ class GameGUI(tk.Tk):
                                                        parent=self)
             if raise_amount:
                 message = {"type": "bet", "action": action, "amount": raise_amount, "user_id": self.user_id,
-                           "lobby_name": \
-                               self.lobby_name}
+                           "lobby_id": \
+                               self.lobby_id}
         else:
-            message = {"type": "bet", "action": action, "user_id": self.user_id, "lobby_name": self.lobby_name}
+            message = {"type": "bet", "action": action, "user_id": self.user_id, "lobby_id": self.lobby_id}
 
         response = self.controller.network_manager.send_message(message)
         if response.get("success") or response.get("type") == "update_game_state":
@@ -495,10 +497,11 @@ class GameGUI(tk.Tk):
         player_left = self.controller.network_manager.send_message({
             'type': 'leave_lobby',
             'user_id': self.user_id,
-            'lobby_name': self.lobby_name
+            'lobby_id': self.lobby_id
         })
         self.is_leaving_game = True
         print(f"(leave game from game_gui): {player_left}")
+        self.controller.open_main_menu(self.user_id)
 
     def place_player(self, x, y, name, position, user_id, chips):
         # print(f"placing player: {name}")
