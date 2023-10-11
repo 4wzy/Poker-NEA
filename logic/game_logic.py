@@ -67,7 +67,7 @@ class Game:
         self.board = []
         self.deck = Deck()
         self.current_player_turn = -1
-        self.is_game_starting = False
+        self.game_started = False
         self.small_blind = 5
         self.big_blind = 10
         self.dealer_position = -1
@@ -130,6 +130,11 @@ class Game:
             self.current_player_turn = (self.current_player_turn + 1) % len(self.players)
 
     def get_last_player(self, last_player):
+        # The following code is explained best with an example
+        # If there are 2 players remaining in a game and last_player is set to 2 (the big_blind_index in the first
+        # round), this will cause an IndexError. In order to counter this, we find the last index.
+        while last_player >= len(self.players):
+            last_player -= 1
         while self.players[last_player].folded:
             last_player = (last_player - 1) % len(self.players)
         return last_player
@@ -239,9 +244,14 @@ class Game:
 
         # Clear any players of any previous attributes if there are any
         if self.small_blind_position != -1 and self.big_blind_position != -1 and self.dealer_position != -1:
-            self.players[self.small_blind_position].blinds = []
-            self.players[self.big_blind_position].blinds = []
-            self.players[self.dealer_position].dealer = False
+            # If the position is less than the amount of players in the game, the player with that position has left,
+            # so trying to access their index in the players list would cause an IndexError.
+            if self.small_blind_position < len(self.players):
+                self.players[self.small_blind_position].blinds = []
+            if self.big_blind_position < len(self.players):
+                self.players[self.big_blind_position].blinds = []
+            if self.dealer_position < len(self.players):
+                self.players[self.dealer_position].dealer = False
 
         self.dealer_position = (self.dealer_position + 1) % len(self.players)
         self.small_blind_position = (self.dealer_position + 1) % len(self.players)

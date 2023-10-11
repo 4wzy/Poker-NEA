@@ -98,7 +98,7 @@ class DatabaseInteraction:
 
         return response
 
-    def start_lobby(self, lobby_id):
+    def set_lobby_status(self, lobby_id, lobby_status):
         response = {"success": True, "error": None}
         with self.db_cursor() as cursor:
             try:
@@ -107,11 +107,12 @@ class DatabaseInteraction:
                 SET status = %s 
                 WHERE lobby_id = %s
                 """
-                cursor.execute(sql, ('in_progress', lobby_id))
+                cursor.execute(sql, (lobby_status, lobby_id))
             except Exception as e:
                 response["success"] = False
                 response["error"] = f"Error: {e}"
 
+        print(f"set lobby status to {lobby_status}")
         return response
 
     def join_lobby(self, user_id, lobby_id):

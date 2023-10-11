@@ -110,6 +110,8 @@ class GameGUI(tk.Tk):
 
         for i, button in enumerate(self.buttons):
             button.place(relx=0.9, rely=0.2 * (2 * i + 5) / len(self.buttons), anchor='center')
+            # Disable the buttons by default so that the user can not act before a game has started
+            button.config(state=tk.DISABLED)
 
         self.controller.network_manager.client_socket.setblocking(0)
         self.network_loop()

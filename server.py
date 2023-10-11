@@ -100,6 +100,10 @@ class LobbyServer:
         # if player.position != game.current_player_turn:
         #     return {"success": False, "error": "It's not your turn!"}
 
+        # Defensive programming: if the game hasn't started yet, nobody should be able to act yet.
+        if not game.game_started:
+            return {"success": False, "error": "The game has not started yet."}
+
         # IF THERE IS ONLY 1 PLAYER LEFT, EVALUATE THE WIN CONDITION OR ELSE THERE WILL BE AN INFINITE LOOP
         last_player_folded = False
         if player.folded:
@@ -145,7 +149,6 @@ class LobbyServer:
         print(f"About to check if only one player active in list of active players: {game.get_active_players()}")
         # Check if everyone has folded apart from one player
         if game.only_one_player_active():
-            print("Only one player active!")
             # The remaining active player wins the pot
             remaining_player = game.get_active_players()[0]
             remaining_player.chips += game.pot.chips
@@ -161,7 +164,8 @@ class LobbyServer:
                 # If the betting round is not over, go to next player's turn
                 game.current_player_turn = (game.current_player_turn + 1) % len(game.players)
                 game.set_next_available_player()
-            print(f"Next player's turn: Player {(game.current_player_turn + 1) % len(game.players)}, {game.players[game.current_player_turn]}")
+            print(
+                f"Next player's turn: Player {(game.current_player_turn + 1) % len(game.players)}, {game.players[game.current_player_turn]}")
 
         # Broadcast the updated game state to all clients
         self.broadcast_game_state(lobby_id, None, False)
@@ -170,14 +174,16 @@ class LobbyServer:
     def leave_lobby(self, user_id, lobby_id, client_socket):
         if lobby_id in self.lobbies:
             game = self.lobbies[lobby_id]
+            # If there is only one player left
             if len(game.players) == 1:
                 self.database_interaction.remove_player_from_lobby(user_id, lobby_id)
+                # If the game has not yet started (not enough players connected), it is an abandoned lobby
+                if not game.game_started:
+                    self.database_interaction.set_lobby_status(lobby_id, "abandoned")
+                del self.lobbies[lobby_id]
                 return {"success": True}
 
-            print("Got game")
-
             player = next((p for p in game.players if p.user_id == user_id), None)
-            print("Got player")
             player.folded = True
 
             if game.is_betting_round_over(True):
@@ -189,18 +195,24 @@ class LobbyServer:
             #     game.set_next_available_player()
 
             player_position = player.position
-            print("Got player position")
+
+            # Remove the player from the game while keeping the current_player_turn correct
+            leaving_player_index = game.players.index(player)
+            if leaving_player_index < game.current_player_turn:
+                game.current_player_turn -= 1
+            elif leaving_player_index == game.current_player_turn:
+                game.current_player_turn = 0
             game.remove_player(user_id)
-            print("removed player")
 
             print(f"New player list: {game.players}")
 
+
             self.database_interaction.remove_player_from_lobby(user_id, lobby_id)
-            print("Database interaction - removing player from lobby")
 
             self.broadcast_player_left_game_state(lobby_id, client_socket)
             # Only broadcast the game state if the game has started.
-            if game.is_game_starting:
+            if game.game_started:
+                time.sleep(0.1)
                 self.broadcast_game_state(lobby_id, client_socket, False)
             else:
                 print(player_position)
@@ -219,13 +231,17 @@ class LobbyServer:
             if broadcast_to_everyone:
                 for player in game.players:
                     user_id = player.user_id
-                    player.client_socket.sendall((json.dumps({"type": "update_game_state", "user_id": user_id, "game_state": game_states[user_id]}) + '\n').encode('utf-8'))
+                    player.client_socket.sendall((json.dumps({"type": "update_game_state", "user_id": user_id,
+                                                              "game_state": game_states[user_id]}) + '\n').encode(
+                        'utf-8'))
                     print(f"sent game states {game_states[user_id]} to user {user_id}")
             else:
                 for player in game.players:
                     if current_client != player.client_socket:
                         user_id = player.user_id
-                        player.client_socket.sendall((json.dumps({"type": "update_game_state", "user_id": user_id, "game_state": game_states[user_id]}) + '\n').encode('utf-8'))
+                        player.client_socket.sendall((json.dumps({"type": "update_game_state", "user_id": user_id,
+                                                                  "game_state": game_states[user_id]}) + '\n').encode(
+                            'utf-8'))
                         print(f"sent game states {game_states[user_id]} to user {user_id}")
 
             print("sent game state..")
@@ -236,7 +252,8 @@ class LobbyServer:
         print(f"Initial game state to broadcast: {game_state}")
         for client_socket in self.get_clients_in_lobby(lobby_id):
             if client_socket != current_client:
-                client_socket.sendall((json.dumps({"type": "initial_state", "game_state": game_state}) + '\n').encode('utf-8'))
+                client_socket.sendall(
+                    (json.dumps({"type": "initial_state", "game_state": game_state}) + '\n').encode('utf-8'))
                 print(f"sent initial game state data to f{client_socket}")
 
     def broadcast_player_left_game_state(self, lobby_id, current_client):
@@ -246,7 +263,8 @@ class LobbyServer:
         print(f"Initial game state to broadcast: {game_state}")
         for client_socket in self.get_clients_in_lobby(lobby_id):
             if client_socket != current_client:
-                client_socket.sendall((json.dumps({"type": "player_left_game_state", "game_state": game_state}) + '\n').encode('utf-8'))
+                client_socket.sendall(
+                    (json.dumps({"type": "player_left_game_state", "game_state": game_state}) + '\n').encode('utf-8'))
                 print(f"sent initial game state data to f{client_socket}")
 
     def get_game_state(self, lobby_id):
@@ -266,6 +284,10 @@ class LobbyServer:
 
         if lobby_id in self.lobbies:
             game = self.lobbies[lobby_id]
+            # Defensive programming - don't allow a player to join if the lobby is full
+            if len(game.players) == game.player_limit:
+                return {"success": False, "error": "The lobby is already full!"}
+
             player = Player(user_name, user_id, chips=game.starting_chips, position=game.available_positions.pop(0))
             game.add_player(player, client_socket)
             self.database_interaction.join_lobby(user_id, lobby_id)
@@ -279,9 +301,9 @@ class LobbyServer:
             if len(game.players) == game.player_limit:
                 game.start_round()
                 data_type = "game_starting"  # Inform the client that the game is starting
-                game.is_game_starting = True  # Set a flag to denote that the game is ready to start
-                self.database_interaction.start_lobby(lobby_id)
-                print("(server.py): set game._is_game_starting to True so that the round can start")
+                game.game_started = True  # Set a flag to denote that the game is ready to start
+                self.database_interaction.set_lobby_status(lobby_id, "in_progress")
+                print("(server.py): set game._game_started to True so that the round can start")
 
             data_to_return = {"success": True, "type": data_type, "game_state": initial_state}
             print(data_to_return)
@@ -295,7 +317,7 @@ class LobbyServer:
     def handle_start_game(self, lobby_id):
         print("running handle_start_game")
         game = self.lobbies[lobby_id]
-        if game.is_game_starting:  # Check if the game is ready to start
+        if game.game_started:  # Check if the game is ready to start
             self.broadcast_game_state(lobby_id, None, False)
 
     def get_all_lobbies(self, request):

@@ -158,6 +158,9 @@ class LobbyBrowser(tk.Tk):
 
     def join_selected_lobby(self, lobby_info):
         response_data = self.controller.join_lobby(self.user_id, lobby_info['lobby_id'])
+        if not response_data['success']:
+            messagebox.showinfo("Error", response_data['error'])
+            return
 
 
 
