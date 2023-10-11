@@ -1,4 +1,5 @@
-WARNING: NO DUPLICATED ENTRIES IN PLAYER_LOBBIES MAY LEAD TO PLAYER COUNT NOT UPDATING PROPERLY
+test players exiting the game during rounds
+new implementation of checking if rounds over..
 
 0. handle players leaving! this works to an extent but the current player needs to be updated to the next one after a
 player leaves, and update the game state properly to show the current players

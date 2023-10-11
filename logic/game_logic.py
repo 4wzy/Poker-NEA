@@ -76,58 +76,75 @@ class Game:
         self.current_highest_bet = self.big_blind
         self.current_round = "preflop"
         self.player_limit = player_limit
+        self.first_player_to_act = None
+        self.last_player_to_act = None
+        self.first_player_acted = False
 
-    def is_betting_round_over(self, last_player_folded):
+    def is_betting_round_over(self):
+        if not self.first_player_acted:
+            if self.current_player_turn == self.first_player_to_act:
+                self.first_player_acted = True
+
+        print("-------------- IS_BETTING_ROUND_OVER ----------------")
+        print(f"first_player_to_act: {self.first_player_to_act}")
+        print(f"last_player_to_act: {self.last_player_to_act}")
+        print(f"current_player_turn: {self.current_player_turn}")
+        print(f"has self.first_player_acted: {self.first_player_acted}")
+        print("------------------------------")
+
         # Check if all active players have bet the same amount
         active_players = self.get_active_players()
         if len(set(p.current_bet for p in active_players)) > 1:
             print("Current betting round not over as not all players have gone")
             return False
 
-        # Check if every player has had an opportunity to act
-        if self.current_round == "preflop":
-            last_player = self.get_last_player(self.big_blind_position)
-            print("-------------------------------")
-            print("PREFLOP")
-            print(f"big blind position: {self.big_blind_position}")
-            print(f"Last player: {last_player}")
-            # If the last player folded, and they were supposed to be the last one to bet,
-            # the last player variable will currently hold the first player who hasn't folded before the last player
-            # adding one to this gets us the actual last player who we are looking for (with modulus)
-            if last_player_folded:
-                last_player = (last_player + 1) % len(self.players)
-            print(f"New last player: {last_player}")
-            print("-------------------------------")
+        return self.first_player_acted and self.current_player_turn == self.last_player_to_act
 
-            if self.current_player_turn != last_player:
-                print("Current betting round not over as the current player is not the big blind player")
-                return False
+    def start_new_round(self, round_type):
+        if round_type == "preflop":
+            # First player to act: player after the big blind
+            # Last player to act: Big blid player
+            self.first_player_to_act = self.get_next_active_player(self.big_blind_position)
+            self.last_player_to_act = self.big_blind_position
         else:
-            last_player = self.get_last_player(self.dealer_position)
-            print("-------------------------------")
-            print("NOT PREFLOP")
-            print(f"big blind position: {self.big_blind_position}")
-            print(f"Last player: {last_player}")
-            if last_player_folded:
-                last_player = (last_player + 1) % len(self.players)
-            print(f"New last player: {last_player}")
-            print("-------------------------------")
+            # First player to act: small blind player or first active player after
+            # Last player to act: dealer player or first active player before
+            self.first_player_to_act = self.get_next_active_player(self.dealer_position)
+            self.last_player_to_act = self.get_previous_active_player(self.small_blind_position)
+            self.current_player_turn = self.first_player_to_act
 
-            if self.current_player_turn != last_player:
-                print("Current betting round not over as the current player is not the dealer button player")
-                return False
+        print("-------------- START_NEW_ROUND ----------------")
+        print(f"first_player_to_act: {self.first_player_to_act}")
+        print(f"last_player_to_act: {self.last_player_to_act}")
+        print(f"current_player_turn: {self.current_player_turn}")
+        print(f"has self.first_player_acted: {self.first_player_acted}")
+        print("------------------------------")
 
-        self.current_player_turn = self.small_blind_position
-        print(f"Current player turn = small blind positoin: {self.current_player_turn}")
-        self.set_next_available_player()
-        print(f"New current player turn: {self.current_player_turn}")
+        self.first_player_acted = False
 
-        return True
+    def handle_player_leaving(self, leaving_player_position):
+        # Check if the leaving player is first or last to act and update accordingly
+        print("player leaving!")
+        print(f"old first_player_to_act: {self.first_player_to_act}")
+        print(f"old last_player_to_act: {self.last_player_to_act}")
+        if leaving_player_position == self.first_player_to_act:
+            self.first_player_to_act = self.get_next_active_player(leaving_player_position)
+        elif leaving_player_position == self.last_player_to_act:
+            self.last_player_to_act = self.get_previous_active_player(leaving_player_position)
+        print(f"new first_player_to_act: {self.first_player_to_act}")
+        print(f"new last_player_to_act: {self.last_player_to_act}")
 
-    def set_next_available_player(self):
-        while self.players[self.current_player_turn].folded:
-            print(f"{self.players[self.current_player_turn]} has folded so moving to next player")
-            self.current_player_turn = (self.current_player_turn + 1) % len(self.players)
+    def get_next_active_player(self, current_position):
+        while True:
+            current_position = (current_position + 1) % len(self.players)
+            if not self.players[current_position].folded:
+                return current_position
+
+    def get_previous_active_player(self, current_position):
+        while True:
+            current_position = (current_position - 1) % len(self.players)
+            if not self.players[current_position].folded:
+                return current_position
 
     def get_last_player(self, last_player):
         # The following code is explained best with an example
@@ -147,7 +164,6 @@ class Game:
         return len(active_players) == 1
 
     def progress_to_next_round(self):
-
         if self.current_round == "preflop":
             self.flop()
             self.current_round = "flop"
@@ -159,6 +175,8 @@ class Game:
             self.current_round = "river"
         elif self.current_round == "river":
             self.showdown()
+
+        self.start_new_round(self.current_round)
 
     def showdown(self):
         print("showdown has been reached")
@@ -236,6 +254,9 @@ class Game:
         self.deck.shuffle()
         self.current_highest_bet = self.big_blind
         self.current_round = "preflop"
+        self.first_player_to_act = 0
+        self.last_player_to_act = len(self.players) - 1
+        self.first_player_acted = False
 
         self.board = []
         for player in self.players:
@@ -269,6 +290,7 @@ class Game:
         self.players[self.dealer_position].dealer = True
 
         self.pot.add_chips(self.small_blind + self.big_blind)
+        self.start_new_round(self.current_round)
 
     def flop(self):
         for i in range(3):
