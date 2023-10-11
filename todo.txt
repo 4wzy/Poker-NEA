@@ -45,6 +45,9 @@ Remember, when designing systems like this, always consider the player experienc
 8. Add to user statistics tables
 9. Allow players to go all in (player has self.all_in already set up)
 10. Implement showdowns (what happens when there are more than 1 players remaining at the end.. e.g. win conditions)
+11. Only allow players to join if the game is not already full.
+For example, if the game has 5/6 players and 2 players are both going to join from the lobby browser, don't let one of them join!
+This can currently happen as both players will still be able to press the join button.
 
 
 

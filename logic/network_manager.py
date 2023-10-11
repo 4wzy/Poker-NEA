@@ -5,11 +5,12 @@ import time
 
 class NetworkManager:
     def __init__(self):
-        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket = None
         self.connect_to_server()
         self.buffer = ""
 
     def connect_to_server(self):
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.client_socket.connect(("127.0.0.1", 12345))
             print("Connected to server")
@@ -69,3 +70,9 @@ class NetworkManager:
 
     def close_connection(self):
         self.client_socket.close()
+
+    def reset_connection(self):
+        print("Resetting connection...")
+        self.close_connection()
+        time.sleep(0.5)  # Wait to ensure the socket is properly closed
+        self.connect_to_server()

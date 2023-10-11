@@ -85,24 +85,40 @@ class Game:
         # Check if every player has had an opportunity to act
         if self.current_round == "preflop":
             last_player = self.get_last_player(self.big_blind_position)
+            print("-------------------------------")
+            print("PREFLOP")
+            print(f"big blind position: {self.big_blind_position}")
+            print(f"Last player: {last_player}")
             # If the last player folded, and they were supposed to be the last one to bet,
             # the last player variable will currently hold the first player who hasn't folded before the last player
             # adding one to this gets us the actual last player who we are looking for (with modulus)
             if last_player_folded:
                 last_player = (last_player + 1) % len(self.players)
+            print(f"New last player: {last_player}")
+            print("-------------------------------")
+
             if self.current_player_turn != last_player:
                 print("Current betting round not over as the current player is not the big blind player")
                 return False
         else:
             last_player = self.get_last_player(self.dealer_position)
+            print("-------------------------------")
+            print("NOT PREFLOP")
+            print(f"big blind position: {self.big_blind_position}")
+            print(f"Last player: {last_player}")
             if last_player_folded:
                 last_player = (last_player + 1) % len(self.players)
+            print(f"New last player: {last_player}")
+            print("-------------------------------")
+
             if self.current_player_turn != last_player:
                 print("Current betting round not over as the current player is not the dealer button player")
                 return False
 
         self.current_player_turn = self.small_blind_position
+        print(f"Current player turn = small blind positoin: {self.current_player_turn}")
         self.set_next_available_player()
+        print(f"New current player turn: {self.current_player_turn}")
 
         return True
 

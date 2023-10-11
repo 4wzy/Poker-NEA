@@ -6,10 +6,6 @@ from tkinter import messagebox
 import json
 from datetime import datetime
 
-# To do:
-# Handle joining and creating lobbies properly
-# The join command should take in a user_id, and a lobby_name, and should open a new GUI for the player joining
-
 class LobbyBrowser(tk.Tk):
     def __init__(self, controller, user_id, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -103,6 +99,9 @@ class LobbyBrowser(tk.Tk):
                     'utf-8')
             )
 
+            lobbies = ""
+            data = ""
+
             # Receiving data and appending it to the buffer
             data = self.controller.network_manager.client_socket.recv(16384)
             if not data:
@@ -121,6 +120,8 @@ class LobbyBrowser(tk.Tk):
 
         except Exception as e:
             print(f"Error while populating lobby list: {e}")
+            print(f"Data received: {data}")
+            print(f"Lobbies received: {lobbies}")
             return
 
         print(f"Received lobbies: {lobbies}")

@@ -175,24 +175,17 @@ class GameGUI(tk.Tk):
 
     def process_player_left_game_state(self, player_left_state):
         print("game_gui.py: PROCESSING PLAYER LEFT STATE")
-        # check if the player who is leaving is the current player
-        if self.is_leaving_game:
-            print("current player is leaving")
-            self.is_leaving_game = False  # reset the flag
-            self.controller.open_main_menu(self.user_id)  # open the main menu after the acknowledgment is received
-        else:
+        # Delete old items from the canvas
+        for item_id in self.canvas_items:
+            self.game_canvas.delete(item_id)
+        self.canvas_items.clear()  # Clear the list of stored IDs
+        print("game_gui.py: CANVAS CLEARED")
 
-            # Delete old items from the canvas
-            for item_id in self.canvas_items:
-                self.game_canvas.delete(item_id)
-            self.canvas_items.clear()  # Clear the list of stored IDs
-            print("game_gui.py: CANVAS CLEARED")
-
-            # Now place the new players
-            self.place_players(player_left_state)
-            print("game_gui.py: PLAYERS PLACED AGAIN")
-            # Update the rest of the game state
-            # self.update_game_state(player_left_state)
+        # Now place the new players
+        self.place_players(player_left_state)
+        print("game_gui.py: PLAYERS PLACED AGAIN")
+        # Update the rest of the game state
+        # self.update_game_state(player_left_state)
 
     def get_coordinates_for_position(self, position):
         positions = {
@@ -273,13 +266,12 @@ class GameGUI(tk.Tk):
 
         # Get the components for each player, and update accordingly
         for player_data in game_state["players"]:
-            print(f"using data: {player_data}")
+            print(f"using player data: {player_data}")
             components = self.player_components.get(player_data["user_id"])
             if not components:
                 print(f"No components found for user_id {user_id}")
                 print(f"components: {components}")
                 return
-            print(f"PLAYER DATA: {player_data}")
             if player_data:
                 roles = []
                 if "SB" in player_data['blinds']:
@@ -299,6 +291,7 @@ class GameGUI(tk.Tk):
                 time.sleep(0.05)
                 components['name_label'].config(text=f"{player_data['name']}: {player_data['chips']} chips")
                 components['role_label'].config(text=role_text)
+                print(f"Updated role label {components['role_label']} with text: {role_text}")
             else:
                 print(f"No player data found for user_id {user_id}")
 
@@ -337,13 +330,11 @@ class GameGUI(tk.Tk):
         if len(game_state["board"]) > 0:
             self.place_community_cards(game_state["board"])
 
-    def new_round(self):
-        # RESET THE COMMUNITY CARDS
-        self.clear_community_cards()
-        pass
-
     def show_current_player(self, game_state):
+        print("Showing current player")
         current_turn_player_id = game_state["players"][game_state['current_player_turn']]['user_id']
+        print(f"Finding current player {[game_state['current_player_turn']]} from {game_state['players']}")
+        print(f"Current player ID turn: {current_turn_player_id}")
 
         # Unhighlight the last player's frame
         if self.last_highlighted_player_id:
@@ -352,6 +343,7 @@ class GameGUI(tk.Tk):
                 last_player_frame = last_player_components[
                     'profile_label'].master
                 last_player_frame.config(bg="#302525")  # Resetting to original background colour.
+                print(f"Last highlighted player id {self.last_highlighted_player_id} frame changed to grey colour")
 
         # Highlight the current player's frame
         current_player_components = self.player_components.get(current_turn_player_id)
@@ -359,13 +351,16 @@ class GameGUI(tk.Tk):
             current_player_frame = current_player_components['profile_label'].master
             current_player_frame.config(bg="#FFD700")  # Highlighting with a gold colour.
             self.last_highlighted_player_id = current_turn_player_id
+            print(f"Current highlighted player id {current_turn_player_id} frame changed to gold colour")
 
         # Enable/Disable action buttons based on whose turn it is
         if current_turn_player_id == self.user_id:
+            print(f"YES Current turn id == user id : {current_turn_player_id} = {self.user_id}")
             # Enable the buttons
             for button in self.buttons:
                 button.config(state=tk.NORMAL)
         else:
+            print(f"NO Current turn id != user id : {current_turn_player_id} != {self.user_id}")
             # Disable the buttons
             for button in self.buttons:
                 button.config(state=tk.DISABLED)

@@ -148,14 +148,32 @@ class LobbyServer:
             print(f"Next player's turn: Player {(game.current_player_turn + 1) % len(game.players)}, {game.players[game.current_player_turn]}")
 
         # Broadcast the updated game state to all clients
-        self.broadcast_game_state(lobby_id)
+        self.broadcast_game_state(lobby_id, None, False)
         return {"success": True, "message": message}
 
-    # TO DO: FIX LEAVING LOBBY, no need to return the game state. a success message will do.
     def leave_lobby(self, user_id, lobby_id, client_socket):
         if lobby_id in self.lobbies:
             game = self.lobbies[lobby_id]
+            if len(game.players) == 1:
+                self.database_interaction.remove_player_from_lobby(user_id, lobby_id)
+                return {"success": True}
+
             print("Got game")
+
+            player = next((p for p in game.players if p.user_id == user_id), None)
+            print("Got player")
+            player.folded = True
+
+            if game.is_betting_round_over(True):
+                print(f"{game.current_round} round over!")
+                game.progress_to_next_round()
+            # else:
+            #     # you might not even need to do this as the players list will be one less now
+            #     game.current_player_turn = (game.current_player_turn + 1) % len(game.players)
+            #     game.set_next_available_player()
+
+            player_position = player.position
+            print("Got player position")
             game.remove_player(user_id)
             print("removed player")
 
@@ -165,20 +183,35 @@ class LobbyServer:
             print("Database interaction - removing player from lobby")
 
             self.broadcast_player_left_game_state(lobby_id, client_socket)
+            # Only broadcast the game state if the game has started.
+            if game.is_game_starting:
+                self.broadcast_game_state(lobby_id, client_socket, False)
+            else:
+                print(player_position)
+                game.available_positions = [player_position] + game.available_positions
+                print(game.available_positions)
             print("broadcasted player left game state")
             return {"success": True}
         else:
             return {"success": False, "error": "Could not find lobby to remove player from"}
 
-    def broadcast_game_state(self, lobby_id):
+    def broadcast_game_state(self, lobby_id, current_client, broadcast_to_everyone):
         print("BROADCASTING GAME STATE TO EVERYONE")
         if lobby_id in self.lobbies:
             game = self.lobbies[lobby_id]
             game_states = game.send_game_state()
-            for player in game.players:
-                user_id = player.user_id
-                player.client_socket.sendall((json.dumps({"type": "update_game_state", "user_id": user_id, "game_state": game_states[user_id]}) + '\n').encode('utf-8'))
-                print(f"sent game states {game_states[user_id]} to user {user_id}")
+            if broadcast_to_everyone:
+                for player in game.players:
+                    user_id = player.user_id
+                    player.client_socket.sendall((json.dumps({"type": "update_game_state", "user_id": user_id, "game_state": game_states[user_id]}) + '\n').encode('utf-8'))
+                    print(f"sent game states {game_states[user_id]} to user {user_id}")
+            else:
+                for player in game.players:
+                    if current_client != player.client_socket:
+                        user_id = player.user_id
+                        player.client_socket.sendall((json.dumps({"type": "update_game_state", "user_id": user_id, "game_state": game_states[user_id]}) + '\n').encode('utf-8'))
+                        print(f"sent game states {game_states[user_id]} to user {user_id}")
+
             print("sent game state..")
 
     def broadcast_initial_game_state(self, lobby_id, current_client):
@@ -246,7 +279,7 @@ class LobbyServer:
         print("running handle_start_game")
         game = self.lobbies[lobby_id]
         if game.is_game_starting:  # Check if the game is ready to start
-            self.broadcast_game_state(lobby_id)
+            self.broadcast_game_state(lobby_id, None, False)
 
     def get_all_lobbies(self, request):
         status_filter = request["status"]

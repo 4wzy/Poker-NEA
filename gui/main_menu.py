@@ -12,6 +12,7 @@ class MainMenu(tk.Tk):
         print(f"USING MAIN MENU WITH USER_ID: {self.user_id}")
         self.database_interaction = DatabaseInteraction()
         self.username = self.database_interaction.get_username(self.user_id)
+        self.controller.network_manager.reset_connection()
 
         self.title("AceAware Poker")
 
