@@ -56,13 +56,14 @@ class Player:
 
 
 class Game:
-    def __init__(self, starting_chips=200):
+    def __init__(self, starting_chips=200, player_limit=6):
         self.players: List[Player] = []
         self.client_sockets = []
         self.available_positions = ["top_left", "top_middle", "top_right", "bottom_right", "bottom_middle",
                                     "bottom_left"]
 
         self.pot = Pot()
+        self.starting_chips = starting_chips
         self.board = []
         self.deck = Deck()
         self.current_player_turn = -1
@@ -74,6 +75,7 @@ class Game:
         self.big_blind_position = -1
         self.current_highest_bet = self.big_blind
         self.current_round = "preflop"
+        self.player_limit = player_limit
 
     def is_betting_round_over(self, last_player_folded):
         # Check if all active players have bet the same amount
@@ -162,6 +164,7 @@ class Game:
                         self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board],
+            'player_limit': self.player_limit,
         }
         return state
 

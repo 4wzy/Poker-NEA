@@ -55,4 +55,4 @@ This exception handling from the sockets
 Add decorator to controller.py lines 22 and 23
 
 
-# a
+Allow players to make lobbies of custom player limits, with the textbox containing 6 as a default.

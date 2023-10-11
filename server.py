@@ -28,6 +28,15 @@ class LobbyServer:
         while True:
             data = client_socket.recv(16384)
             if not data:
+                user_id, lobby_id = self.find_disconnected_player(client_socket)
+                #
+                #
+                #
+                #
+                # YOU ARE HERE! CHECK WHAT THESE VALUES RETURN
+                print(f"User_id: {user_id}, Lobby_id: {lobby_id})")
+                if user_id and lobby_id:
+                    self.leave_lobby(user_id, lobby_id, client_socket)
                 break
 
             # Decoding the received bytes to a string before appending to the buffer
@@ -72,6 +81,13 @@ class LobbyServer:
                     buffer = ""  # Clear the buffer to avoid parsing the same invalid data again
 
         client_socket.close()
+
+    def find_disconnected_player(self, disconnected_socket):
+        for lobby_id, game in self.lobbies.items():
+            for player in game.players:
+                if player.client_socket == disconnected_socket:
+                    return player.user_id, lobby_id
+        return None, None
 
     def process_player_action(self, request):
         user_id = request["user_id"]
@@ -250,7 +266,7 @@ class LobbyServer:
 
         if lobby_id in self.lobbies:
             game = self.lobbies[lobby_id]
-            player = Player(user_name, user_id, chips=200, position=game.available_positions.pop(0))
+            player = Player(user_name, user_id, chips=game.starting_chips, position=game.available_positions.pop(0))
             game.add_player(player, client_socket)
             self.database_interaction.join_lobby(user_id, lobby_id)
 
@@ -259,7 +275,8 @@ class LobbyServer:
             self.broadcast_initial_game_state(lobby_id, client_socket)
             print(f"(server.py): broadcasted initial game state to everyone apart from {client_socket}")
             data_type = "initial_state"
-            if len(game.players) == 6:
+            print(f"LEN GAME.PLAYERS: {len(game.players)}, game.player_limit: {game.player_limit}")
+            if len(game.players) == game.player_limit:
                 game.start_round()
                 data_type = "game_starting"  # Inform the client that the game is starting
                 game.is_game_starting = True  # Set a flag to denote that the game is ready to start
@@ -295,7 +312,7 @@ class LobbyServer:
         response = self.database_interaction.create_lobby(request)
         if response["success"]:
             lobby_id = response["lobby_id"]
-            self.lobbies[lobby_id] = Game()
+            self.lobbies[lobby_id] = Game(starting_chips=200, player_limit=request['player_limit'])
         return response
 
     def get_clients_in_lobby(self, lobby_id):

@@ -158,7 +158,7 @@ class GameGUI(tk.Tk):
     def process_initial_state(self, initial_state):
         print("(game_gui): processing initial state")
         self.place_players(initial_state)
-        if len(initial_state['players']) == 6:
+        if len(initial_state['players']) == initial_state['player_limit']:
             print("(game_gui): START GAME!!")
             # self.send_acknowledgment()
             if self.player_starts_game:

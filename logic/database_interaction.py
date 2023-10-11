@@ -40,7 +40,7 @@ class DatabaseInteraction:
             with self.db_cursor() as cursor:
 
                 cursor.execute("""
-                    SELECT l.lobby_id, l.name, l.status, COUNT(pl.user_id), l.created_at, l.show_odds
+                    SELECT l.lobby_id, l.name, l.status, COUNT(pl.user_id), l.created_at, l.show_odds, l.player_limit
                     FROM lobbies l
                     LEFT JOIN player_lobbies pl ON l.lobby_id = pl.lobby_id
                     WHERE l.status = %s AND l.show_odds = %s
@@ -55,9 +55,9 @@ class DatabaseInteraction:
                     'status': lobby[2],
                     'player_count': lobby[3],
                     'created_at': lobby[4].strftime('%Y-%m-%d %H:%M:%S'),
-                    'show_odds': lobby[5]
+                    'show_odds': lobby[5],
+                    'player_limit': lobby[6]
                 } for lobby in lobbies]
-
         except Exception as e:
             print(f"Error: {e}")
             return []
@@ -80,11 +80,17 @@ class DatabaseInteraction:
                 return response
 
             # If no such lobby exists, proceed with the insert
+
+            if lobby_data["player_limit"] < 3 or lobby_data["player_limit"] > 6:
+                response["success"] = False
+                response["error"] = "Player limit can only be 3 to 6"
+                return response
+
             sql = """
-            INSERT INTO lobbies (host_user_id, name, status, show_odds)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO lobbies (host_user_id, name, status, show_odds, player_limit)
+            VALUES (%s, %s, %s, %s, %s)
             """
-            cursor.execute(sql, (lobby_data['host_user_id'], lobby_data['name'], 'waiting', lobby_data['show_odds']))
+            cursor.execute(sql, (lobby_data['host_user_id'], lobby_data['name'], 'waiting', lobby_data['show_odds'], lobby_data['player_limit']))
 
             # Get the last inserted ID
             lobby_id = cursor.lastrowid

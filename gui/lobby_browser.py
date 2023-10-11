@@ -4,6 +4,7 @@ from tkinter import font as tkfont
 from logic.database_interaction import DatabaseInteraction
 from tkinter import messagebox
 import json
+from tkinter import ttk
 from datetime import datetime
 
 class LobbyBrowser(tk.Tk):
@@ -175,7 +176,7 @@ class LobbyCard(tk.Frame):
                                 fg="#FFFFFF", bg="#444444")
         status_label.pack(side="top", fill="x", padx=5, pady=2)
 
-        player_count_label = tk.Label(self, text=f"{lobby_info['player_count']}/6 players",
+        player_count_label = tk.Label(self, text=f"{lobby_info['player_count']}/ {lobby_info['player_limit']} players",
                                       font=tkfont.Font(family="Cambria", size=10), fg="#FFFFFF", bg="#444444")
         player_count_label.pack(side="top", fill="x", padx=5, pady=2)
 
@@ -210,25 +211,36 @@ class CreateLobbyWindow(tk.Toplevel):
         self.lobby_name_entry.grid(row=1, column=1, sticky="w")
         self.lobby_name_entry.focus()
 
+        player_limit_label = tk.Label(container, text="Player Limit:", font=tkfont.Font(family="Cambria", size=16),
+                                      fg="#FFFFFF", bg="#333333")
+        player_limit_label.grid(row=2, column=0, sticky="e")
+
+        self.player_limit_values = [str(i) for i in range(3, 7)]  # Values from 3 to 6
+        self.player_limit_combobox = ttk.Combobox(container, values=self.player_limit_values, width=5,
+                                                  font=tkfont.Font(family="Cambria", size=16), state="readonly")
+        self.player_limit_combobox.set("6")  # Default value
+        self.player_limit_combobox.grid(row=2, column=1, sticky="w")
+
         # Show Odds
         self.show_odds_var = tk.BooleanVar(value=True)
         show_odds_checkbutton = tk.Checkbutton(container, text="Show Odds", variable=self.show_odds_var,
                                                font=tkfont.Font(family="Cambria", size=16), fg="#FFFFFF",
                                                bg="#333333", selectcolor="#444444")
-        show_odds_checkbutton.grid(row=2, column=0, columnspan=2, sticky="w")
+        show_odds_checkbutton.grid(row=3, column=0, columnspan=2, sticky="w")
 
         # Buttons
         create_button = tk.Button(container, text="Create", font=tkfont.Font(family="Cambria", size=16),
                                   fg="#FFFFFF", bg="#444444", bd=0, padx=20, pady=10, command=self.create_lobby)
-        create_button.grid(row=3, column=0, sticky="ew", pady=10, padx=10)
+        create_button.grid(row=4, column=0, sticky="ew", pady=10, padx=10)
 
         cancel_button = tk.Button(container, text="Cancel", font=tkfont.Font(family="Cambria", size=16),
                                   fg="#FFFFFF", bg="#444444", bd=0, padx=20, pady=10, command=self.destroy)
-        cancel_button.grid(row=3, column=1, sticky="ew", pady=10, padx=10)
+        cancel_button.grid(row=4, column=1, sticky="ew", pady=10, padx=10)
 
     def create_lobby(self):
         lobby_name = self.lobby_name_entry.get()
         show_odds = self.show_odds_var.get()
+        player_limit = int(self.player_limit_combobox.get())
 
         if not lobby_name or len(lobby_name) > 16:
             messagebox.showinfo("Error", "Please enter a valid lobby name (1-16 characters)")
@@ -238,7 +250,8 @@ class CreateLobbyWindow(tk.Toplevel):
             "type": "create_lobby",
             "host_user_id": self.user_id,
             "name": lobby_name,
-            "show_odds": show_odds
+            "show_odds": show_odds,
+            "player_limit": player_limit
         }
 
         try:
