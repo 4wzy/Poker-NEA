@@ -96,7 +96,8 @@ class LobbyBrowser(tk.Tk):
         try:
             # Sending the message with a newline character as a delimiter
             self.controller.network_manager.client_socket.sendall(
-                (json.dumps({"type": "get_all_lobbies", "status": status_filter, "odds": odds_filter}) + '\n').encode(
+                (json.dumps({"type": "get_all_lobbies", "status": status_filter, "odds": odds_filter,
+                             "user_id": self.user_id}) + '\n').encode(
                     'utf-8')
             )
 
@@ -128,19 +129,24 @@ class LobbyBrowser(tk.Tk):
         print(f"Received lobbies: {lobbies}")
         self.populate_lobby_list(lobbies)
 
+    # NOTE: COULD MAKE UP NEED FOR MERGE SORT HERE!! INSTEAD OF USING SQL SORT
     def populate_lobby_list(self, lobbies):
         print(f"Populating lobby list with {lobbies}")
 
         row = 0
         col = 0
         for lobby in lobbies:
+            allow_reconnect = False
             if lobby["status"] == "waiting":
                 allow_join = True
+            elif lobby.get("allow_reconnect", False):
+                allow_join = True
+                allow_reconnect = True
             else:
                 allow_join = False
             lobby_card = LobbyCard(container=self.lobby_container_frame, lobby_info=lobby,
                                    join_command=lambda lobby=lobby: self.join_selected_lobby(lobby),
-                                   allow_join=allow_join)
+                                   allow_join=allow_join, allow_reconnect=allow_reconnect)
 
             lobby_card.grid(row=row, column=col, padx=10, pady=5, sticky="nsew")
 
@@ -163,9 +169,8 @@ class LobbyBrowser(tk.Tk):
             return
 
 
-
 class LobbyCard(tk.Frame):
-    def __init__(self, container, lobby_info, join_command, allow_join, *args, **kwargs):
+    def __init__(self, container, lobby_info, join_command, allow_join, allow_reconnect, *args, **kwargs):
         super().__init__(container, *args, **kwargs)
         self.join_command = join_command
         self.configure(bg="#444444", bd=2, relief="groove")
@@ -183,7 +188,10 @@ class LobbyCard(tk.Frame):
                                       font=tkfont.Font(family="Cambria", size=10), fg="#FFFFFF", bg="#444444")
         player_count_label.pack(side="top", fill="x", padx=5, pady=2)
 
-        if allow_join:
+        if allow_reconnect:
+            join_button = tk.Button(self, text="Reconnect", command=self.join_command)
+            join_button.pack(side="bottom", padx=5, pady=5)
+        elif allow_join:
             join_button = tk.Button(self, text="Join", command=self.join_command)
             join_button.pack(side="bottom", padx=5, pady=5)
 

@@ -1,10 +1,32 @@
-test players exiting the game during rounds
-new implementation of checking if rounds over..
+IMPORTANT STUFF:
 
+Updates for players leaving:
+If the game has not yet started, use the old method:
+1. Remove them from the players list
+2. Refill the positions list in game_logic.py
+3. Remove their components from the GUI.
+
+If the game has started, use a new method:
+1. Update the player's disconnected flag to true
+2. Handle the current poker round working as if the player has folded.
+3. Handle future poker rounds to ignore any disconnected players when assigning the dealer button or blinds.
+4. Grey out the disconnected player's frame, and add "disconnected" to their role text.
+5. Do not give disconnected players the opportunity to act. Their index should never be the current_player index.
+
+Also, players now have a "busted" attribute. If a player is busted, they can still choose to spectate the game, but this
+ will be CLEARLY visually indicated.
+
+----------
+test out what happens when p1 connects, p2 connects, p3connects, p2 disconnects, then the game is played out
+I remember something doesn't work..
+
+
+
+
+------------------
 
 Detect when a player has no more chips and make them spectate the game or watch the game somehow.
 Perhaps add a "bankrupt" field to each player and check active players using this field? Similar to how you skip through folded players.
-
 
 1. Detect when poker game fully finished (1 player has won)
 2. When the poker game has finished, remove the poker game from the lobbies dict in server.py

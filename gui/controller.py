@@ -16,7 +16,7 @@ class Controller:
 
     def run(self):
         # self.open_login_menu()
-        self.open_main_menu(19)
+        self.open_main_menu(18)
         tk.mainloop()
 
     def open_login_menu(self):
@@ -46,9 +46,11 @@ class Controller:
             if self.current_menu:
                 self.current_menu.destroy()
             if response_data.get('type') == "game_starting":
-                self.current_menu = GameGUI(self, user_id, lobby_id, response_data['game_state'], True)
+                self.current_menu = GameGUI(self, user_id, lobby_id, response_data, True, False)
+            elif response_data.get('type') == "reconnecting":
+                self.current_menu = GameGUI(self, user_id, lobby_id, response_data, False, True)
             else:
-                self.current_menu = GameGUI(self, user_id, lobby_id, response_data['game_state'], False)
+                self.current_menu = GameGUI(self, user_id, lobby_id, response_data, False, False)
         return response_data
 
     def process_received_message(self, message_type, message_content):

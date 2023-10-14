@@ -49,7 +49,9 @@ class Player:
         self.blinds = []
         self.dealer = False
         self.folded = False
+        self.disconnected = False
         self.all_in = False
+        self.busted = False
 
     def add_card(self, card):
         self.hand.cards.append(card)
@@ -61,6 +63,7 @@ class Game:
         self.client_sockets = []
         self.available_positions = ["top_left", "top_middle", "top_right", "bottom_right", "bottom_middle",
                                     "bottom_left"]
+        self.last_position_index = -1
         self.pot = Pot()
         self.starting_chips = starting_chips
         self.board = []
@@ -93,7 +96,7 @@ class Game:
 
         # Check if all active players have bet the same amount
         active_players = self.get_active_players()
-        if len(set(p.current_bet for p in active_players)) > 1:
+        if len(set(player.current_bet for player in active_players)) > 1:
             print("Current betting round not over as not all players have gone")
             return False
 
@@ -125,69 +128,54 @@ class Game:
 
         self.first_player_acted = False
 
-    def handle_player_leaving(self, leaving_player_position):
+    def handle_player_leaving(self, leaving_player):
         # Check if the leaving player is first or last to act and update accordingly
-        print("player leaving!")
-
-        if not self.game_started:
-            print(f"The game has not started yet. No need to change player betting variables!")
-            return
-        print(f"old first_player_to_act: {self.first_player_to_act}")
-        print(f"old last_player_to_act: {self.last_player_to_act}")
-        if leaving_player_position == self.first_player_to_act:
-            print(f"Leaving_player_position == self.first_player_to_act! {leaving_player_position} == {self.first_player_to_act}")
-            self.first_player_to_act = self.get_next_active_player(leaving_player_position, True)
-        elif leaving_player_position == self.last_player_to_act:
-            print(f"Leaving_player_position == self.last_player_to_act! {leaving_player_position} == {self.last_player_to_act}")
-            self.last_player_to_act = self.get_previous_active_player(leaving_player_position, True)
-        elif self.first_player_to_act >= len(self.players):
-            print(f"First player to act >= len(self.players)! {self.first_player_to_act} >= {len(self.players)}")
-            self.first_player_to_act = self.get_next_active_player(self.first_player_to_act, True)
-        print(f"new first_player_to_act: {self.first_player_to_act}")
-        print(f"new last_player_to_act: {self.last_player_to_act}")
+        print(f"player {leaving_player} leaving!")
+        print(f"First player to act: {self.first_player_to_act}, Last player to act: {self.last_player_to_act}")
+        if leaving_player == self.players[self.current_player_turn]:
+            if self.players[self.first_player_to_act] == leaving_player:
+                print("First player to act == leaving player")
+                self.first_player_to_act = self.get_next_active_player(self.first_player_to_act, False)
+            elif self.players[self.last_player_to_act] == leaving_player:
+                print("Last player to act == leaving player")
+                self.last_player_to_act = self.get_previous_active_player(self.last_player_to_act, False)
+            print("Updating current player turn")
+            self.current_player_turn = self.get_next_active_player(self.current_player_turn, False)
 
     def get_next_active_player(self, current_position, use_current_player):
+        if len(self.get_active_players()) == 0:
+            # If the server is force terminated, stop it from being in an infinite loop
+            return 0
+
         if use_current_player:
-            if not self.players[current_position].folded:
+            if self.is_player_active(current_position):
                 return current_position
+
+        print(f"(get_next_active_player): {current_position}")
 
         while True:
             current_position = (current_position + 1) % len(self.players)
-            if not self.players[current_position].folded:
+            print(f"(get_next_active_player): {current_position}")
+            if self.is_player_active(current_position):
                 return current_position
+
+    def is_player_active(self, current_position):
+        return not (self.players[current_position].folded or
+                    self.players[current_position].disconnected or
+                    self.players[current_position].busted)
 
     def get_previous_active_player(self, current_position, use_current_player):
-        print("getting previous active player")
         if use_current_player:
-            if not self.players[current_position].folded:
-                print(f"Current player has not folded, returning current_position")
-                return current_position
-        while True:
-            print(f"Current position {current_position} being set to {(current_position - 1) % len(self.players)}")
-            current_position = (current_position - 1) % len(self.players)
-            if not self.players[current_position].folded:
-                print(f"Returning {current_position}")
+            if self.is_player_active(current_position):
                 return current_position
 
-    def get_last_player(self, last_player, use_current_player):
-        # The following code is explained best with an example
-        # If there are 2 players remaining in a game and last_player is set to 2 (the big_blind_index in the first
-        # round), this will cause an IndexError. In order to counter this, we find the last index.
-        print("GET LAST PLAYER:")
-        while last_player >= len(self.players):
-            print(f"Last_player {last_player} >= len(self.players) {self.players} so last_player = {last_player - 1}")
-            last_player -= 1
-        if use_current_player:
-            if not self.players[last_player].folded:
-                print(f"use_current_player = True. The player at index {last_player} hasn't folded, so returning {last_player}")
-                return last_player
-        while self.players[last_player].folded:
-            print(f"Player index {last_player} has folded, so last_player = {(last_player - 1) % len(self.players)}")
-            last_player = (last_player - 1) % len(self.players)
-        return last_player
+        while True:
+            current_position = (current_position - 1) % len(self.players)
+            if self.is_player_active(current_position):
+                return current_position
 
     def get_active_players(self):
-        return [p for p in self.players if not p.folded]
+        return [p for index, p in enumerate(self.players) if self.is_player_active(index)]
 
     def only_one_player_active(self):
         active_players = self.get_active_players()
@@ -236,11 +224,26 @@ class Game:
         # The state of the game to be sent to a specific player
         state = {
             'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet,
-                         "blinds": p.blinds, "dealer": p.dealer, "folded": p.folded} for p in self.players],
+                         "blinds": p.blinds, "dealer": p.dealer, "folded": p.folded, "disconnected": p.disconnected,
+                         "busted": p.busted} for p in self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board],
             'current_player_turn': self.current_player_turn,
             'hand': [str(card) for card in player.hand.cards]
+        }
+        print(f"(game_logic.py): returning {state} to {player}")
+        return state
+
+    def get_game_state_for_reconnecting_player(self, player):
+        state = {
+            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet,
+                         "blinds": p.blinds, "dealer": p.dealer, "folded": p.folded, "disconnected": p.disconnected,
+                         "busted": p.busted, "position": p.position} for p in self.players],
+            'pot': self.pot.chips,
+            'board': [str(card) for card in self.board],
+            'current_player_turn': self.current_player_turn,
+            'hand': [str(card) for card in player.hand.cards],
+            'player_limit': self.player_limit
         }
         print(f"(game_logic.py): returning {state} to {player}")
         return state
@@ -267,16 +270,34 @@ class Game:
         player.client_socket = client_socket
         self.players.append(player)
 
-    def remove_player(self, user_id):
-        self.players = [player for player in self.players if player.user_id != user_id]
+    def reconnect_player(self, user_id, client_socket):
+        player = next((p for p in self.players if p.user_id == user_id), None)
+        player.client_socket = client_socket
+        player.disconnected = False
+
+    def remove_player(self, user_id, completely_remove):
+        if completely_remove:
+            self.players = [player for player in self.players if player.user_id != user_id]
+        else:
+            player = next((player for player in self.players if player.user_id == user_id), None)
+            if player:
+                # The following flags allow a player to rejoin in the future.
+                # The player will remain folded, so that they do not interrupt a round that is already being played
+                player.disconnected = True
+                player.folded = True
+                print(f"Found player {player.name} and set disconnected to true")
+                self.handle_player_leaving(player)
 
     def deal_cards(self, num_cards, player):
-        for i in range(num_cards):
-            card = self.deck.deal_card()
-            player.add_card(card)
+        if not player.disconnected:
+            for i in range(num_cards):
+                card = self.deck.deal_card()
+                player.add_card(card)
 
     def start_round(self):
         self.board = []
+        self.deck.reset_deck()
+        self.deck.shuffle()
         for player in self.players:
             player.current_bet = 0
             player.hand.cards = []
@@ -284,29 +305,24 @@ class Game:
             player.blinds = []
             player.dealer = False
             self.deal_cards(2, player)
-        self.deck.reset_deck()
-        self.deck.shuffle()
+            if not player.busted and player.chips == 0 and player.all_in:
+                player.busted = True
+            else:
+                player.all_in = False
+
+            if player.disconnected:
+                player.folded = True
+
         self.current_highest_bet = self.big_blind
         self.current_round = "preflop"
         self.first_player_to_act = 0
         self.last_player_to_act = len(self.players) - 1
         self.first_player_acted = False
 
-        # Clear any players of any previous attributes if there are any
-        # if self.small_blind_position != -1 and self.big_blind_position != -1 and self.dealer_position != -1:
-        #     # If the position is less than the amount of players in the game, the player with that position has left,
-        #     # so trying to access their index in the players list would cause an IndexError.
-        #     if self.small_blind_position < len(self.players):
-        #         self.players[self.small_blind_position].blinds = []
-        #     if self.big_blind_position < len(self.players):
-        #         self.players[self.big_blind_position].blinds = []
-        #     if self.dealer_position < len(self.players):
-        #         self.players[self.dealer_position].dealer = False
-
-        self.dealer_position = (self.dealer_position + 1) % len(self.players)
-        self.small_blind_position = (self.dealer_position + 1) % len(self.players)
-        self.big_blind_position = (self.small_blind_position + 1) % len(self.players)
-        self.current_player_turn = (self.big_blind_position + 1) % len(self.players)
+        self.dealer_position = self.get_next_active_player(self.dealer_position, False)
+        self.small_blind_position = self.get_next_active_player(self.dealer_position, False)
+        self.big_blind_position = self.get_next_active_player(self.small_blind_position, False)
+        self.current_player_turn = self.get_next_active_player(self.big_blind_position, False)
         print(f"Current player turn: {self.current_player_turn}")
 
         self.players[self.small_blind_position].chips -= self.small_blind
@@ -330,9 +346,99 @@ class Game:
         card = self.deck.deal_card()
         self.board.append(card)
 
-    def process_player_action(self, player_id, action):
-        # Process a player action (fold, call, raise) and update the game state
-        pass
+    def player_fold(self, player):
+        message = f"{player.name} folds"
+
+        player.folded = True
+        if player == self.players[self.first_player_to_act]:
+            self.first_player_to_act = self.get_next_active_player(self.first_player_to_act, False)
+        elif player == self.players[self.last_player_to_act]:
+            self.last_player_to_act = self.get_previous_active_player(self.last_player_to_act, False)
+
+        return message
+
+    def player_call(self, player):
+        bet_amount = self.current_highest_bet - player.current_bet
+        if player.chips >= bet_amount:
+            player.chips -= bet_amount
+            self.pot.add_chips(bet_amount)
+            player.current_bet = self.current_highest_bet
+            if player.chips == 0:
+                player.all_in = True
+        else:
+            return {"success": False, "error": "You do not have enough chips to call"}
+
+        return {"success": True}
+
+    def player_raise(self, player, raise_amount):
+        # The player raises over the current highest bet
+        total_bet = raise_amount + player.current_bet
+        if total_bet <= self.current_highest_bet or raise_amount <= 0:
+            return {"success": False,
+                    "error": f"You need to raise by at least {self.current_highest_bet - player.current_bet}."}
+        # Previously only game.current_highest_bet above instead of taking away player.current_bet
+        if raise_amount > player.chips:
+            return {"success": False, "error": "You don't have enough chips to raise this amount."}
+        else:
+            player.chips -= raise_amount
+            self.pot.add_chips(raise_amount)
+            player.current_bet = total_bet
+            self.current_highest_bet = total_bet
+            message = f"{player.name} raises by {raise_amount} chips to a total of {total_bet} chips"
+            print(message)
+            if player.chips == 0:
+                player.all_in = True
+            return {"success": True}
+
+    def process_player_action(self, player, action, raise_amount):
+        message = ""
+        # Check if it's the player's turn
+        if player != self.players[self.current_player_turn]:
+            return {"success": False, "error": "It's not your turn!"}
+
+        # Defensive programming: if the game hasn't started yet, nobody should be able to act yet.
+        if not self.game_started:
+            return {"success": False, "error": "The game has not started yet."}
+
+        # IF THERE IS ONLY 1 PLAYER LEFT, EVALUATE THE WIN CONDITION OR ELSE THERE WILL BE AN INFINITE LOOP
+        last_player_folded = False
+        if player.folded:
+            return {"success": False, "error": "This player has folded."}
+        if action == 'fold':
+            message = self.player_fold(player)
+            print(message)
+
+        elif action == 'call':
+            action_response = self.player_call(player)
+            if not action_response['success']:
+                return action_response
+
+        elif action == 'raise':
+            action_response = self.player_raise(player, raise_amount)
+            if not action_response['success']:
+                return action_response
+
+        print(f"About to check if only one player active in list of active players: {self.get_active_players()}")
+        # Check if everyone has folded apart from one player
+        if self.only_one_player_active():
+            # The remaining active player wins the pot
+            remaining_player = self.get_active_players()[0]
+            remaining_player.chips += self.pot.chips
+            self.pot.chips = 0
+            message = f"{remaining_player.name} wins the pot as everyone else folded!"
+            self.start_round()
+        else:
+            # If not, the current Poker round is still in action, so check if the betting round is over
+            if self.is_betting_round_over():
+                print(f"{self.current_round} round over!")
+                self.progress_to_next_round()
+            else:
+                # If the betting round is not over, go to next player's turn
+                self.current_player_turn = self.get_next_active_player(self.current_player_turn, False)
+            print(
+                f"Next player's turn: Player index {(self.current_player_turn)}, {self.players[self.current_player_turn]}")
+
+        return {"success": True, "message": message}
 
 
 class Pot:

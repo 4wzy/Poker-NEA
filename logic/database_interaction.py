@@ -49,7 +49,7 @@ class DatabaseInteraction:
 
                 lobbies = cursor.fetchall()
 
-                return [{
+                lobbies_list = [{
                     'lobby_id': lobby[0],
                     'name': lobby[1],
                     'status': lobby[2],
@@ -58,6 +58,10 @@ class DatabaseInteraction:
                     'show_odds': lobby[5],
                     'player_limit': lobby[6]
                 } for lobby in lobbies]
+
+                sorted_lobbies = sorted(lobbies_list, key=lambda x: x['player_count'], reverse=True)
+
+                return sorted_lobbies
         except Exception as e:
             print(f"Error: {e}")
             return []

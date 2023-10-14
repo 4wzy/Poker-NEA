@@ -8,7 +8,7 @@ from logic.database_interaction import DatabaseInteraction
 
 
 class GameGUI(tk.Tk):
-    def __init__(self, controller, user_id, lobby_id, initial_state, player_starts_game):
+    def __init__(self, controller, user_id, lobby_id, initial_state, player_starts_game, reconnecting):
         super().__init__()
         self.last_highlighted_player_id = None
         self.geometry("1280x720")
@@ -26,6 +26,7 @@ class GameGUI(tk.Tk):
         self.player_components = {}
         self.player_starts_game = player_starts_game
         self.community_card_items = []
+        self.reconnecting = reconnecting
 
         self.title("Poker Game")
 
@@ -158,9 +159,10 @@ class GameGUI(tk.Tk):
             self.scheduled_tasks.append(task_id)
 
     def process_initial_state(self, initial_state):
+        game_state = initial_state['game_state']
         print("(game_gui): processing initial state")
-        self.place_players(initial_state)
-        if len(initial_state['players']) == initial_state['player_limit']:
+        self.place_players(game_state)
+        if len(game_state['players']) == game_state['player_limit']:
             print("(game_gui): START GAME!!")
             # self.send_acknowledgment()
             if self.player_starts_game:
@@ -168,6 +170,9 @@ class GameGUI(tk.Tk):
                 # The following call to self.after() is necessary so that the players are placed first before the
                 # game attempts to update game components which don't exist yet
                 self.after(20, self.start_game_update)
+        if self.reconnecting:
+            print("(game_gui): attempting to reconnect...")
+            self.after(20, self.update_game_state, initial_state)
 
     # Could be made as a private method
     def start_game_update(self):
@@ -217,7 +222,7 @@ class GameGUI(tk.Tk):
                     message_type = message.get('type')
                     if message_type == 'initial_state':
                         print(f"(game gui): Initial state message TYPE: {message}")
-                        task_id = self.after(0, self.process_initial_state, message['game_state'])
+                        task_id = self.after(0, self.process_initial_state, message)
                         self.scheduled_tasks.append(task_id)
                     elif message_type in ['update_game_state', 'game_starting']:
                         print(f"(game_gui): UPDATING GAME STATE or GAME STARTING")
@@ -282,7 +287,12 @@ class GameGUI(tk.Tk):
                     roles.append("Big Blind")
                 if player_data['dealer']:
                     roles.append("Dealer")
-                if player_data['folded']:
+                if player_data['disconnected']:
+                    roles.append("Disconnected")
+                # elif used on purpose as disconnected players are not in the round by default
+                elif player_data['busted']:
+                    roles.append("Busted")
+                elif player_data['folded']:
                     roles.append("Folded")
 
                 role_text = ", ".join(roles)
@@ -304,7 +314,7 @@ class GameGUI(tk.Tk):
 
         self.indicate_active_players(game_state)
         self.show_current_player(game_state)
-        self.indicate_folded_players(game_state)
+        self.indicate_folded_and_busted_and_disconnected_players(game_state)
 
         # Update card images if they are in the game_state
         # ONLY UPDATE THIS ONCE IN A GAME, WHEN ALL THE PLAYERS HAVE JOINED IF THIS IS THE "START GAME STATE"
@@ -367,14 +377,27 @@ class GameGUI(tk.Tk):
             for button in self.buttons:
                 button.config(state=tk.DISABLED)
 
-    def indicate_folded_players(self, game_state):
-        # print(f"game_state of players: {game_state['players']}")
-        folded_players = [p for p in game_state["players"] if p["folded"]]
+    def indicate_folded_and_busted_and_disconnected_players(self, game_state):
+        folded_players = [player for player in game_state["players"] if player["folded"]]
         for player in folded_players:
             current_player_components = self.player_components.get(player["user_id"])
             if current_player_components:
                 current_player_frame = current_player_components['profile_label'].master
                 current_player_frame.config(bg="#5A4E4B")  # Highlighting with a grey color.
+
+        disconnected_players = [player for player in game_state["players"] if player["disconnected"]]
+        for player in disconnected_players:
+            current_player_components = self.player_components.get(player["user_id"])
+            if current_player_components:
+                current_player_frame = current_player_components['profile_label'].master
+                current_player_frame.config(bg="#450e00")  # Highlighting with dark red (ish)
+
+        busted_players = [player for player in game_state["players"] if player["busted"]]
+        for player in busted_players:
+            current_player_components = self.player_components.get(player["user_id"])
+            if current_player_components:
+                current_player_frame = current_player_components['profile_label'].master
+                current_player_frame.config(bg="#090245")  # Highlighting with dark blue (ish)
 
     def indicate_active_players(self, game_state):
         # print(f"game_state of players: {game_state['players']}")

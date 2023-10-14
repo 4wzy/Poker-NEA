@@ -29,10 +29,12 @@ class LobbyServer:
             try:
                 data = client_socket.recv(16384)
                 if not data:
+                    print("No data from client socket, searching for disconnected player")
                     user_id, lobby_id = self.find_disconnected_player(client_socket)
                     print(f"User_id: {user_id}, Lobby_id: {lobby_id})")
                     if user_id and lobby_id:
-                        self.leave_lobby(user_id, lobby_id, client_socket)
+                        if not self.find_player_from_user_id(user_id, self.lobbies[lobby_id]).disconnected:
+                            self.leave_lobby(user_id, lobby_id, client_socket)
                     break
             except ConnectionResetError:
                 print("Connection was reset by client.")
@@ -91,139 +93,76 @@ class LobbyServer:
                     return player.user_id, lobby_id
         return None, None
 
+    def find_player_from_user_id(self, user_id, game):
+        return next((player for player in game.players if player.user_id == user_id), None)
+
     def process_player_action(self, request):
         user_id = request["user_id"]
         action = request["action"]
         lobby_id = request["lobby_id"]
         game = self.lobbies[lobby_id]
-        player = next((p for p in game.players if p.user_id == user_id), None)
+        player = self.find_player_from_user_id(user_id, game)
+        raise_amount = request.get('amount', 0)
 
-        # Check if it's the player's turn
-        # if player.position != game.current_player_turn:
-        #     return {"success": False, "error": "It's not your turn!"}
+        action_response = game.process_player_action(player, action, raise_amount)
 
-        # Defensive programming: if the game hasn't started yet, nobody should be able to act yet.
-        if not game.game_started:
-            return {"success": False, "error": "The game has not started yet."}
-
-        # IF THERE IS ONLY 1 PLAYER LEFT, EVALUATE THE WIN CONDITION OR ELSE THERE WILL BE AN INFINITE LOOP
-        last_player_folded = False
-        if player.folded:
-            return {"success": False, "error": "This player has folded."}
-        if action == 'fold':
-            message = f"{player.name} folds"
-            print(message)
-            last_player_folded = True
-            player.folded = True
-            print(f"{player.name} folded: {player.folded}")
-            # Handle fold logic here (e.g., remove player from current round)
-
-        elif action == 'call':
-            message = f"{player.name} calls"
-            print(message)
-            # The player matches the current highest bet
-            bet_amount = game.current_highest_bet - player.current_bet
-            if player.chips >= bet_amount:
-                player.chips -= bet_amount
-                game.pot.add_chips(bet_amount)
-                player.current_bet = game.current_highest_bet
-            else:
-                return {"success": False, "error": "You do not have enough chips to call"}
-
-        elif action == 'raise':
-            # The player raises over the current highest bet
-            raise_amount = request['amount']
-            total_bet = raise_amount + player.current_bet
-            if total_bet <= game.current_highest_bet or raise_amount <= 0:
-                return {"success": False,
-                        "error": f"You need to raise by at least {game.current_highest_bet - player.current_bet}."}
-            # Previously only game.current_highest_bet above instead of taking away player.current_bet
-            if raise_amount > player.chips:
-                return {"success": False, "error": "You don't have enough chips to raise this amount."}
-            else:
-                player.chips -= raise_amount
-                game.pot.add_chips(raise_amount)
-                player.current_bet = total_bet
-                game.current_highest_bet = total_bet
-                message = f"{player.name} raises by {raise_amount} chips to a total of {total_bet} chips"
-                print(message)
-
-        print(f"About to check if only one player active in list of active players: {game.get_active_players()}")
-        # Check if everyone has folded apart from one player
-        if game.only_one_player_active():
-            # The remaining active player wins the pot
-            remaining_player = game.get_active_players()[0]
-            remaining_player.chips += game.pot.chips
-            game.pot.chips = 0
-            message = f"{remaining_player.name} wins the pot as everyone else folded!"
-            game.start_round()
-        else:
-            # If not, the current Poker round is still in action, so check if the betting round is over
-            if game.is_betting_round_over():
-                print(f"{game.current_round} round over!")
-                game.progress_to_next_round()
-            else:
-                # If the betting round is not over, go to next player's turn
-                game.current_player_turn = game.get_next_active_player(game.current_player_turn, False)
-            print(
-                f"Next player's turn: Player index {(game.current_player_turn)}, {game.players[game.current_player_turn]}")
-
-        # Broadcast the updated game state to all clients
-        self.broadcast_game_state(lobby_id, None, False)
-        return {"success": True, "message": message}
+        if action_response['success']:
+            # Broadcast the updated game state to all clients
+            self.broadcast_game_state(lobby_id, None, False)
+        return action_response
 
     def leave_lobby(self, user_id, lobby_id, client_socket):
+        print("player leaving")
         if lobby_id not in self.lobbies:
             return {"success": False, "error": "Could not find lobby to remove player from"}
 
         game = self.lobbies[lobby_id]
-        # If there is only one player left
-        if len(game.players) == 1:
-            self._handle_last_player_leaving(lobby_id, game, user_id)
-            return {"success": True}
+        player = self.find_player_from_user_id(user_id, game)
+        self.database_interaction.remove_player_from_lobby(player.user_id, lobby_id)
 
-        player = next((p for p in game.players if p.user_id == user_id), None)
-        player.folded = True
+        if not game.game_started:
+            # If there is only one player left
+            if len(game.players) == 1:
+                self._handle_last_player_leaving(lobby_id)
+                return {"success": True}
 
-        if game.game_started:
-            self._update_game_state_for_leaving_player(game, player)
+            game.remove_player(user_id, completely_remove=True)
+            print(f"New player list: {game.players}")
 
-        game.remove_player(user_id)
-        print(f"New player list: {game.players}")
+            self._update_lobby_after_player_left(game, player, lobby_id, client_socket)
+            print("broadcasted player left game state")
+        else:
+            game.remove_player(user_id, completely_remove=False)
+            self.broadcast_game_state(lobby_id, client_socket, False)
 
-        self._update_lobby_after_player_left(game, player, lobby_id, client_socket)
-        print("broadcasted player left game state")
         return {"success": True}
 
-    def _handle_last_player_leaving(self, lobby_id, game, user_id):
-        self.database_interaction.remove_player_from_lobby(user_id, lobby_id)
-        # If the game has not yet started (not enough players connected), it is an abandoned lobby
-        if not game.game_started:
-            self.database_interaction.set_lobby_status(lobby_id, "abandoned")
-        del self.lobbies[lobby_id]
-
-    def _update_game_state_for_leaving_player(self, game, player):
-        if game.is_betting_round_over():
-            print(f"{game.current_round} round over!")
-            game.progress_to_next_round()
-
-        leaving_player_index = game.players.index(player)
-        if leaving_player_index < game.current_player_turn:
-            game.current_player_turn -= 1
-        elif leaving_player_index == game.current_player_turn:
-            game.current_player_turn = 0
-
-        game.handle_player_leaving(leaving_player_index)
-
     def _update_lobby_after_player_left(self, game, player, lobby_id, client_socket):
-        self.database_interaction.remove_player_from_lobby(player.user_id, lobby_id)
+        all_positions = ["top_left", "top_middle", "top_right", "bottom_right", "bottom_middle", "bottom_left"]
+
+        leaving_player_position_index = all_positions.index(player.position)
+
+        # Loop through the players after the leaving player and update their position as necessary
+        print("========================================")
+        print(f"Old positions: {game.available_positions}")
+        for player in game.players:
+            player_position_index = all_positions.index(player.position)
+            print(f"Old position for {player.name}: {player.position}")
+            if player_position_index > leaving_player_position_index:
+                # Shift position one step to the left
+                player.position = all_positions[player_position_index - 1]
+                print(f"New position for {player.name}: {player.position}")
+        # Modify the list of positions to include the last position again
+        game.available_positions.insert(0, all_positions[game.last_position_index])
+        print(f"New positions: {game.available_positions}")
+        print(f"All positions: {all_positions}")
+        print(f"Leaving player position index: {leaving_player_position_index}")
         self.broadcast_player_left_game_state(lobby_id, client_socket)
 
-        if game.game_started:
-            time.sleep(0.1)
-            self.broadcast_game_state(lobby_id, client_socket, False)
-        else:
-            game.available_positions = [player.position] + game.available_positions
+    def _handle_last_player_leaving(self, lobby_id):
+        # If the game has not yet started (not enough players connected), it is an abandoned lobby
+        self.database_interaction.set_lobby_status(lobby_id, "abandoned")
+        del self.lobbies[lobby_id]
 
     def join_lobby(self, request, client_socket):
         print(f"JOINING LOBBY REQUEST: {request}")
@@ -231,14 +170,39 @@ class LobbyServer:
         lobby_id = request["lobby_id"]
         user_name = self.database_interaction.get_username(user_id)
 
-        if lobby_id in self.lobbies:
-            game = self.lobbies[lobby_id]
-            # Defensive programming - don't allow a player to join if the lobby is full
-            if len(game.players) == game.player_limit:
-                return {"success": False, "error": "The lobby is already full!"}
+        if lobby_id not in self.lobbies:
+            print("could not return data. error: Lobby not found")
+            return {"success": False, "error": "Lobby not found"}
 
+        game = self.lobbies[lobby_id]
+
+        # Handle what happens if the player is attempting to reconnect
+        if game.game_started:
+            player_to_reconnect = self.find_player_from_user_id(user_id, game)
+            if player_to_reconnect is None:
+                # Avoid an AttributeError by only checking if the player is disconnected if player_to_reconnect
+                # is not None
+                error_message = "Reconnecting player is not in player list"
+            else:
+                if player_to_reconnect.disconnected:
+                    game.reconnect_player(user_id, client_socket)
+                    self.database_interaction.join_lobby(user_id, lobby_id)
+
+                    reconnecting_state = self.get_state_for_reconnecting_player(lobby_id, player_to_reconnect)
+                    self.broadcast_game_state(lobby_id, client_socket, False)
+
+                    return {"success": True, "type": "reconnecting", "user_id": user_id, "game_state":
+                        reconnecting_state}
+
+        # Defensive programming - don't allow a player to join if the lobby is full
+        if len(game.players) == game.player_limit:
+            return {"success": False, "error": "The lobby is already full!"}
+
+        if not game.game_started:
             player = Player(user_name, user_id, chips=game.starting_chips, position=game.available_positions.pop(0))
+            game.last_position_index += 1
             game.add_player(player, client_socket)
+
             self.database_interaction.join_lobby(user_id, lobby_id)
 
             initial_state = self.get_initial_state(lobby_id)
@@ -246,22 +210,21 @@ class LobbyServer:
             self.broadcast_initial_game_state(lobby_id, client_socket)
             print(f"(server.py): broadcasted initial game state to everyone apart from {client_socket}")
             data_type = "initial_state"
-            print(f"LEN GAME.PLAYERS: {len(game.players)}, game.player_limit: {game.player_limit}")
             if len(game.players) == game.player_limit:
                 game.start_round()
-                data_type = "game_starting"  # Inform the client that the game is starting
-                game.game_started = True  # Set a flag to denote that the game is ready to start
+                data_type = "game_starting"
+                game.game_started = True
                 self.database_interaction.set_lobby_status(lobby_id, "in_progress")
                 print("(server.py): set game._game_started to True so that the round can start")
 
             data_to_return = {"success": True, "type": data_type, "game_state": initial_state}
             print(data_to_return)
             return data_to_return
-        else:
-            error_message = "Lobby not found"
 
-        print(f"could not return data. error: {error_message}")
         return {"success": False, "error": error_message}
+
+    def get_connected_players(self, game):
+        return [player for player in game.players if not player.disconnected]
 
     def broadcast_game_state(self, lobby_id, current_client, broadcast_to_everyone):
         print("BROADCASTING GAME STATE TO EVERYONE")
@@ -269,14 +232,16 @@ class LobbyServer:
             game = self.lobbies[lobby_id]
             game_states = game.send_game_state()
             if broadcast_to_everyone:
-                for player in game.players:
+                for player in self.get_connected_players(game):
                     user_id = player.user_id
                     player.client_socket.sendall((json.dumps({"type": "update_game_state", "user_id": user_id,
                                                               "game_state": game_states[user_id]}) + '\n').encode(
                         'utf-8'))
                     print(f"sent game states {game_states[user_id]} to user {user_id}")
             else:
-                for player in game.players:
+                print(f"broadcasting game state to connected players: {self.get_connected_players(game)}")
+                for player in self.get_connected_players(game):
+                    print(f"Connected player: {player}: {player.disconnected}")
                     if current_client != player.client_socket:
                         user_id = player.user_id
                         player.client_socket.sendall((json.dumps({"type": "update_game_state", "user_id": user_id,
@@ -307,6 +272,9 @@ class LobbyServer:
                     (json.dumps({"type": "player_left_game_state", "game_state": game_state}) + '\n').encode('utf-8'))
                 print(f"sent initial game state data to f{client_socket}")
 
+    def get_state_for_reconnecting_player(self, lobby_id, player):
+        return self.lobbies[lobby_id].get_game_state_for_reconnecting_player(player)
+
     def get_game_state(self, lobby_id):
         return self.lobbies[lobby_id].get_game_state()
 
@@ -326,9 +294,24 @@ class LobbyServer:
         status_filter = request["status"]
         odds_filter = request["odds"]
         lobbies = []
+        user_id = request["user_id"]
+        reconnect_lobby = None
+
         if "in_progress" in status_filter:
             lobbies += self.database_interaction.get_all_lobbies("in_progress", odds_filter)
         lobbies += self.database_interaction.get_all_lobbies("waiting", odds_filter)
+        # The code below checks if a player is already in the list of players in order to allow the player to reconnect
+        for lobby in lobbies:
+            lobby_id = lobby['lobby_id']
+            if lobby_id in self.lobbies:
+                if any(player.user_id == user_id and player.disconnected for player in self.lobbies[lobby_id].players):
+                    lobby["allow_reconnect"] = True
+                    reconnect_lobby = lobby
+                    break
+
+        if reconnect_lobby:
+            lobbies.remove(reconnect_lobby)
+            lobbies.insert(0, reconnect_lobby)
 
         return lobbies
 
@@ -341,7 +324,8 @@ class LobbyServer:
 
     def get_clients_in_lobby(self, lobby_id):
         client_sockets = []
-        for player in self.lobbies[lobby_id].players:
+        game = self.lobbies[lobby_id]
+        for player in self.get_connected_players(game):
             client_sockets.append(player.client_socket)
         return client_sockets
 
