@@ -154,6 +154,7 @@ class LobbyServer:
                 print(f"New position for {player.name}: {player.position}")
         # Modify the list of positions to include the last position again
         game.available_positions.insert(0, all_positions[game.last_position_index])
+        game.last_position_index -= 1
         print(f"New positions: {game.available_positions}")
         print(f"All positions: {all_positions}")
         print(f"Leaving player position index: {leaving_player_position_index}")

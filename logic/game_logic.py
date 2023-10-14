@@ -52,6 +52,13 @@ class Player:
         self.disconnected = False
         self.all_in = False
         self.busted = False
+        # Variables for game statistics
+        self.amount_of_times_raised = 0
+        self.amount_of_times_all_in = 0
+        self.amount_of_times_called = 0
+        self.amount_of_times_checked = 0
+        self.amount_of_times_folded = 0
+        self.amount_of_times_acted = 0
 
     def add_card(self, card):
         self.hand.cards.append(card)
@@ -350,6 +357,7 @@ class Game:
         message = f"{player.name} folds"
 
         player.folded = True
+        player.amount_of_times_folded += 1
         if player == self.players[self.first_player_to_act]:
             self.first_player_to_act = self.get_next_active_player(self.first_player_to_act, False)
         elif player == self.players[self.last_player_to_act]:
@@ -365,9 +373,14 @@ class Game:
             player.current_bet = self.current_highest_bet
             if player.chips == 0:
                 player.all_in = True
+                player.amount_of_times_all_in += 1
         else:
             return {"success": False, "error": "You do not have enough chips to call"}
 
+        if bet_amount == 0:
+            player.amount_of_times_checked += 1
+        else:
+            player.amount_of_times_called += 1
         return {"success": True}
 
     def player_raise(self, player, raise_amount):
@@ -388,6 +401,8 @@ class Game:
             print(message)
             if player.chips == 0:
                 player.all_in = True
+                player.amount_of_times_all_in += 1
+            player.amount_of_times_raised += 1
             return {"success": True}
 
     def process_player_action(self, player, action, raise_amount):
@@ -438,6 +453,7 @@ class Game:
             print(
                 f"Next player's turn: Player index {(self.current_player_turn)}, {self.players[self.current_player_turn]}")
 
+        player.amount_of_times_acted += 1
         return {"success": True, "message": message}
 
 

@@ -1,26 +1,8 @@
-IMPORTANT STUFF:
-
-Updates for players leaving:
-If the game has not yet started, use the old method:
-1. Remove them from the players list
-2. Refill the positions list in game_logic.py
-3. Remove their components from the GUI.
-
-If the game has started, use a new method:
-1. Update the player's disconnected flag to true
-2. Handle the current poker round working as if the player has folded.
-3. Handle future poker rounds to ignore any disconnected players when assigning the dealer button or blinds.
-4. Grey out the disconnected player's frame, and add "disconnected" to their role text.
-5. Do not give disconnected players the opportunity to act. Their index should never be the current_player index.
-
-Also, players now have a "busted" attribute. If a player is busted, they can still choose to spectate the game, but this
- will be CLEARLY visually indicated.
-
-----------
-test out what happens when p1 connects, p2 connects, p3connects, p2 disconnects, then the game is played out
-I remember something doesn't work..
-
-
+notes for future justin:
+when there is one player left in the Poker game (the winner), that's when you insert the game statistics in the tables.
+aggressiveness score can be something like amount_of_times_raised / total_actions
+it could also be more complicated so that it's something like (amount of times raised when you have nothing good) /
+total actions. (bluffs I guess)
 
 
 ------------------
