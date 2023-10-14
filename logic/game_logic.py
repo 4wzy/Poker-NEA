@@ -61,7 +61,6 @@ class Game:
         self.client_sockets = []
         self.available_positions = ["top_left", "top_middle", "top_right", "bottom_right", "bottom_middle",
                                     "bottom_left"]
-
         self.pot = Pot()
         self.starting_chips = starting_chips
         self.board = []
@@ -104,13 +103,17 @@ class Game:
         if round_type == "preflop":
             # First player to act: player after the big blind
             # Last player to act: Big blid player
-            self.first_player_to_act = self.get_next_active_player(self.big_blind_position)
+            self.first_player_to_act = self.get_next_active_player(self.big_blind_position, False)
             self.last_player_to_act = self.big_blind_position
-        else:
+        elif round_type == "flop":
             # First player to act: small blind player or first active player after
             # Last player to act: dealer player or first active player before
-            self.first_player_to_act = self.get_next_active_player(self.dealer_position)
-            self.last_player_to_act = self.get_previous_active_player(self.small_blind_position)
+            self.first_player_to_act = self.get_next_active_player(self.dealer_position, False)
+            self.last_player_to_act = self.get_previous_active_player(self.small_blind_position, False)
+            self.current_player_turn = self.first_player_to_act
+        else:
+            self.first_player_to_act = self.get_next_active_player(self.first_player_to_act, True)
+            self.last_player_to_act = self.get_previous_active_player(self.last_player_to_act, True)
             self.current_player_turn = self.first_player_to_act
 
         print("-------------- START_NEW_ROUND ----------------")
@@ -125,34 +128,61 @@ class Game:
     def handle_player_leaving(self, leaving_player_position):
         # Check if the leaving player is first or last to act and update accordingly
         print("player leaving!")
+
+        if not self.game_started:
+            print(f"The game has not started yet. No need to change player betting variables!")
+            return
         print(f"old first_player_to_act: {self.first_player_to_act}")
         print(f"old last_player_to_act: {self.last_player_to_act}")
         if leaving_player_position == self.first_player_to_act:
-            self.first_player_to_act = self.get_next_active_player(leaving_player_position)
+            print(f"Leaving_player_position == self.first_player_to_act! {leaving_player_position} == {self.first_player_to_act}")
+            self.first_player_to_act = self.get_next_active_player(leaving_player_position, True)
         elif leaving_player_position == self.last_player_to_act:
-            self.last_player_to_act = self.get_previous_active_player(leaving_player_position)
+            print(f"Leaving_player_position == self.last_player_to_act! {leaving_player_position} == {self.last_player_to_act}")
+            self.last_player_to_act = self.get_previous_active_player(leaving_player_position, True)
+        elif self.first_player_to_act >= len(self.players):
+            print(f"First player to act >= len(self.players)! {self.first_player_to_act} >= {len(self.players)}")
+            self.first_player_to_act = self.get_next_active_player(self.first_player_to_act, True)
         print(f"new first_player_to_act: {self.first_player_to_act}")
         print(f"new last_player_to_act: {self.last_player_to_act}")
 
-    def get_next_active_player(self, current_position):
+    def get_next_active_player(self, current_position, use_current_player):
+        if use_current_player:
+            if not self.players[current_position].folded:
+                return current_position
+
         while True:
             current_position = (current_position + 1) % len(self.players)
             if not self.players[current_position].folded:
                 return current_position
 
-    def get_previous_active_player(self, current_position):
+    def get_previous_active_player(self, current_position, use_current_player):
+        print("getting previous active player")
+        if use_current_player:
+            if not self.players[current_position].folded:
+                print(f"Current player has not folded, returning current_position")
+                return current_position
         while True:
+            print(f"Current position {current_position} being set to {(current_position - 1) % len(self.players)}")
             current_position = (current_position - 1) % len(self.players)
             if not self.players[current_position].folded:
+                print(f"Returning {current_position}")
                 return current_position
 
-    def get_last_player(self, last_player):
+    def get_last_player(self, last_player, use_current_player):
         # The following code is explained best with an example
         # If there are 2 players remaining in a game and last_player is set to 2 (the big_blind_index in the first
         # round), this will cause an IndexError. In order to counter this, we find the last index.
+        print("GET LAST PLAYER:")
         while last_player >= len(self.players):
+            print(f"Last_player {last_player} >= len(self.players) {self.players} so last_player = {last_player - 1}")
             last_player -= 1
+        if use_current_player:
+            if not self.players[last_player].folded:
+                print(f"use_current_player = True. The player at index {last_player} hasn't folded, so returning {last_player}")
+                return last_player
         while self.players[last_player].folded:
+            print(f"Player index {last_player} has folded, so last_player = {(last_player - 1) % len(self.players)}")
             last_player = (last_player - 1) % len(self.players)
         return last_player
 
@@ -246,10 +276,14 @@ class Game:
             player.add_card(card)
 
     def start_round(self):
+        self.board = []
         for player in self.players:
             player.current_bet = 0
             player.hand.cards = []
             player.folded = False
+            player.blinds = []
+            player.dealer = False
+            self.deal_cards(2, player)
         self.deck.reset_deck()
         self.deck.shuffle()
         self.current_highest_bet = self.big_blind
@@ -258,21 +292,16 @@ class Game:
         self.last_player_to_act = len(self.players) - 1
         self.first_player_acted = False
 
-        self.board = []
-        for player in self.players:
-            self.deal_cards(2, player)
-            player.folded = False
-
         # Clear any players of any previous attributes if there are any
-        if self.small_blind_position != -1 and self.big_blind_position != -1 and self.dealer_position != -1:
-            # If the position is less than the amount of players in the game, the player with that position has left,
-            # so trying to access their index in the players list would cause an IndexError.
-            if self.small_blind_position < len(self.players):
-                self.players[self.small_blind_position].blinds = []
-            if self.big_blind_position < len(self.players):
-                self.players[self.big_blind_position].blinds = []
-            if self.dealer_position < len(self.players):
-                self.players[self.dealer_position].dealer = False
+        # if self.small_blind_position != -1 and self.big_blind_position != -1 and self.dealer_position != -1:
+        #     # If the position is less than the amount of players in the game, the player with that position has left,
+        #     # so trying to access their index in the players list would cause an IndexError.
+        #     if self.small_blind_position < len(self.players):
+        #         self.players[self.small_blind_position].blinds = []
+        #     if self.big_blind_position < len(self.players):
+        #         self.players[self.big_blind_position].blinds = []
+        #     if self.dealer_position < len(self.players):
+        #         self.players[self.dealer_position].dealer = False
 
         self.dealer_position = (self.dealer_position + 1) % len(self.players)
         self.small_blind_position = (self.dealer_position + 1) % len(self.players)

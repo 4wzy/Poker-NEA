@@ -1,8 +1,10 @@
 test players exiting the game during rounds
 new implementation of checking if rounds over..
 
-0. handle players leaving! this works to an extent but the current player needs to be updated to the next one after a
-player leaves, and update the game state properly to show the current players
+
+Detect when a player has no more chips and make them spectate the game or watch the game somehow.
+Perhaps add a "bankrupt" field to each player and check active players using this field? Similar to how you skip through folded players.
+
 
 1. Detect when poker game fully finished (1 player has won)
 2. When the poker game has finished, remove the poker game from the lobbies dict in server.py
