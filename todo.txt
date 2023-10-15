@@ -1,3 +1,8 @@
+Handle what happens with players who are all in at the showdown! You may need an all in pot in server.py
+
+
+-----------------
+
 notes for future justin:
 when there is one player left in the Poker game (the winner), that's when you insert the game statistics in the tables.
 aggressiveness score can be something like amount_of_times_raised / total_actions

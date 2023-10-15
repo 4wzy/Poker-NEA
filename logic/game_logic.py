@@ -1,3 +1,4 @@
+from itertools import combinations
 from random import randint
 from typing import List
 
@@ -169,7 +170,16 @@ class Game:
     def is_player_active(self, current_position):
         return not (self.players[current_position].folded or
                     self.players[current_position].disconnected or
+                    self.players[current_position].busted or
+                    self.players[current_position].all_in)
+
+    def is_player_active_showdown(self, current_position):
+        return not (self.players[current_position].folded or
+                    self.players[current_position].disconnected or
                     self.players[current_position].busted)
+
+    def get_players_for_showdown(self):
+        return [p for index, p in enumerate(self.players) if self.is_player_active_showdown(index)]
 
     def get_previous_active_player(self, current_position, use_current_player):
         if use_current_player:
@@ -199,12 +209,56 @@ class Game:
             self.turn_river()
             self.current_round = "river"
         elif self.current_round == "river":
-            self.showdown()
+            print(self.showdown())
+            self.start_round()
+            return
 
         self.start_new_round(self.current_round)
 
     def showdown(self):
-        print("showdown has been reached")
+        remaining_players = self.get_players_for_showdown()
+        best_hands = {}  # Store best hand for each player
+
+        # Define hand rankings for comparison
+        hand_rankings = ["High Card", "Pair", "Two Pair", "Three of a Kind",
+                         "Straight", "Flush", "Full House", "Four of a Kind",
+                         "Straight Flush", "Royal Flush"]
+
+        # For each player, evaluate the best hand they can make with their hole cards + community cards
+        for player in remaining_players:
+            all_seven_cards = player.hand.cards + self.board
+            best_rank = -1  # Track the best rank found
+            best_cards = None  # Track the best 5 cards found
+
+            # Check all combinations of 5 out of the 7 cards
+            for combo in combinations(all_seven_cards, 5):
+                test_hand = Hand(list(combo))
+                rank, cards = test_hand.evaluate_strength()
+                rank_index = hand_rankings.index(rank)
+                if rank_index > best_rank or (rank_index == best_rank and cards > best_cards):
+                    best_rank = rank_index
+                    best_cards = cards
+
+            best_hands[player] = (best_rank, best_cards)
+
+        # Determine the winner(s)
+        winners = []
+        max_rank = max(best_hands.values(), key=lambda x: x[0])[0]
+        for player, (rank, cards) in best_hands.items():
+            if rank == max_rank:
+                if not winners or cards > best_hands[winners[0]][1]:
+                    winners = [player]
+                elif cards == best_hands[winners[0]][1]:
+                    winners.append(player)
+
+        if len(winners) == 1:
+            winner_message = f"{winners[0].name} wins with a {hand_rankings[max_rank]}!"
+            winners[0].chips += self.pot.chips
+            self.pot.chips = 0
+        else:
+            winner_message = "It's a tie between " + ", ".join([player.name for player in winners]) + "!"
+
+        return winner_message
 
     def get_initial_state(self):
         state = {
@@ -475,5 +529,63 @@ class Hand:
     def __init__(self, cards):
         self.cards = cards
 
+    RANKS = {'2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
+             'Jack': 11, 'Queen': 12, 'King': 13, 'Ace': 14}
+
+    @staticmethod
+    def is_sequence(lst):
+        """Check if the given list forms a sequence."""
+        return sorted(lst) == list(range(min(lst), max(lst) + 1))
+
     def evaluate_strength(self):
-        pass
+        # Convert cards to rank numbers and sort
+        ranks = sorted([self.RANKS[card.rank] for card in self.cards], reverse=True)
+        suits = [card.suit for card in self.cards]
+
+        # Check for flush and straight
+        flush = len(set(suits)) == 1
+        straight = self.is_sequence(ranks) or (ranks == [14, 5, 4, 3, 2])  # Including A,2,3,4,5 straight
+
+        # Check for four of a kind, three of a kind, pairs
+        rank_counts = {rank: ranks.count(rank) for rank in ranks}
+        max_count = max(rank_counts.values())
+
+        # Royal Flush
+        if flush and ranks[:5] == [14, 13, 12, 11, 10]:
+            return "Royal Flush", ranks
+        # Straight Flush
+        if flush and straight:
+            return "Straight Flush", ranks if ranks != [14, 5, 4, 3, 2] else [5, 4, 3, 2, 1]
+        # Four of a Kind
+        if max_count == 4:
+            quad_rank = [rank for rank, count in rank_counts.items() if count == 4][0]
+            other_ranks = [rank for rank in ranks if rank != quad_rank]
+            return "Four of a Kind", [quad_rank] * 4 + other_ranks[:1]
+        # Full House
+        if max_count == 3 and len(set(ranks)) == 2:
+            trips_rank = [rank for rank, count in rank_counts.items() if count == 3][0]
+            other_rank = [rank for rank in ranks if rank != trips_rank][0]
+            return "Full House", [trips_rank] * 3 + [other_rank] * 2
+        # Flush
+        if flush:
+            return "Flush", ranks
+        # Straight
+        if straight:
+            return "Straight", ranks if ranks != [14, 5, 4, 3, 2] else [5, 4, 3, 2, 1]
+        # Three of a Kind
+        if max_count == 3:
+            trips_rank = [rank for rank, count in rank_counts.items() if count == 3][0]
+            other_ranks = [rank for rank in ranks if rank != trips_rank]
+            return "Three of a Kind", [trips_rank] * 3 + other_ranks[:2]
+        # Two Pair
+        if list(rank_counts.values()).count(2) == 2:
+            pair_ranks = [rank for rank, count in rank_counts.items() if count == 2]
+            other_ranks = [rank for rank in ranks if rank not in pair_ranks]
+            return "Two Pair", pair_ranks * 2 + other_ranks[:1]
+        # Pair
+        if 2 in rank_counts.values():
+            pair_rank = [rank for rank, count in rank_counts.items() if count == 2][0]
+            other_ranks = [rank for rank in ranks if rank != pair_rank]
+            return "Pair", [pair_rank] * 2 + other_ranks[:3]
+        # High Card
+        return "High Card", ranks
