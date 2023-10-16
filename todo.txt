@@ -1,5 +1,7 @@
 Handle what happens with players who are all in at the showdown! You may need an all in pot in server.py
 
+Handle what happens when everyone goes all in before the showdown, for example during the flop round
+The game should skip to the river and then the showdown phase.
 
 -----------------
 

@@ -90,6 +90,10 @@ class Game:
         self.last_player_to_act = None
         self.first_player_acted = False
 
+    #
+    #
+    #
+    # THIS LOGIC NEEDS UPDATING NOW
     def is_betting_round_over(self):
         if not self.first_player_acted:
             if self.current_player_turn == self.first_player_to_act:
@@ -103,7 +107,7 @@ class Game:
         print("------------------------------")
 
         # Check if all active players have bet the same amount
-        active_players = self.get_active_players()
+        active_players = self.get_players_for_showdown()
         if len(set(player.current_bet for player in active_players)) > 1:
             print("Current betting round not over as not all players have gone")
             return False
@@ -195,7 +199,7 @@ class Game:
         return [p for index, p in enumerate(self.players) if self.is_player_active(index)]
 
     def only_one_player_active(self):
-        active_players = self.get_active_players()
+        active_players = self.get_players_for_showdown()
         return len(active_players) == 1
 
     def progress_to_next_round(self):
@@ -214,6 +218,26 @@ class Game:
             return
 
         self.start_new_round(self.current_round)
+
+    def determine_winner_from_eligible_players(self, best_hands, eligible_players):
+        # Define hand rankings for comparison
+        hand_rankings = ["High Card", "Pair", "Two Pair", "Three of a Kind",
+                         "Straight", "Flush", "Full House", "Four of a Kind",
+                         "Straight Flush", "Royal Flush"]
+
+        # Filter out the best hands only for eligible players
+        eligible_best_hands = {player: hand for player, hand in best_hands.items() if player in eligible_players}
+
+        # Determine the winner(s)
+        winners = []
+        max_rank = max(eligible_best_hands.values(), key=lambda x: x[0])[0]
+        for player, (rank, cards) in eligible_best_hands.items():
+            if rank == max_rank:
+                if not winners or cards > best_hands[winners[0]][1]:
+                    winners = [player]
+                elif cards == best_hands[winners[0]][1]:
+                    winners.append(player)
+        return winners
 
     def showdown(self):
         remaining_players = self.get_players_for_showdown()
@@ -241,24 +265,47 @@ class Game:
 
             best_hands[player] = (best_rank, best_cards)
 
-        # Determine the winner(s)
-        winners = []
-        max_rank = max(best_hands.values(), key=lambda x: x[0])[0]
-        for player, (rank, cards) in best_hands.items():
-            if rank == max_rank:
-                if not winners or cards > best_hands[winners[0]][1]:
-                    winners = [player]
-                elif cards == best_hands[winners[0]][1]:
-                    winners.append(player)
+        all_in_players = sorted([player for player in remaining_players if player.all_in], key=lambda p: p.current_bet)
 
-        if len(winners) == 1:
-            winner_message = f"{winners[0].name} wins with a {hand_rankings[max_rank]}!"
-            winners[0].chips += self.pot.chips
-            self.pot.chips = 0
-        else:
-            winner_message = "It's a tie between " + ", ".join([player.name for player in winners]) + "!"
+        # List of pots, each pot is a tuple of (amount, eligible_players)
+        pots = []
 
-        return winner_message
+        # Create pots based on all-in amounts
+        last_all_in_amount = 0
+        for all_in_player in all_in_players:
+            pot_amount = (all_in_player.current_bet - last_all_in_amount) * len(remaining_players)
+            pots.append((pot_amount, remaining_players.copy()))
+            last_all_in_amount = all_in_player.current_bet
+            remaining_players.remove(all_in_player)
+
+        # Add the main pot
+        main_pot = self.pot.chips - sum(pot[0] for pot in pots)
+        pots.append((main_pot, remaining_players))
+
+        winner_messages = []
+        for pot_amount, eligible_players in pots:
+            winning_players = self.determine_winner_from_eligible_players(best_hands, eligible_players)
+            num_winners = len(winning_players)
+
+            # Determine winner(s) and handle pot distribution
+            if num_winners == 1:
+                winner_message = f"{winning_players[0].name} wins {pot_amount} chips with a {hand_rankings[best_hands[winning_players[0]][0]]}!"
+                winning_players[0].chips += pot_amount
+            else:
+                winner_message = "It's a tie between " + ", ".join(
+                    [player.name for player in winning_players]) + f" for {pot_amount} chips!"
+                pot_share = pot_amount // num_winners  # Integer division to get floor value
+                extra_chips = pot_amount % num_winners
+                for player in winning_players:
+                    player.chips += pot_share
+
+                # Give the extra chip to only one of the winners
+                winning_players[0].chips += extra_chips
+
+            winner_messages.append(winner_message)
+
+        self.pot.chips = 0
+        return "\n".join(winner_messages)
 
     def get_initial_state(self):
         state = {
