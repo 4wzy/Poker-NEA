@@ -231,6 +231,23 @@ class GameGUI(tk.Tk):
                     elif message_type == "player_left_game_state":
                         task_id = self.after(0, self.process_player_left_game_state, message['game_state'])
                         self.scheduled_tasks.append(task_id)
+                    elif message_type == 'update_showdown_state':
+                        print("message type == update showdown state")
+                        task_id = self.after(1, self.update_showdown_state, message)
+                        self.scheduled_tasks.append(task_id)
+                    # Check if the round is being skipped due to all players going all in before the river
+                    elif message_type == "skip_round":
+                        # If so, give the players some time to look at their community cards and process the outcome of
+                        # the round, and then send a request to the server for the next round to start
+                        print("message type thing happened with start_next_round")
+                        # task_id = self.after(1, self.update_showdown_state, message)
+                        # self.scheduled_tasks.append(task_id)
+                        time.sleep(8)
+                        message = {"type": "start_next_round", "lobby_id": self.lobby_id}
+                        response = self.controller.network_manager.send_message(message)
+                        if response.get("success") or response.get("type") == "update_game_state":
+                            print("going to update game state with new response")
+                            self.update_game_state(response)
                 elif isinstance(message, list):
                     self.controller.process_received_message('lobby_list', message)
             except json.JSONDecodeError as e:
@@ -263,6 +280,8 @@ class GameGUI(tk.Tk):
         return file_name
 
     def update_game_state(self, game_state):
+        self.hide_everyones_cards(game_state)
+        print("updating game state")
         print(f"Trying to get user_id in game_state: {game_state}")
         user_id = game_state['user_id']
         print(f"(game_gui.py): updating game state for {user_id}")
@@ -271,6 +290,54 @@ class GameGUI(tk.Tk):
         game_state = game_state["game_state"]
         print(f"(game_gui): new game_state: {game_state}")
 
+        self.update_roles(game_state, user_id)
+        self.update_pot(game_state)
+
+        self.indicate_active_players(game_state)
+        self.show_current_player(game_state)
+        self.indicate_folded_and_busted_and_disconnected_players(game_state)
+
+        # Update card images if they are in the game_state
+        # ONLY UPDATE THIS ONCE IN A GAME, WHEN ALL THE PLAYERS HAVE JOINED IF THIS IS THE "START GAME STATE"
+        print(f"hand: {game_state.get('hand')}")
+        self.show_local_cards(game_state, user_id)
+
+        print(f"BOARD: {game_state['board']}")
+        self.clear_community_cards()
+        if len(game_state["board"]) > 0:
+            self.place_community_cards(game_state["board"])
+
+    def update_showdown_state(self, game_state):
+        print("updating showdown state")
+        print(f"Trying to get user_id in game_state: {game_state}")
+        user_id = game_state['user_id']
+        print(f"(game_gui.py): updating game state for {user_id}")
+
+        print(f"(game_gui.py): old game_state: {game_state}")
+        game_state = game_state["game_state"]
+        print(f"(game_gui): new game_state: {game_state}")
+
+        self.update_roles(game_state, user_id)
+        self.update_pot(game_state)
+
+        self.indicate_active_players(game_state)
+        self.show_current_player(game_state)
+        self.indicate_folded_and_busted_and_disconnected_players(game_state)
+
+        self.show_everyones_cards(game_state)
+
+        print(f"BOARD: {game_state['board']}")
+        self.clear_community_cards()
+        if len(game_state["board"]) > 0:
+            self.place_community_cards(game_state["board"])
+
+    def update_pot(self, game_state):
+        pot_amount = game_state.get('pot', 0)
+        print(f"Pot amount: {pot_amount}")
+        self.pot_label.config(text=f"Pot: {pot_amount}")
+        print(f"pot_label: {self.process_lobby_list()}")
+
+    def update_roles(self, game_state, user_id):
         # Get the components for each player, and update accordingly
         for player_data in game_state["players"]:
             print(f"using player data: {player_data}")
@@ -312,12 +379,7 @@ class GameGUI(tk.Tk):
         self.pot_label.config(text=f"Pot: {pot_amount}")
         print(f"pot_label: {self.process_lobby_list()}")
 
-        self.indicate_active_players(game_state)
-        self.show_current_player(game_state)
-        self.indicate_folded_and_busted_and_disconnected_players(game_state)
-
-        # Update card images if they are in the game_state
-        # ONLY UPDATE THIS ONCE IN A GAME, WHEN ALL THE PLAYERS HAVE JOINED IF THIS IS THE "START GAME STATE"
+    def show_local_cards(self, game_state, user_id):
         print(f"hand: {game_state.get('hand')}")
         components = self.player_components.get(user_id)
         if not components:
@@ -337,10 +399,48 @@ class GameGUI(tk.Tk):
             card_label.photo = card_photo  # keep a reference to avoid garbage collection
             print(f"(game_gui): card_label after change: {card_label}")
 
-        print(f"BOARD: {game_state['board']}")
-        self.clear_community_cards()
-        if len(game_state["board"]) > 0:
-            self.place_community_cards(game_state["board"])
+    def show_everyones_cards(self, game_state):
+        print("SHOWING EVERYONES CARDS!")
+        for player in game_state['players']:
+            user_id = player.get('user_id')
+            components = self.player_components.get(user_id)
+            if not components:
+                print(f"No components found for user_id {user_id}")
+                print(f"components: {components}")
+                return
+            for idx, card_str in enumerate(player.get('hand', [])):
+                print(f"(game_gui): DEBUG idx: {idx} card_str: {card_str}")
+                card_image_path = self.get_card_image_path(card_str)
+                # print(f"(game_gui): card_image_path: {card_image_path}")
+                card_photo = Image.open(card_image_path)
+                card_photo = card_photo.resize((60, 90))
+                card_photo = ImageTk.PhotoImage(card_photo)
+                card_label = components[f'card{idx + 1}_label']
+                # print(f"(game_gui): card_label before change: {card_label}")
+                card_label.config(image=card_photo)
+                card_label.photo = card_photo  # keep a reference to avoid garbage collection
+                # print(f"(game_gui): card_label after change: {card_label}")
+
+    def hide_everyones_cards(self, game_state):
+        game_state = game_state['game_state']
+        print("HIDING EVERYONES CARDS!")
+        for player in game_state['players']:
+            user_id = player.get('user_id')
+            components = self.player_components.get(user_id)
+            if not components:
+                print(f"No components found for user_id {user_id}")
+                print(f"components: {components}")
+                return
+
+            card_photo = Image.open("gui/Images/Cards/back.png")
+            card_photo = card_photo.resize((60, 90))
+            card_photo = ImageTk.PhotoImage(card_photo)
+            card_label1 = components[f'card1_label']
+            card_label2 = components[f'card2_label']
+            card_label1.config(image=card_photo)
+            card_label1.photo = card_photo
+            card_label2.config(image=card_photo)
+            card_label2.photo = card_photo
 
     def show_current_player(self, game_state):
         print("Showing current player")
@@ -409,9 +509,6 @@ class GameGUI(tk.Tk):
                 current_player_frame = current_player_components['profile_label'].master
                 current_player_frame.config(bg="#302525")
 
-    def raise_action(self):
-        pass
-
     def send_player_action(self, action):
         if action == "raise":
             raise_amount = simpledialog.askinteger(f"Raise Amount", "Enter the amount you want to raise):",
@@ -429,6 +526,7 @@ class GameGUI(tk.Tk):
         response = self.controller.network_manager.send_message(message)
         if response.get("success") or response.get("type") == "update_game_state":
             self.update_game_state(response)
+            print(f"updated game state with response: {response}")
         else:
             error_message = response.get("error", "An unknown error occurred.")
             messagebox.showerror("Error", error_message)

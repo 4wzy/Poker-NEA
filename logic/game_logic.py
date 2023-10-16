@@ -1,3 +1,4 @@
+import time
 from itertools import combinations
 from random import randint
 from typing import List
@@ -89,11 +90,11 @@ class Game:
         self.first_player_to_act = None
         self.last_player_to_act = None
         self.first_player_acted = False
+        self.hand_rankings = ["High Card", "Pair", "Two Pair", "Three of a Kind",
+                              "Straight", "Flush", "Full House", "Four of a Kind",
+                              "Straight Flush", "Royal Flush"]
+        self.non_active_player = None
 
-    #
-    #
-    #
-    # THIS LOGIC NEEDS UPDATING NOW
     def is_betting_round_over(self):
         if not self.first_player_acted:
             if self.current_player_turn == self.first_player_to_act:
@@ -104,6 +105,7 @@ class Game:
         print(f"last_player_to_act: {self.last_player_to_act}")
         print(f"current_player_turn: {self.current_player_turn}")
         print(f"has self.first_player_acted: {self.first_player_acted}")
+        print(f"non_active_player: {self.non_active_player}")
         print("------------------------------")
 
         # Check if all active players have bet the same amount
@@ -112,7 +114,10 @@ class Game:
             print("Current betting round not over as not all players have gone")
             return False
 
-        return self.first_player_acted and self.current_player_turn == self.last_player_to_act
+        if self.non_active_player:
+            return self.first_player_acted and self.players[self.current_player_turn] == self.non_active_player
+        else:
+            return self.first_player_acted and self.current_player_turn == self.last_player_to_act
 
     def start_new_round(self, round_type):
         if round_type == "preflop":
@@ -150,24 +155,44 @@ class Game:
                 self.first_player_to_act = self.get_next_active_player(self.first_player_to_act, False)
             elif self.players[self.last_player_to_act] == leaving_player:
                 print("Last player to act == leaving player")
+                self.non_active_player = leaving_player
                 self.last_player_to_act = self.get_previous_active_player(self.last_player_to_act, False)
             print("Updating current player turn")
             self.current_player_turn = self.get_next_active_player(self.current_player_turn, False)
 
     def get_next_active_player(self, current_position, use_current_player):
-        if len(self.get_active_players()) == 0:
+        if len(self.get_players_for_showdown()) == 0:
             # If the server is force terminated, stop it from being in an infinite loop
+            print("ERROR ERROR ERROR: NO PLAYERS AVAILABLE FOR GET_NEXT_ACTIVE_PLAYER")
+            print(f"{[f'{player.name}: {player.all_in}, {player.busted}, {player.folded}' for player in self.players]}")
             return 0
 
         if use_current_player:
             if self.is_player_active(current_position):
+                print(f"(get_next_active_player) FINAL: {current_position}")
                 return current_position
-
-        print(f"(get_next_active_player): {current_position}")
 
         while True:
             current_position = (current_position + 1) % len(self.players)
             print(f"(get_next_active_player): {current_position}")
+            if self.is_player_active(current_position):
+                return current_position
+
+    def get_previous_active_player(self, current_position, use_current_player):
+        if len(self.get_players_for_showdown()) == 0:
+            # If the server is force terminated, stop it from being in an infinite loop
+            print("ERROR ERROR ERROR: NO PLAYERS AVAILABLE FOR GET_NEXT_ACTIVE_PLAYER")
+            print(f"{[f'{player.name}: {player.all_in}, {player.busted}, {player.folded}' for player in self.players]}")
+            return 0
+
+        if use_current_player:
+            if self.is_player_active(current_position):
+                print(f"(get_previous_active_player) FINAL: {current_position}")
+                return current_position
+
+        while True:
+            current_position = (current_position - 1) % len(self.players)
+            print(f"(get_previous_active_player): {current_position}")
             if self.is_player_active(current_position):
                 return current_position
 
@@ -185,21 +210,12 @@ class Game:
     def get_players_for_showdown(self):
         return [p for index, p in enumerate(self.players) if self.is_player_active_showdown(index)]
 
-    def get_previous_active_player(self, current_position, use_current_player):
-        if use_current_player:
-            if self.is_player_active(current_position):
-                return current_position
-
-        while True:
-            current_position = (current_position - 1) % len(self.players)
-            if self.is_player_active(current_position):
-                return current_position
-
     def get_active_players(self):
         return [p for index, p in enumerate(self.players) if self.is_player_active(index)]
 
     def only_one_player_active(self):
         active_players = self.get_players_for_showdown()
+        print(f"(ONLY_ONE_PLAYER_ACTIVE) activer_players: {active_players}")
         return len(active_players) == 1
 
     def progress_to_next_round(self):
@@ -219,17 +235,24 @@ class Game:
 
         self.start_new_round(self.current_round)
 
-    def determine_winner_from_eligible_players(self, best_hands, eligible_players):
-        # Define hand rankings for comparison
-        hand_rankings = ["High Card", "Pair", "Two Pair", "Three of a Kind",
-                         "Straight", "Flush", "Full House", "Four of a Kind",
-                         "Straight Flush", "Royal Flush"]
+    def skip_to_next_round(self):
+        if self.current_round == "preflop":
+            self.flop()
+            self.current_round = "flop"
+        if self.current_round == "flop":
+            self.turn_river()
+            self.current_round = "turn"
+        if self.current_round == "turn":
+            self.turn_river()
+            self.current_round = "river"
 
+    def determine_winner_from_eligible_players(self, best_hands, eligible_players):
         # Filter out the best hands only for eligible players
         eligible_best_hands = {player: hand for player, hand in best_hands.items() if player in eligible_players}
 
         # Determine the winner(s)
         winners = []
+        print(f"GETTING MAX RANK using max({eligible_best_hands}, values: {eligible_best_hands.values()})")
         max_rank = max(eligible_best_hands.values(), key=lambda x: x[0])[0]
         for player, (rank, cards) in eligible_best_hands.items():
             if rank == max_rank:
@@ -239,57 +262,62 @@ class Game:
                     winners.append(player)
         return winners
 
-    def showdown(self):
-        remaining_players = self.get_players_for_showdown()
-        best_hands = {}  # Store best hand for each player
+    def evaluate_player_hands(self, remaining_players):
+        best_hand_per_player = {}
 
-        # Define hand rankings for comparison
-        hand_rankings = ["High Card", "Pair", "Two Pair", "Three of a Kind",
-                         "Straight", "Flush", "Full House", "Four of a Kind",
-                         "Straight Flush", "Royal Flush"]
-
-        # For each player, evaluate the best hand they can make with their hole cards + community cards
         for player in remaining_players:
             all_seven_cards = player.hand.cards + self.board
-            best_rank = -1  # Track the best rank found
-            best_cards = None  # Track the best 5 cards found
+            best_rank = -1
+            best_cards = None
 
-            # Check all combinations of 5 out of the 7 cards
             for combo in combinations(all_seven_cards, 5):
                 test_hand = Hand(list(combo))
                 rank, cards = test_hand.evaluate_strength()
-                rank_index = hand_rankings.index(rank)
+                rank_index = self.hand_rankings.index(rank)
+
                 if rank_index > best_rank or (rank_index == best_rank and cards > best_cards):
                     best_rank = rank_index
                     best_cards = cards
 
-            best_hands[player] = (best_rank, best_cards)
+            best_hand_per_player[player] = (best_rank, best_cards)
 
-        all_in_players = sorted([player for player in remaining_players if player.all_in], key=lambda p: p.current_bet)
+        return best_hand_per_player
 
-        # List of pots, each pot is a tuple of (amount, eligible_players)
+    # Create pots based on any all_ins and return a list of pots
+    def create_pots(self, remaining_players):
         pots = []
-
-        # Create pots based on all-in amounts
         last_all_in_amount = 0
+
+        all_in_players = sorted((player for player in remaining_players if player.all_in), key=lambda p: p.current_bet)
+
         for all_in_player in all_in_players:
             pot_amount = (all_in_player.current_bet - last_all_in_amount) * len(remaining_players)
-            pots.append((pot_amount, remaining_players.copy()))
+            pots.append((pot_amount, list(remaining_players)))
+
             last_all_in_amount = all_in_player.current_bet
             remaining_players.remove(all_in_player)
 
-        # Add the main pot
         main_pot = self.pot.chips - sum(pot[0] for pot in pots)
-        pots.append((main_pot, remaining_players))
+        # Add the main pot only if there are players left who haven't gone all-in
+        if remaining_players and main_pot > 0:
+            pots.append((main_pot, remaining_players))
+
+        return pots
+
+    def showdown(self):
+        remaining_players = self.get_players_for_showdown()
+        best_hand_per_player = self.evaluate_player_hands(remaining_players)
+        pots = self.create_pots(remaining_players)
 
         winner_messages = []
         for pot_amount, eligible_players in pots:
-            winning_players = self.determine_winner_from_eligible_players(best_hands, eligible_players)
+            winning_players = self.determine_winner_from_eligible_players(best_hand_per_player, eligible_players)
             num_winners = len(winning_players)
 
             # Determine winner(s) and handle pot distribution
             if num_winners == 1:
-                winner_message = f"{winning_players[0].name} wins {pot_amount} chips with a {hand_rankings[best_hands[winning_players[0]][0]]}!"
+                winner_message = f"{winning_players[0].name} wins {pot_amount} chips with a " \
+                                 f"{self.hand_rankings[best_hand_per_player[winning_players[0]][0]]}!"
                 winning_players[0].chips += pot_amount
             else:
                 winner_message = "It's a tie between " + ", ".join(
@@ -317,17 +345,6 @@ class Game:
         }
         return state
 
-    def get_game_state(self):
-        # The general state of the game
-        state = {
-            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet,
-                         "blinds": p.blinds} for p in self.players],
-            'pot': self.pot.chips,
-            'board': [str(card) for card in self.board],
-            'current_player_turn': self.current_player_turn,
-        }
-        return state
-
     def get_game_state_for_player(self, player):
         # The state of the game to be sent to a specific player
         state = {
@@ -340,6 +357,18 @@ class Game:
             'hand': [str(card) for card in player.hand.cards]
         }
         print(f"(game_logic.py): returning {state} to {player}")
+        return state
+
+    def get_game_state_for_showdown(self):
+        state = {
+            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet,
+                         "blinds": p.blinds, "dealer": p.dealer, "folded": p.folded, "disconnected": p.disconnected,
+                         "busted": p.busted, "hand": [str(card) for card in p.hand.cards]} for p in self.players],
+            'pot': self.pot.chips,
+            'board': [str(card) for card in self.board],
+            'current_player_turn': self.current_player_turn
+        }
+        print(f"(game_logic.py): returning {state}")
         return state
 
     def get_game_state_for_reconnecting_player(self, player):
@@ -462,6 +491,7 @@ class Game:
         if player == self.players[self.first_player_to_act]:
             self.first_player_to_act = self.get_next_active_player(self.first_player_to_act, False)
         elif player == self.players[self.last_player_to_act]:
+            self.non_active_player = player
             self.last_player_to_act = self.get_previous_active_player(self.last_player_to_act, False)
 
         return message
@@ -472,11 +502,16 @@ class Game:
             player.chips -= bet_amount
             self.pot.add_chips(bet_amount)
             player.current_bet = self.current_highest_bet
-            if player.chips == 0:
-                player.all_in = True
-                player.amount_of_times_all_in += 1
         else:
-            return {"success": False, "error": "You do not have enough chips to call"}
+            # if they player does not have enough chips to call, they go all in and side pots are handled later
+            player.current_bet += player.chips
+            self.pot.add_chips(player.chips)
+            player.chips = 0
+
+        if player.chips == 0:
+            player.all_in = True
+            player.amount_of_times_all_in += 1
+            self.non_active_player = player
 
         if bet_amount == 0:
             player.amount_of_times_checked += 1
@@ -503,10 +538,13 @@ class Game:
             if player.chips == 0:
                 player.all_in = True
                 player.amount_of_times_all_in += 1
+                self.non_active_player = player
+
             player.amount_of_times_raised += 1
             return {"success": True}
 
     def process_player_action(self, player, action, raise_amount):
+        self.non_active_player = None
         message = ""
         # Check if it's the player's turn
         if player != self.players[self.current_player_turn]:
@@ -547,12 +585,19 @@ class Game:
             # If not, the current Poker round is still in action, so check if the betting round is over
             if self.is_betting_round_over():
                 print(f"{self.current_round} round over!")
-                self.progress_to_next_round()
+                # If the betting round is over, check if all current players are "all in"
+                if False in [player.all_in for player in self.get_players_for_showdown()] and self.current_round != \
+                        "river":
+                    self.progress_to_next_round()
+                else:
+                    self.skip_to_next_round()
+                    return {"success": True, "type": "skip_round", "showdown": True}
             else:
                 # If the betting round is not over, go to next player's turn
+                print("betting round not over, so getting next active player turn.")
                 self.current_player_turn = self.get_next_active_player(self.current_player_turn, False)
             print(
-                f"Next player's turn: Player index {(self.current_player_turn)}, {self.players[self.current_player_turn]}")
+                f"Next player's turn: Player index {self.current_player_turn}, {self.players[self.current_player_turn]}")
 
         player.amount_of_times_acted += 1
         return {"success": True, "message": message}

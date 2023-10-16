@@ -22,6 +22,7 @@ class NetworkManager:
             print(f"1. {message}")
             self.client_socket.sendall((json.dumps(message) + '\n').encode('utf-8'))
             response = self.receive_message()
+            print(f"2. {response}")
             if response:
                 return response
         except BrokenPipeError:
