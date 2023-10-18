@@ -61,6 +61,7 @@ class Player:
         self.amount_of_times_checked = 0
         self.amount_of_times_folded = 0
         self.amount_of_times_acted = 0
+        self.won = True
 
     def add_card(self, card):
         self.hand.cards.append(card)
@@ -218,7 +219,7 @@ class Game:
         print(f"(ONLY_ONE_PLAYER_ACTIVE) activer_players: {active_players}")
         return len(active_players) == 1
 
-    def progress_to_next_round(self):
+    def progress_to_next_betting_round(self):
         if self.current_round == "preflop":
             self.flop()
             self.current_round = "flop"
@@ -235,7 +236,7 @@ class Game:
 
         self.start_new_round(self.current_round)
 
-    def skip_to_next_round(self):
+    def skip_through_poker_rounds(self):
         if self.current_round == "preflop":
             self.flop()
             self.current_round = "flop"
@@ -325,6 +326,7 @@ class Game:
                 pot_share = pot_amount // num_winners  # Integer division to get floor value
                 extra_chips = pot_amount % num_winners
                 for player in winning_players:
+                    player.won = True
                     player.chips += pot_share
 
                 # Give the extra chip to only one of the winners
@@ -363,7 +365,7 @@ class Game:
         state = {
             'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet,
                          "blinds": p.blinds, "dealer": p.dealer, "folded": p.folded, "disconnected": p.disconnected,
-                         "busted": p.busted, "hand": [str(card) for card in p.hand.cards]} for p in self.players],
+                         "busted": p.busted, "hand": [str(card) for card in p.hand.cards], "won": p.won} for p in self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board],
             'current_player_turn': self.current_player_turn
@@ -441,6 +443,7 @@ class Game:
             player.folded = False
             player.blinds = []
             player.dealer = False
+            player.won = False
             self.deal_cards(2, player)
             if not player.busted and player.chips == 0 and player.all_in:
                 player.busted = True
@@ -588,10 +591,11 @@ class Game:
                 # If the betting round is over, check if all current players are "all in"
                 if False in [player.all_in for player in self.get_players_for_showdown()] and self.current_round != \
                         "river":
-                    self.progress_to_next_round()
+                    self.progress_to_next_betting_round()
                 else:
-                    self.skip_to_next_round()
-                    return {"success": True, "type": "skip_round", "showdown": True}
+                    self.skip_through_poker_rounds()
+                    print(self.showdown())
+                    return {"success": True, "type": "skip_round", "showdown": True, "game_state": self.get_game_state_for_showdown()}
             else:
                 # If the betting round is not over, go to next player's turn
                 print("betting round not over, so getting next active player turn.")

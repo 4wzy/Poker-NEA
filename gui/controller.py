@@ -8,7 +8,6 @@ from gui.game_gui import GameGUI
 from logic.network_manager import NetworkManager
 
 
-
 class Controller:
     def __init__(self):
         self.current_menu = None
@@ -16,7 +15,7 @@ class Controller:
 
     def run(self):
         # self.open_login_menu()
-        self.open_main_menu(14)
+        self.open_main_menu(17)
         tk.mainloop()
 
     def open_login_menu(self):
@@ -57,4 +56,3 @@ class Controller:
         if message_type == 'lobby_list':
             if isinstance(self.current_menu, LobbyBrowser):
                 self.current_menu.populate_lobby_list(message_content)
-

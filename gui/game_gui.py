@@ -240,8 +240,9 @@ class GameGUI(tk.Tk):
                         # If so, give the players some time to look at their community cards and process the outcome of
                         # the round, and then send a request to the server for the next round to start
                         print("message type thing happened with start_next_round")
-                        # task_id = self.after(1, self.update_showdown_state, message)
-                        # self.scheduled_tasks.append(task_id)
+                        print(f"message: {message}")
+                        task_id = self.after(1, self.update_showdown_state, message)
+                        self.scheduled_tasks.append(task_id)
                         time.sleep(8)
                         message = {"type": "start_next_round", "lobby_id": self.lobby_id}
                         response = self.controller.network_manager.send_message(message)
@@ -253,6 +254,8 @@ class GameGUI(tk.Tk):
             except json.JSONDecodeError as e:
                 print(f"JSON Decode Error: {e}")
                 print(f"Data causing the error: {message_str}")
+            except Exception as e:
+                print(f"Unknown exception: {e}")
 
     def process_lobby_list(self):
         pass
@@ -290,7 +293,7 @@ class GameGUI(tk.Tk):
         game_state = game_state["game_state"]
         print(f"(game_gui): new game_state: {game_state}")
 
-        self.update_roles(game_state, user_id)
+        self.update_roles(game_state)
         self.update_pot(game_state)
 
         self.indicate_active_players(game_state)
@@ -310,19 +313,19 @@ class GameGUI(tk.Tk):
     def update_showdown_state(self, game_state):
         print("updating showdown state")
         print(f"Trying to get user_id in game_state: {game_state}")
-        user_id = game_state['user_id']
-        print(f"(game_gui.py): updating game state for {user_id}")
+        print(f"(game_gui.py): updating game state for user")
 
         print(f"(game_gui.py): old game_state: {game_state}")
         game_state = game_state["game_state"]
         print(f"(game_gui): new game_state: {game_state}")
 
-        self.update_roles(game_state, user_id)
+        self.update_roles(game_state)
         self.update_pot(game_state)
 
         self.indicate_active_players(game_state)
         self.show_current_player(game_state)
         self.indicate_folded_and_busted_and_disconnected_players(game_state)
+        self.indicate_winning_players(game_state)
 
         self.show_everyones_cards(game_state)
 
@@ -337,13 +340,12 @@ class GameGUI(tk.Tk):
         self.pot_label.config(text=f"Pot: {pot_amount}")
         print(f"pot_label: {self.process_lobby_list()}")
 
-    def update_roles(self, game_state, user_id):
+    def update_roles(self, game_state):
         # Get the components for each player, and update accordingly
         for player_data in game_state["players"]:
             print(f"using player data: {player_data}")
             components = self.player_components.get(player_data["user_id"])
             if not components:
-                print(f"No components found for user_id {user_id}")
                 print(f"components: {components}")
                 return
             if player_data:
@@ -372,7 +374,7 @@ class GameGUI(tk.Tk):
                 components['role_label'].config(text=role_text)
                 print(f"Updated role label {components['role_label']} with text: {role_text}")
             else:
-                print(f"No player data found for user_id {user_id}")
+                print(f"No player data found..")
 
         pot_amount = game_state.get('pot', 0)
         print(f"Pot amount: {pot_amount}")
@@ -499,6 +501,14 @@ class GameGUI(tk.Tk):
                 current_player_frame = current_player_components['profile_label'].master
                 current_player_frame.config(bg="#090245")  # Highlighting with dark blue (ish)
 
+    def indicate_winning_players(self, game_state):
+        winning_players = [player for player in game_state["players"] if player["won"]]
+        for player in winning_players:
+            current_player_components = self.player_components.get(player["user_id"])
+            if current_player_components:
+                current_player_frame = current_player_components['profile_label'].master
+                current_player_frame.config(bg="#fcba03")  # Highlighting with a grey color.
+
     def indicate_active_players(self, game_state):
         # print(f"game_state of players: {game_state['players']}")
         active_players = [p for p in game_state["players"] if not p["folded"]]
@@ -524,9 +534,12 @@ class GameGUI(tk.Tk):
             message = {"type": "bet", "action": action, "user_id": self.user_id, "lobby_id": self.lobby_id}
 
         response = self.controller.network_manager.send_message(message)
-        if response.get("success") or response.get("type") == "update_game_state":
-            self.update_game_state(response)
+        if response.get("success") and response[1].get("type") == "update_game_state":
+            self.update_game_state(response[1])
             print(f"updated game state with response: {response}")
+        elif response.get("success") and response[1].get("type") == "update_game_state":
+            self.update_showdown_state(response[1])
+            print(f"updated showdown state with response: {response}")
         else:
             error_message = response.get("error", "An unknown error occurred.")
             messagebox.showerror("Error", error_message)
