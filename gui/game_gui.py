@@ -96,6 +96,10 @@ class GameGUI(tk.Tk):
                                   font=("Cambria", 12, "bold"))
         self.pot_label.place(x=420, y=430, anchor="center")
 
+        self.game_messages_label = tk.Label(self.game_canvas, text="Message: ", bg="#006400", fg="#FFFFFF",
+                                  font=("Cambria", 12, "bold"))
+        self.game_messages_label.place(x=420, y=670, anchor="center")
+
         # Define the buttons
         self.buttons = [
             tk.Button(self.game_area, text="Call/Check", command=lambda: self.send_player_action("call"), bg="#555555",
@@ -226,29 +230,19 @@ class GameGUI(tk.Tk):
                         self.scheduled_tasks.append(task_id)
                     elif message_type in ['update_game_state', 'game_starting']:
                         print(f"(game_gui): UPDATING GAME STATE or GAME STARTING")
-                        task_id = self.after(1, self.update_game_state, message)
+                        task_id = self.after(0, self.update_game_state, message)
                         self.scheduled_tasks.append(task_id)
                     elif message_type == "player_left_game_state":
                         task_id = self.after(0, self.process_player_left_game_state, message['game_state'])
                         self.scheduled_tasks.append(task_id)
                     elif message_type == 'update_showdown_state':
                         print("message type == update showdown state")
-                        task_id = self.after(1, self.update_showdown_state, message)
+                        task_id = self.after(0, self.update_showdown_state, message)
                         self.scheduled_tasks.append(task_id)
-                    # Check if the round is being skipped due to all players going all in before the river
-                    elif message_type == "skip_round":
-                        # If so, give the players some time to look at their community cards and process the outcome of
-                        # the round, and then send a request to the server for the next round to start
-                        print("message type thing happened with start_next_round")
-                        print(f"message: {message}")
-                        task_id = self.after(1, self.update_showdown_state, message)
+                    elif message_type == 'update_completed_state':
+                        print("updating completed state...")
+                        task_id = self.after(0, self.update_completed_state, message)
                         self.scheduled_tasks.append(task_id)
-                        time.sleep(8)
-                        message = {"type": "start_next_round", "lobby_id": self.lobby_id}
-                        response = self.controller.network_manager.send_message(message)
-                        if response.get("success") or response.get("type") == "update_game_state":
-                            print("going to update game state with new response")
-                            self.update_game_state(response)
                 elif isinstance(message, list):
                     self.controller.process_received_message('lobby_list', message)
             except json.JSONDecodeError as e:
@@ -282,6 +276,28 @@ class GameGUI(tk.Tk):
         file_name = f"gui/Images/Cards/{rank}_of_{suit}.png"
         return file_name
 
+    def update_game_messages_label(self, text_to_update_with):
+        self.game_messages_label.config(text=text_to_update_with)
+
+    # YOU ARE HERE!
+    #
+    #
+    #
+    #
+    # HERE
+    def update_completed_state(self, game_state):
+        print("updating showdown state")
+        print(f"(game_gui.py): updating game state for user")
+
+        print(f"(game_gui.py): old game_state: {game_state}")
+        game_state = game_state["game_state"]
+        print(f"(game_gui): new game_state: {game_state}")
+
+        self.indicate_winning_players(game_state)
+        winning_player = [player for player in game_state["players"] if player["won"]]
+
+        self.update_game_messages_label(f"{winning_player} wins the Poker game!")
+
     def update_game_state(self, game_state):
         self.hide_everyones_cards(game_state)
         print("updating game state")
@@ -312,7 +328,6 @@ class GameGUI(tk.Tk):
 
     def update_showdown_state(self, game_state):
         print("updating showdown state")
-        print(f"Trying to get user_id in game_state: {game_state}")
         print(f"(game_gui.py): updating game state for user")
 
         print(f"(game_gui.py): old game_state: {game_state}")
@@ -323,9 +338,15 @@ class GameGUI(tk.Tk):
         self.update_pot(game_state)
 
         self.indicate_active_players(game_state)
-        self.show_current_player(game_state)
         self.indicate_folded_and_busted_and_disconnected_players(game_state)
         self.indicate_winning_players(game_state)
+
+        winning_players = [player["name"] for player in game_state["players"] if player["won"]]
+        winning_players_str = ""
+        # You might want to use for idx, player in winning_players and then check the length of the string
+        for player in winning_players:
+            winning_players_str += player + ", "
+        self.update_game_messages_label(f"{winning_players_str} won the previous round")
 
         self.show_everyones_cards(game_state)
 
@@ -363,6 +384,8 @@ class GameGUI(tk.Tk):
                     roles.append("Busted")
                 elif player_data['folded']:
                     roles.append("Folded")
+                elif player_data.get("won"):
+                    roles.append("Winner")
 
                 role_text = ", ".join(roles)
 
@@ -479,45 +502,34 @@ class GameGUI(tk.Tk):
             for button in self.buttons:
                 button.config(state=tk.DISABLED)
 
+    def change_players_frame(self, players, colour):
+        for player in players:
+            current_player_components = self.player_components.get(player["user_id"])
+            if current_player_components:
+                current_player_frame = current_player_components['profile_label'].master
+                current_player_frame.config(bg=colour)  # Highlight player frame with a colour
+
     def indicate_folded_and_busted_and_disconnected_players(self, game_state):
         folded_players = [player for player in game_state["players"] if player["folded"]]
-        for player in folded_players:
-            current_player_components = self.player_components.get(player["user_id"])
-            if current_player_components:
-                current_player_frame = current_player_components['profile_label'].master
-                current_player_frame.config(bg="#5A4E4B")  # Highlighting with a grey color.
+        self.change_players_frame(folded_players, "#5A4E4B")
 
         disconnected_players = [player for player in game_state["players"] if player["disconnected"]]
-        for player in disconnected_players:
-            current_player_components = self.player_components.get(player["user_id"])
-            if current_player_components:
-                current_player_frame = current_player_components['profile_label'].master
-                current_player_frame.config(bg="#450e00")  # Highlighting with dark red (ish)
+        self.change_players_frame(disconnected_players, "#450e00")
 
         busted_players = [player for player in game_state["players"] if player["busted"]]
-        for player in busted_players:
-            current_player_components = self.player_components.get(player["user_id"])
-            if current_player_components:
-                current_player_frame = current_player_components['profile_label'].master
-                current_player_frame.config(bg="#090245")  # Highlighting with dark blue (ish)
+        self.change_players_frame(busted_players, "#090245")
 
     def indicate_winning_players(self, game_state):
+        # First make every player's profile have a standard grey background
+        losing_players = [player for player in game_state["players"] if not player["won"]]
+        self.change_players_frame(losing_players, "#302525")
+
         winning_players = [player for player in game_state["players"] if player["won"]]
-        for player in winning_players:
-            current_player_components = self.player_components.get(player["user_id"])
-            if current_player_components:
-                current_player_frame = current_player_components['profile_label'].master
-                current_player_frame.config(bg="#fcba03")  # Highlighting with a grey color.
+        self.change_players_frame(winning_players, "#03ebfc")
 
     def indicate_active_players(self, game_state):
-        # print(f"game_state of players: {game_state['players']}")
         active_players = [p for p in game_state["players"] if not p["folded"]]
-        for player in active_players:
-            # print(player)
-            current_player_components = self.player_components.get(player["user_id"])
-            if current_player_components:
-                current_player_frame = current_player_components['profile_label'].master
-                current_player_frame.config(bg="#302525")
+        self.change_players_frame(active_players, "#302525")
 
     def send_player_action(self, action):
         if action == "raise":
@@ -533,17 +545,38 @@ class GameGUI(tk.Tk):
         else:
             message = {"type": "bet", "action": action, "user_id": self.user_id, "lobby_id": self.lobby_id}
 
-        response = self.controller.network_manager.send_message(message)
-        if response.get("success") and response[1].get("type") == "update_game_state":
-            self.update_game_state(response[1])
-            print(f"updated game state with response: {response}")
-        elif response.get("success") and response[1].get("type") == "update_game_state":
-            self.update_showdown_state(response[1])
-            print(f"updated showdown state with response: {response}")
+        action_response = self.controller.network_manager.send_message(message)
+        print(f"response: {action_response}")
+
+        if action_response.get("success"):
+            if action_response.get("game_completed"):
+                print("about to send broadcast_completed_game_state signal")
+                signal_message = {"type": "broadcast_completed_game_state", "lobby_id": self.lobby_id}
+                self.controller.network_manager.send_signal(signal_message)
+            elif action_response.get("showdown"):
+                # send signal to broadcast showdown state
+                signal_message = {"type": "broadcast_showdown", "lobby_id": self.lobby_id}
+                print("about to send broadcast_showdown signal")
+                self.controller.network_manager.send_signal(signal_message)
+                # then wait 8 seconds and send signal to broadcast update game state
+
+                signal_message = {"type": "start_next_round", "lobby_id": self.lobby_id}
+                print("about to send start_next_round signal")
+                task_id = self.after(9000, self.controller.network_manager.send_signal, signal_message)
+                self.scheduled_tasks.append(task_id)
+
+                signal_message = {"type": "broadcast_new_game_state", "lobby_id": self.lobby_id}
+                print("about to send broadcast_new_game_state signal")
+                task_id = self.after(0, self.controller.network_manager.send_signal, signal_message)
+                self.scheduled_tasks.append(task_id)
+            else:
+                # send signal to broadcast update game state
+                print("about to send broadcast_new_game_state signal")
+                signal_message = {"type": "broadcast_new_game_state", "lobby_id": self.lobby_id}
+                self.controller.network_manager.send_signal(signal_message)
         else:
-            error_message = response.get("error", "An unknown error occurred.")
+            error_message = action_response.get("error", "An unknown error occurred.")
             messagebox.showerror("Error", error_message)
-        print(f"send_player_action response: {response}")
 
     def clear_community_cards(self):
         for item_id in self.community_card_items:

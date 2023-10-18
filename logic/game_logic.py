@@ -61,7 +61,8 @@ class Player:
         self.amount_of_times_checked = 0
         self.amount_of_times_folded = 0
         self.amount_of_times_acted = 0
-        self.won = True
+        self.won_round = False
+        self.won_game = False
 
     def add_card(self, card):
         self.hand.cards.append(card)
@@ -95,6 +96,7 @@ class Game:
                               "Straight", "Flush", "Full House", "Four of a Kind",
                               "Straight Flush", "Royal Flush"]
         self.non_active_player = None
+        self.game_completed = False
 
     def is_betting_round_over(self):
         if not self.first_player_acted:
@@ -230,9 +232,13 @@ class Game:
             self.turn_river()
             self.current_round = "river"
         elif self.current_round == "river":
-            print(self.showdown())
-            self.start_round()
-            return
+            message = self.showdown()
+
+            if self.start_round() == "game_completed":
+                print("game completed!")
+                return {"success": True, "type": "game_completed"}
+
+            return message
 
         self.start_new_round(self.current_round)
 
@@ -246,6 +252,9 @@ class Game:
         if self.current_round == "turn":
             self.turn_river()
             self.current_round = "river"
+        message = self.showdown()
+
+        return message
 
     def determine_winner_from_eligible_players(self, best_hands, eligible_players):
         # Filter out the best hands only for eligible players
@@ -320,13 +329,14 @@ class Game:
                 winner_message = f"{winning_players[0].name} wins {pot_amount} chips with a " \
                                  f"{self.hand_rankings[best_hand_per_player[winning_players[0]][0]]}!"
                 winning_players[0].chips += pot_amount
+                winning_players[0].won_round = True
             else:
                 winner_message = "It's a tie between " + ", ".join(
                     [player.name for player in winning_players]) + f" for {pot_amount} chips!"
                 pot_share = pot_amount // num_winners  # Integer division to get floor value
                 extra_chips = pot_amount % num_winners
                 for player in winning_players:
-                    player.won = True
+                    player.won_round = True
                     player.chips += pot_share
 
                 # Give the extra chip to only one of the winners
@@ -365,10 +375,20 @@ class Game:
         state = {
             'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet,
                          "blinds": p.blinds, "dealer": p.dealer, "folded": p.folded, "disconnected": p.disconnected,
-                         "busted": p.busted, "hand": [str(card) for card in p.hand.cards], "won": p.won} for p in self.players],
+                         "busted": p.busted, "hand": [str(card) for card in p.hand.cards], "won": p.won_round} for p in self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board],
             'current_player_turn': self.current_player_turn
+        }
+        print(f"(game_logic.py): returning {state}")
+        return state
+
+    def get_game_state_for_completed(self):
+        state = {
+            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, "won_game": p.won_game} for p in
+                        self.players],
+            'pot': self.pot.chips,
+            'board': [str(card) for card in self.board]
         }
         print(f"(game_logic.py): returning {state}")
         return state
@@ -443,8 +463,9 @@ class Game:
             player.folded = False
             player.blinds = []
             player.dealer = False
-            player.won = False
-            self.deal_cards(2, player)
+            player.won_round = False
+            if not player.busted:
+                self.deal_cards(2, player)
             if not player.busted and player.chips == 0 and player.all_in:
                 player.busted = True
             else:
@@ -452,6 +473,11 @@ class Game:
 
             if player.disconnected:
                 player.folded = True
+
+        if len(self.get_active_players()) == 1:
+            # end the game
+            self.game_completed = True
+            return "game_completed"
 
         self.current_highest_bet = self.big_blind
         self.current_round = "preflop"
@@ -583,7 +609,9 @@ class Game:
             remaining_player.chips += self.pot.chips
             self.pot.chips = 0
             message = f"{remaining_player.name} wins the pot as everyone else folded!"
-            self.start_round()
+            if self.start_round() == "game_completed":
+                print("game completed!")
+                return {"success": True, "type": "game_completed"}
         else:
             # If not, the current Poker round is still in action, so check if the betting round is over
             if self.is_betting_round_over():
@@ -594,8 +622,7 @@ class Game:
                     self.progress_to_next_betting_round()
                 else:
                     self.skip_through_poker_rounds()
-                    print(self.showdown())
-                    return {"success": True, "type": "skip_round", "showdown": True, "game_state": self.get_game_state_for_showdown()}
+                    return {"success": True, "type": "skip_round", "showdown": True}
             else:
                 # If the betting round is not over, go to next player's turn
                 print("betting round not over, so getting next active player turn.")

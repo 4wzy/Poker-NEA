@@ -32,6 +32,17 @@ class NetworkManager:
             print(f"Other exception: {e}")
             print(f"Data causing the error: {self.buffer}")
 
+    # Method to send a signal to the server without expecting a response
+    def send_signal(self, signal):
+        print(f"Signal 1. {signal}")
+        try:
+            self.client_socket.sendall((json.dumps(signal) + '\n').encode('utf-8'))
+        except BrokenPipeError:
+            print("Connection to the server is broken")
+        except Exception as e:
+            print(f"Other exception: {e}")
+            print(f"Data causing the error: {self.buffer}")
+
     def receive_message(self):
         while True:
             try:
