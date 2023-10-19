@@ -13,8 +13,10 @@ class Controller:
         self.current_menu = None
         self.network_manager = NetworkManager()
 
+    # Note: When running the application properly, use self.open_login_menu()
     def run(self):
         # self.open_login_menu()
+        # The call to open_main_menu() is for debugging purposes only - to skip the login stage for time efficiency
         self.open_main_menu(17)
         tk.mainloop()
 

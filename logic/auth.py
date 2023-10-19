@@ -1,23 +1,13 @@
+from logic.database_base import DatabaseBase
 import hashlib
 import secrets
 import mysql.connector
 import re
 
 
-class UserAuth:
-    def __init__(self):
-        self.config = {
-            "user": "root",
-            "password": "Password66",
-            "host": "127.0.0.1",
-            "database": "poker_game"
-        }
-
+class UserAuth(DatabaseBase):
     def login_user(self, username: str, password: str):
-        try:
-            connection = mysql.connector.connect(**self.config)
-            cursor = connection.cursor()
-
+        with self.db_cursor() as cursor:
             # Retrieve hashed_password and salt from the database for the given username
             cursor.execute("SELECT hashed_password, salt FROM users WHERE username = %s", (username,))
             row = cursor.fetchone()
@@ -27,7 +17,6 @@ class UserAuth:
                 return {"success": False, "message": "Invalid username"}
 
             stored_hashed_password, salt = row
-
             # Hash the provided password with the retrieved salt
             hashed_password = password + salt
             for i in range(10):
@@ -42,13 +31,6 @@ class UserAuth:
             else:
                 print("Invalid password")
                 return {"success": False, "message": "Invalid password"}
-        except Exception as e:
-            print(f"Error: {e}")
-            return {"success": False, "message": "Error, check console"}
-        finally:
-            if connection.is_connected():
-                cursor.close()
-                connection.close()
 
     def register_user(self, username: str, password: str, email: str):
         if not self.validate_password(password):
@@ -60,31 +42,21 @@ class UserAuth:
 
         hashed_password, salt = self.hash_password(password)
 
-        config = {
-            "user": "root",
-            "password": "Password66",
-            "host": "127.0.0.1",
-            "database": "poker_game"
-        }
+        with self.db_cursor() as cursor:
+            try:
+                cursor.execute(
+                    "INSERT INTO users (username, hashed_password, salt, email) VALUES (%s, %s, %s, %s)",
+                    (username, hashed_password, salt, email)
+                )
 
-        try:
-            connection = mysql.connector.connect(**config)
-            cursor = connection.cursor()
-            cursor.execute(
-                "INSERT INTO users (username, hashed_password, salt, email) VALUES (%s, %s, %s, %s)",
-                (username, hashed_password, salt, email)
-            )
-            connection.commit()
-            return {"success": True, "message": "User registered successfully!"}
-        except mysql.connector.IntegrityError:
-            return {"success": False, "message": "Username or Email already exists"}
-        except Exception as e:
-            print(f"Error: {e}")
-            return {"success": False, "message": "Error, check console"}
-        finally:
-            if connection.is_connected():
-                cursor.close()
-                connection.close()
+                user_id = cursor.lastrowid  # Get the user_id of the user that just registered
+                cursor.execute(
+                    "INSERT INTO user_chips (user_id, chips_balance) VALUES (%s, DEFAULT)",
+                    (user_id,)
+                )
+                return {"success": True, "message": "User registered successfully!"}
+            except mysql.connector.IntegrityError:
+                return {"success": False, "message": "Username or Email already exists"}
 
     def validate_password(self, password: str) -> bool:
         # Use regular expressions to validate password, including checking if one or more types of characters are present

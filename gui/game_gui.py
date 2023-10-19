@@ -279,12 +279,6 @@ class GameGUI(tk.Tk):
     def update_game_messages_label(self, text_to_update_with):
         self.game_messages_label.config(text=text_to_update_with)
 
-    # YOU ARE HERE!
-    #
-    #
-    #
-    #
-    # HERE
     def update_completed_state(self, game_state):
         print("updating showdown state")
         print(f"(game_gui.py): updating game state for user")
@@ -295,10 +289,10 @@ class GameGUI(tk.Tk):
 
         self.indicate_active_players(game_state)
         self.indicate_folded_and_busted_and_disconnected_players(game_state)
-        winning_player = [player for player in game_state["players"] if player["won_game"]]
+        winning_player = [player for player in game_state["players"] if player["won_game"]][0]
         self.indicate_game_winner(winning_player)
 
-        self.update_game_messages_label(f"{winning_player} wins the Poker game!")
+        self.update_game_messages_label(f"{winning_player['name']} wins the Poker game!")
 
     def update_game_state(self, game_state):
         self.hide_everyones_cards(game_state)
@@ -336,6 +330,9 @@ class GameGUI(tk.Tk):
         game_state = game_state["game_state"]
         print(f"(game_gui): new game_state: {game_state}")
 
+        # Disable the users action buttons, so they can't act during the showdown (which could lead to bugs)
+        for button in self.buttons:
+            button.config(state=tk.DISABLED)
         self.update_roles(game_state)
         self.update_pot(game_state)
 
@@ -351,6 +348,7 @@ class GameGUI(tk.Tk):
         self.update_game_messages_label(f"{winning_players_str} won the previous round")
 
         self.show_everyones_cards(game_state)
+
 
         print(f"BOARD: {game_state['board']}")
         self.clear_community_cards()

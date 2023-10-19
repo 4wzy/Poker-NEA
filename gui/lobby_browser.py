@@ -13,8 +13,9 @@ class LobbyBrowser(tk.Tk):
         self.controller = controller
         self.user_id = user_id
         print(f"USING LOBBY BROWSER WITH USER_ID: {self.user_id}")
-        self.database_interaction = DatabaseInteraction()
-        self.username = self.database_interaction.get_username(self.user_id)
+        self.username = self.controller.network_manager.send_message({"type": "get_username", "user_id": self.user_id})
+        self.user_chips = self.controller.network_manager.send_message({"type": "request_user_chips", "user_id":
+            self.user_id})
 
         # For the checkboxes to filter lobbies based on game options
         self.status_var = tk.StringVar(value="waiting")
@@ -27,9 +28,18 @@ class LobbyBrowser(tk.Tk):
         container.pack(side="top", fill="both", expand=True)
         container.config(highlightbackground="red", highlightthickness=2)
 
-        title_label = tk.Label(container, text="Lobby Browser", font=tkfont.Font(family="Cambria", size=18),
+        header_frame = tk.Frame(container, bg="#333333")
+        header_frame.grid(row=0, column=0, columnspan=2, sticky="ew")
+
+        title_label = tk.Label(header_frame, text="Lobby Browser", font=tkfont.Font(family="Cambria", size=18),
                                fg="#FFD700", bg="#333333", padx=20)
-        title_label.grid(row=0, column=0, columnspan=2, sticky="w")
+        title_label.pack(side="left")
+
+        # Adjusted font size, padding, and colors to make it stand out less than the main title
+        user_chips_label = tk.Label(header_frame, text=f"Chips: {self.user_chips}",
+                                    font=tkfont.Font(family="Cambria", size=16),
+                                    fg="#FFFFFF", bg="#444444", padx=10, pady=5)
+        user_chips_label.pack(side="right")
 
         # Checkbuttons for filters
         filter_frame = tk.Frame(container, bg="#333333")
@@ -145,7 +155,7 @@ class LobbyBrowser(tk.Tk):
             else:
                 allow_join = False
             lobby_card = LobbyCard(container=self.lobby_container_frame, lobby_info=lobby,
-                                   join_command=lambda lobby=lobby: self.join_selected_lobby(lobby),
+                                   join_command=lambda lobby=lobby: self.join_selected_lobby(lobby, allow_reconnect),
                                    allow_join=allow_join, allow_reconnect=allow_reconnect)
 
             lobby_card.grid(row=row, column=col, padx=10, pady=5, sticky="nsew")
@@ -162,7 +172,27 @@ class LobbyBrowser(tk.Tk):
         self.fetch_and_populate_lobby_list()
         self.lobby_container_canvas.yview_moveto(0)
 
-    def join_selected_lobby(self, lobby_info):
+    def join_selected_lobby(self, lobby_info, allow_reconnect):
+        request_user_chips_data = {
+            "type": "request_user_chips",
+            "user_id": self.user_id
+        }
+        user_chips = self.controller.network_manager.send_message(request_user_chips_data)
+        if not user_chips:
+            messagebox.showerror("Error", "Error getting user_chips back from server")
+            return
+
+        # If the player is not reconnecting, charge them the buy-in fee.
+        if not allow_reconnect:
+            if user_chips < lobby_info["buy_in"]:
+                messagebox.showerror("Error", "You do not have enough chips to join this lobby")
+                return
+
+            # Take away the amount of chips from the user for joining
+            buy_in_message = {"type": "add_to_chip_balance_for_user", "user_id": self.user_id, "amount": -lobby_info[
+                "buy_in"]}
+            self.controller.network_manager.send_message(buy_in_message)
+
         response_data = self.controller.join_lobby(self.user_id, lobby_info['lobby_id'])
         if not response_data['success']:
             messagebox.showinfo("Error", response_data['error'])
@@ -187,6 +217,10 @@ class LobbyCard(tk.Frame):
         player_count_label = tk.Label(self, text=f"{lobby_info['player_count']}/ {lobby_info['player_limit']} players",
                                       font=tkfont.Font(family="Cambria", size=10), fg="#FFFFFF", bg="#444444")
         player_count_label.pack(side="top", fill="x", padx=5, pady=2)
+
+        buy_in_label = tk.Label(self, text=f"Buy in: {lobby_info['buy_in']}",
+                                      font=tkfont.Font(family="Cambria", size=10), fg="#FFFFFF", bg="#444444")
+        buy_in_label.pack(side="top", fill="x", padx=5, pady=2)
 
         if allow_reconnect:
             join_button = tk.Button(self, text="Reconnect", command=self.join_command)
@@ -232,29 +266,64 @@ class CreateLobbyWindow(tk.Toplevel):
         self.player_limit_combobox.set("6")  # Default value
         self.player_limit_combobox.grid(row=2, column=1, sticky="w")
 
+        # Chips entry
+        chips_label = tk.Label(container, text="Buy-in:", font=tkfont.Font(family="Cambria",
+                               size=16), fg="#FFFFFF", bg="#333333")
+        chips_label.grid(row=3, column=0, sticky="e")
+
+        self.chips_entry = tk.Entry(container, font=tkfont.Font(family="Cambria", size=16), width=32,
+                                    fg="#FFFFFF", bg="#555555", insertbackground='white')
+        self.chips_entry.grid(row=3, column=1, sticky="w")
+
         # Show Odds
         self.show_odds_var = tk.BooleanVar(value=True)
         show_odds_checkbutton = tk.Checkbutton(container, text="Show Odds", variable=self.show_odds_var,
                                                font=tkfont.Font(family="Cambria", size=16), fg="#FFFFFF",
                                                bg="#333333", selectcolor="#444444")
-        show_odds_checkbutton.grid(row=3, column=0, columnspan=2, sticky="w")
+        show_odds_checkbutton.grid(row=4, column=0, columnspan=2, sticky="w")
 
         # Buttons
         create_button = tk.Button(container, text="Create", font=tkfont.Font(family="Cambria", size=16),
                                   fg="#FFFFFF", bg="#444444", bd=0, padx=20, pady=10, command=self.create_lobby)
-        create_button.grid(row=4, column=0, sticky="ew", pady=10, padx=10)
+        create_button.grid(row=5, column=0, sticky="ew", pady=10, padx=10)
 
         cancel_button = tk.Button(container, text="Cancel", font=tkfont.Font(family="Cambria", size=16),
                                   fg="#FFFFFF", bg="#444444", bd=0, padx=20, pady=10, command=self.destroy)
-        cancel_button.grid(row=4, column=1, sticky="ew", pady=10, padx=10)
+        cancel_button.grid(row=5, column=1, sticky="ew", pady=10, padx=10)
 
     def create_lobby(self):
         lobby_name = self.lobby_name_entry.get()
         show_odds = self.show_odds_var.get()
         player_limit = int(self.player_limit_combobox.get())
+        lobby_name = self.lobby_name_entry.get()
+        buy_in = self.chips_entry.get()
 
         if not lobby_name or len(lobby_name) > 16:
             messagebox.showinfo("Error", "Please enter a valid lobby name (1-16 characters)")
+            return
+
+        request_user_chips_data = {
+            "type": "request_user_chips",
+            "user_id": self.user_id
+        }
+        user_chips = self.controller.network_manager.send_message(request_user_chips_data)
+        if not user_chips:
+            messagebox.showerror("Error", "Error getting user_chips back from server")
+            return
+
+        try:
+            buy_in = int(buy_in)
+        except ValueError:
+            messagebox.showerror("Error", "The buy in amount should be an integer")
+            return
+        except Exception as e:
+            print(f"Exception: {e}")
+
+        if buy_in < 100:
+            messagebox.showerror("Error", "The buy in amount should be at least 100 chips.")
+            return
+        elif buy_in > user_chips:
+            messagebox.showerror("Error", "You do not have enough chips to host this lobby.")
             return
 
         lobby_data = {
@@ -262,7 +331,8 @@ class CreateLobbyWindow(tk.Toplevel):
             "host_user_id": self.user_id,
             "name": lobby_name,
             "show_odds": show_odds,
-            "player_limit": player_limit
+            "player_limit": player_limit,
+            "buy_in": buy_in
         }
 
         try:
@@ -276,6 +346,11 @@ class CreateLobbyWindow(tk.Toplevel):
                 messagebox.showinfo("Error", response_data['error'])
                 return
             lobby_id = response_data["lobby_id"]
+
+            # Take away the amount of chips from the user for joining
+            buy_in_message = {"type": "add_to_chip_balance_for_user", "user_id": self.user_id, "amount": -buy_in}
+            self.controller.network_manager.send_message(buy_in_message)
+
             self.controller.join_lobby(self.user_id, lobby_id)
 
         except Exception as e:

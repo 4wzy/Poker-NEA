@@ -81,7 +81,13 @@ class LobbyServer:
                         self.broadcast_game_state(request["lobby_id"], None, True)
                     elif request["type"] == 'broadcast_completed_game_state':
                         self.broadcast_completed_game_state(request['lobby_id'])
-
+                    elif request["type"] == 'request_user_chips':
+                        response = self.database_interaction.get_chip_balance_for_user(request["user_id"])
+                    elif request["type"] == 'add_to_chip_balance_for_user':
+                        response = self.database_interaction.add_to_chip_balance_for_user(request["user_id"],
+                                                                                          request["amount"])
+                    elif request["type"] == 'get_username':
+                        response = self.database_interaction.get_username(request["user_id"])
                     if response is not None:
                         client_socket.sendall((json.dumps(response) + '\n').encode('utf-8'))
                         print(f"(handle client): Response: {response}")
@@ -104,6 +110,12 @@ class LobbyServer:
         print(f"start_round_response: {start_round_response}")
         if start_round_response == "game_completed":
             print("(server.py): game completed")
+            # Add the chips that the player has won to their balance
+            print(f"winning_player: {[player for player in game.players if player.won_game]}")
+            winning_player = [player for player in game.players if player.won_game][0]
+            print(f"Adding {game.total_pot} chips to {winning_player.name}")
+            self.database_interaction.add_to_chip_balance_for_user(winning_player.user_id, game.total_pot)
+
             # BROADCAST GAME COMPLETED STATE
             self.broadcast_completed_game_state(lobby_id)
         else:
@@ -389,7 +401,7 @@ class LobbyServer:
         response = self.database_interaction.create_lobby(request)
         if response["success"]:
             lobby_id = response["lobby_id"]
-            self.lobbies[lobby_id] = Game(starting_chips=200, player_limit=request['player_limit'])
+            self.lobbies[lobby_id] = Game(starting_chips=request["buy_in"], player_limit=request['player_limit'])
         return response
 
     def get_clients_in_lobby(self, lobby_id):

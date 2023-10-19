@@ -1,33 +1,9 @@
+from logic.database_base import DatabaseBase
 from datetime import datetime
 import mysql.connector
 from contextlib import contextmanager
 
-
-class DatabaseInteraction:
-    def __init__(self):
-        self.config = {
-            "user": "root",
-            "password": "Password66",
-            "host": "127.0.0.1",
-            "database": "poker_game"
-        }
-
-    @contextmanager
-    def db_cursor(self):
-        """Context manager to handle database connection and cursor."""
-        connection = mysql.connector.connect(**self.config)
-        cursor = connection.cursor()
-        try:
-            yield cursor
-            connection.commit()
-        except mysql.connector.Error as e:
-            print(f"Database error: {e}")
-            connection.rollback()
-            raise
-        finally:
-            cursor.close()
-            connection.close()
-
+class DatabaseInteraction(DatabaseBase):
     def create_database_and_tables(self):
         # SQL commands to create tables
         commands = [
@@ -82,6 +58,7 @@ class DatabaseInteraction:
             status ENUM('waiting', 'in_progress', 'completed', 'abandoned') DEFAULT 'waiting',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             player_limit INT DEFAULT 6,
+            buy_in INT NOT NULL,
             CONSTRAINT CHK_PlayerLimit CHECK (player_limit >= 3 AND player_limit <= 6),
             FOREIGN KEY (host_user_id) REFERENCES users(user_id) ON DELETE CASCADE
             );
@@ -123,7 +100,7 @@ class DatabaseInteraction:
             """
             CREATE TABLE user_chips (
             user_id INT UNIQUE PRIMARY KEY,
-            chips_balance INT DEFAULT 1000, -- or any other default value you choose
+            chips_balance INT DEFAULT 500, -- or any other default value you choose
             FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
             );
             """
@@ -132,6 +109,41 @@ class DatabaseInteraction:
         with self.db_cursor() as cursor:
             for command in commands:
                 cursor.execute(command)
+
+    def get_buy_in_for_lobby(self, lobby_id):
+        with self.db_cursor() as cursor:
+            cursor.execute("SELECT buy_in FROM lobbies WHERE lobby_id = %s", (lobby_id,))
+            result = cursor.fetchone()
+            return result[0] if result else None  # Return None if the requested lobby isn't found
+
+    def get_chip_balance_for_user(self, user_id):
+        with self.db_cursor() as cursor:
+            cursor.execute("SELECT chips_balance FROM user_chips WHERE user_id = %s", (user_id,))
+            result = cursor.fetchone()
+            return result[0] if result else None  # Return None if the requested user isn't found
+
+    def update_chip_balance_for_user(self, user_id, new_balance):
+        with self.db_cursor() as cursor:
+            cursor.execute("UPDATE user_chips SET chips_balance = %s WHERE user_id = %s", (new_balance, user_id))
+
+    def add_to_chip_balance_for_user(self, user_id, amount_to_add):
+        # Get the current chip balance for the user
+        current_balance = self.get_chip_balance_for_user(user_id)
+
+        # If the user isn't found in the user_chips table, raise an error
+        if current_balance is None:
+            raise ValueError(f"No chip balance found for user with ID {user_id}")
+
+        # Calculate the new balance
+        new_balance = current_balance + amount_to_add
+        # A user should never have a negative amount of chips. Set to 0 if this is the case.
+        if new_balance < 0:
+            new_balance = 0
+
+        # Update the new balance in the database
+        with self.db_cursor() as cursor:
+            cursor.execute("UPDATE user_chips SET chips_balance = %s WHERE user_id = %s", (new_balance, user_id))
+        return {"success": True}
 
     def get_username(self, user_id):
         with self.db_cursor() as cursor:
@@ -145,7 +157,8 @@ class DatabaseInteraction:
             with self.db_cursor() as cursor:
 
                 cursor.execute("""
-                    SELECT l.lobby_id, l.name, l.status, COUNT(pl.user_id), l.created_at, l.show_odds, l.player_limit
+                    SELECT l.lobby_id, l.name, l.status, COUNT(pl.user_id), l.created_at, l.show_odds, 
+                    l.player_limit, l.buy_in
                     FROM lobbies l
                     LEFT JOIN player_lobbies pl ON l.lobby_id = pl.lobby_id
                     WHERE l.status = %s AND l.show_odds = %s
@@ -161,9 +174,11 @@ class DatabaseInteraction:
                     'player_count': lobby[3],
                     'created_at': lobby[4].strftime('%Y-%m-%d %H:%M:%S'),
                     'show_odds': lobby[5],
-                    'player_limit': lobby[6]
+                    'player_limit': lobby[6],
+                    'buy_in': lobby[7]
                 } for lobby in lobbies]
 
+                # USE A MERGE SORT HERE!
                 sorted_lobbies = sorted(lobbies_list, key=lambda x: x['player_count'], reverse=True)
 
                 return sorted_lobbies
@@ -196,10 +211,11 @@ class DatabaseInteraction:
                 return response
 
             sql = """
-            INSERT INTO lobbies (host_user_id, name, status, show_odds, player_limit)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO lobbies (host_user_id, name, status, show_odds, player_limit, buy_in)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """
-            cursor.execute(sql, (lobby_data['host_user_id'], lobby_data['name'], 'waiting', lobby_data['show_odds'], lobby_data['player_limit']))
+            cursor.execute(sql, (lobby_data['host_user_id'], lobby_data['name'], 'waiting', lobby_data['show_odds'],
+                                 lobby_data['player_limit'], lobby_data['buy_in']))
 
             # Get the last inserted ID
             lobby_id = cursor.lastrowid

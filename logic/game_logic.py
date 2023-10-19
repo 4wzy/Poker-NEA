@@ -77,6 +77,7 @@ class Game:
         self.last_position_index = -1
         self.pot = Pot()
         self.starting_chips = starting_chips
+        self.total_pot = starting_chips * player_limit
         self.board = []
         self.deck = Deck()
         self.current_player_turn = -1
@@ -316,6 +317,9 @@ class Game:
 
     def showdown(self):
         remaining_players = self.get_players_for_showdown()
+        for player in remaining_players:
+            player.won_round = False
+
         best_hand_per_player = self.evaluate_player_hands(remaining_players)
         pots = self.create_pots(remaining_players)
 
@@ -328,9 +332,16 @@ class Game:
             if num_winners == 1:
                 winner_message = f"{winning_players[0].name} wins {pot_amount} chips with a " \
                                  f"{self.hand_rankings[best_hand_per_player[winning_players[0]][0]]}!"
-                winning_players[0].chips += pot_amount
-                winning_players[0].won_round = True
-                print(f"set {winning_players[0].name}.won_round to True")
+                winning_player = winning_players[0]
+                print(f"{winning_player.name} chips: {winning_player.chips}, pot_amount: {pot_amount}")
+                winning_player.chips += pot_amount
+                winning_player.won_round = True
+                print(f"set {winning_player.name}.won_round to True")
+                # Check if the player has won the game
+                print(f"{winning_player.name}: chips: {winning_player.chips}, current_bet: "
+                      f"{winning_player.current_bet}, self.total_pot: {self.total_pot}")
+                if winning_player.chips == self.total_pot:
+                    winning_player.won_game = True
             else:
                 winner_message = "It's a tie between " + ", ".join(
                     [player.name for player in winning_players]) + f" for {pot_amount} chips!"
@@ -618,11 +629,6 @@ class Game:
                 print("game completed!")
                 return {"success": True, "type": "game_completed"}
         elif self.is_betting_round_over():
-            #
-            #
-            # GET_NEXT_ACTIVE_PLAYER LOOPING BECAUSE OF SOMETHING AROUND HERE...
-            #
-            #
             if [player.all_in for player in self.get_players_for_showdown()].count(False) > 1 and self.current_round != "river":
                 print(f"{self.current_round} round over!")
                 # If the betting round is over, check if all current players are "all in"

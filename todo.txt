@@ -1,63 +1,22 @@
-Handle what happens with players who are all in at the showdown! You may need an all in pot in server.py
+Use https://williamvenner.github.io/AQA-Computer-Science-NEA-Checklist/
 
-Handle what happens when everyone goes all in before the showdown, for example during the flop round
-The game should skip to the river and then the showdown phase.
+Update winning player chips when game completed
 
------------------
+Create the hall of fame. You may have to just stick to who has the most chips instead of the RGScore system.
 
-notes for future justin:
-when there is one player left in the Poker game (the winner), that's when you insert the game statistics in the tables.
-aggressiveness score can be something like amount_of_times_raised / total_actions
-it could also be more complicated so that it's something like (amount of times raised when you have nothing good) /
-total actions. (bluffs I guess)
+Allow players to export the hall of fame as a text file (to get the writing and reading from files mark)
+
+Somehow implement inheritance, possibly polymorphism?
+
+Implement hash tables and use hashing to store passwords.
+Find a way to use stacks if you can.
 
 
 ------------------
 
-Detect when a player has no more chips and make them spectate the game or watch the game somehow.
-Perhaps add a "bankrupt" field to each player and check active players using this field? Similar to how you skip through folded players.
-
-1. Detect when poker game fully finished (1 player has won)
-2. When the poker game has finished, remove the poker game from the lobbies dict in server.py
-3. Change the lobby status to "completed" in the db when the game has finished
-4. Allow users to make games with this name as it is now a completed game
-5. Reflect this in create_lobby in database_interaction.py by adding "in_progress" as the note in the method reads
-
-HANDLE 6 IN THE FOLLOWING WAY (SIMILAR ISH):
-When a player leaves a lobby in server.py, check if the lobby has 0 players in it and then set it as abandoned in the db
-then remove that lobby from the lobbies dict.
-
-Make sure that this happens even when a player terminates the process using the x in the top right instead of the leave
-game button.
-
-
-FEEDBACK FROM CHATGPT ABOUT 6:
-Incomplete Lobbies: It's common in online games to have lobbies that never fill up or games that start but never finish due to various reasons, such as players leaving prematurely.
-
-For lobbies that never fill up:
-
-Database: Instead of deleting the lobby, consider setting its status to "abandoned" or "canceled". This way, you preserve a record that the lobby was created, but it didn't progress to a game. This can be useful for analytics and understanding user behavior (e.g., are there many lobbies being created but not many games being played?).
-In-Memory: For the lobbies dictionary in main.py, you should indeed remove the lobby if it's inactive for a set period. This is to free up memory and ensure your server remains efficient. You can implement a periodic cleanup task that goes through the dictionary and removes lobbies that have been inactive for too long.
-Player Experience: If a host creates a lobby and players join, but it never fills up, consider providing feedback to the players. For instance:
-
-Notify the players that the lobby didn't fill up in a set timeframe and give them options: wait longer, join another lobby, or return to the main menu.
-Consider a "lobby merge" feature where if two lobbies are waiting for long with an insufficient number of players, they merge to form a full game.
-Host Leaving: If the host leaves before the lobby fills up, you have a couple of options:
-
-Promote another player to the host.
-Close the lobby and notify the other players, giving them an option to create a new lobby or join another.
-Abandoned Lobbies: If you decide to track abandoned lobbies, they can offer insights into user behavior. For instance:
-
-Do users often create lobbies and leave before they fill up? If so, is there a pattern? Maybe certain times of the day aren't suitable for full games.
-The ratio of completed games to abandoned lobbies can indicate user engagement or possible issues with game setup.
-Reusing Names: As discussed earlier, allowing users to reuse lobby names once the game is completed or abandoned is a good idea. You have already implemented checks to ensure names are unique among active lobbies, which is excellent.
-
-Remember, when designing systems like this, always consider the player experience. While database and memory efficiency are important, ensuring players have a smooth and enjoyable experience is crucial.
 
 7. Update game statistics tables after poker game finished
 8. Add to user statistics tables
-9. Allow players to go all in (player has self.all_in already set up)
-10. Implement showdowns (what happens when there are more than 1 players remaining at the end.. e.g. win conditions)
 
 
 
@@ -65,4 +24,3 @@ This exception handling from the sockets
 Add decorator to controller.py lines 22 and 23
 
 
-Allow players to make lobbies of custom player limits, with the textbox containing 6 as a default.
