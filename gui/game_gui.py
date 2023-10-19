@@ -97,7 +97,7 @@ class GameGUI(tk.Tk):
         self.pot_label.place(x=420, y=430, anchor="center")
 
         self.game_messages_label = tk.Label(self.game_canvas, text="Message: ", bg="#006400", fg="#FFFFFF",
-                                  font=("Cambria", 12, "bold"))
+                                            font=("Cambria", 12, "bold"))
         self.game_messages_label.place(x=420, y=670, anchor="center")
 
         # Define the buttons
@@ -293,8 +293,8 @@ class GameGUI(tk.Tk):
         game_state = game_state["game_state"]
         print(f"(game_gui): new game_state: {game_state}")
 
-        self.indicate_winning_players(game_state)
-        winning_player = [player for player in game_state["players"] if player["won"]]
+        winning_player = [player for player in game_state["players"] if player["won_game"]]
+        self.indicate_game_winner(winning_player)
 
         self.update_game_messages_label(f"{winning_player} wins the Poker game!")
 
@@ -341,7 +341,7 @@ class GameGUI(tk.Tk):
         self.indicate_folded_and_busted_and_disconnected_players(game_state)
         self.indicate_winning_players(game_state)
 
-        winning_players = [player["name"] for player in game_state["players"] if player["won"]]
+        winning_players = [player["name"] for player in game_state["players"] if player["won_round"]]
         winning_players_str = ""
         # You might want to use for idx, player in winning_players and then check the length of the string
         for player in winning_players:
@@ -364,10 +364,10 @@ class GameGUI(tk.Tk):
     def update_roles(self, game_state):
         # Get the components for each player, and update accordingly
         for player_data in game_state["players"]:
-            print(f"using player data: {player_data}")
+            # print(f"using player data: {player_data}")
             components = self.player_components.get(player_data["user_id"])
             if not components:
-                print(f"components: {components}")
+                # print(f"components: {components}")
                 return
             if player_data:
                 roles = []
@@ -519,12 +519,16 @@ class GameGUI(tk.Tk):
         busted_players = [player for player in game_state["players"] if player["busted"]]
         self.change_players_frame(busted_players, "#090245")
 
+    def indicate_game_winner(self, winning_player):
+        self.change_players_frame(winning_player, "#03ebfc")
+        print("indicated game winner visually")
+
     def indicate_winning_players(self, game_state):
         # First make every player's profile have a standard grey background
-        losing_players = [player for player in game_state["players"] if not player["won"]]
+        losing_players = [player for player in game_state["players"] if not player["won_round"]]
         self.change_players_frame(losing_players, "#302525")
 
-        winning_players = [player for player in game_state["players"] if player["won"]]
+        winning_players = [player for player in game_state["players"] if player["won_round"]]
         self.change_players_frame(winning_players, "#03ebfc")
 
     def indicate_active_players(self, game_state):
@@ -546,7 +550,7 @@ class GameGUI(tk.Tk):
             message = {"type": "bet", "action": action, "user_id": self.user_id, "lobby_id": self.lobby_id}
 
         action_response = self.controller.network_manager.send_message(message)
-        print(f"response: {action_response}")
+        print(f"action_response: {action_response}")
 
         if action_response.get("success"):
             if action_response.get("game_completed"):
@@ -557,7 +561,8 @@ class GameGUI(tk.Tk):
                 # send signal to broadcast showdown state
                 signal_message = {"type": "broadcast_showdown", "lobby_id": self.lobby_id}
                 print("about to send broadcast_showdown signal")
-                self.controller.network_manager.send_signal(signal_message)
+                task_id = self.after(0, self.controller.network_manager.send_signal, signal_message)
+                self.scheduled_tasks.append(task_id)
                 # then wait 8 seconds and send signal to broadcast update game state
 
                 signal_message = {"type": "start_next_round", "lobby_id": self.lobby_id}
@@ -565,10 +570,10 @@ class GameGUI(tk.Tk):
                 task_id = self.after(9000, self.controller.network_manager.send_signal, signal_message)
                 self.scheduled_tasks.append(task_id)
 
-                signal_message = {"type": "broadcast_new_game_state", "lobby_id": self.lobby_id}
-                print("about to send broadcast_new_game_state signal")
-                task_id = self.after(0, self.controller.network_manager.send_signal, signal_message)
-                self.scheduled_tasks.append(task_id)
+                # signal_message = {"type": "broadcast_new_game_state", "lobby_id": self.lobby_id}
+                # print("about to send broadcast_new_game_state signal")
+                # task_id = self.after(10000, self.controller.network_manager.send_signal, signal_message)
+                # self.scheduled_tasks.append(task_id)
             else:
                 # send signal to broadcast update game state
                 print("about to send broadcast_new_game_state signal")

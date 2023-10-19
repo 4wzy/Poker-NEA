@@ -28,6 +28,111 @@ class DatabaseInteraction:
             cursor.close()
             connection.close()
 
+    def create_database_and_tables(self):
+        # SQL commands to create tables
+        commands = [
+            """
+            CREATE DATABASE IF NOT EXISTS poker_game;
+            """,
+
+            """
+            USE poker_game;
+            """,
+
+            """
+            CREATE TABLE users (
+                user_id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                hashed_password VARCHAR(255) NOT NULL,
+                salt VARCHAR(255) NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                profile_picture VARCHAR(255) DEFAULT 'default.png'
+            );
+            """,
+
+            """
+            CREATE TABLE game_statistics(
+            stat_id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT UNIQUE,
+            games_played INT DEFAULT 0,
+            games_won INT DEFAULT 0,
+            rgscore INT DEFAULT 0,
+            aggressiveness_score FLOAT DEFAULT 0,
+            conservativeness_score FLOAT DEFAULT 0,
+            total_play_time INT DEFAULT 0,
+            FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            );
+            """,
+
+            """
+            CREATE TABLE user_game_limits (
+            user_id INT UNIQUE PRIMARY KEY,
+            daily_game_limit INT DEFAULT 5,
+            last_game_timestamp TIMESTAMP,
+            games_played_today INT DEFAULT 0,
+            FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            );
+            """,
+
+            """
+            CREATE TABLE lobbies (
+            lobby_id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            host_user_id INT,
+            status ENUM('waiting', 'in_progress', 'completed', 'abandoned') DEFAULT 'waiting',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            player_limit INT DEFAULT 6,
+            CONSTRAINT CHK_PlayerLimit CHECK (player_limit >= 3 AND player_limit <= 6),
+            FOREIGN KEY (host_user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            );
+            """,
+
+            """
+            CREATE TABLE player_lobbies (
+            user_id INT UNIQUE,
+            lobby_id INT,
+            show_odds BOOLEAN DEFAULT TRUE,
+            FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+            FOREIGN KEY (lobby_id) REFERENCES lobbies(lobby_id) ON DELETE CASCADE,
+            PRIMARY KEY (user_id, lobby_id)
+            );
+            """,
+
+            """
+            CREATE TABLE games (
+            game_id INT AUTO_INCREMENT PRIMARY KEY,
+            lobby_id INT,
+            start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            end_time TIMESTAMP,
+            FOREIGN KEY (lobby_id) REFERENCES lobbies(lobby_id) ON DELETE CASCADE
+            );
+            """,
+
+            """
+            CREATE TABLE game_results (
+            result_id INT AUTO_INCREMENT PRIMARY KEY,
+            game_id INT,
+            user_id INT,
+            pos INT,
+            winnings INT,
+            FOREIGN KEY (game_id) REFERENCES games(game_id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            );
+            """,
+
+            """
+            CREATE TABLE user_chips (
+            user_id INT UNIQUE PRIMARY KEY,
+            chips_balance INT DEFAULT 1000, -- or any other default value you choose
+            FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            );
+            """
+        ]
+
+        with self.db_cursor() as cursor:
+            for command in commands:
+                cursor.execute(command)
+
     def get_username(self, user_id):
         with self.db_cursor() as cursor:
             # Retrieve hashed_password and salt from the database for the given username

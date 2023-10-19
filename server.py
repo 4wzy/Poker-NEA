@@ -100,10 +100,14 @@ class LobbyServer:
         print("got lobby")
         game = self.lobbies[lobby_id]
         print("got game")
-        if game.start_round() == "game_completed":
+        start_round_response = game.start_round()
+        print(f"start_round_response: {start_round_response}")
+        if start_round_response == "game_completed":
             print("(server.py): game completed")
             # BROADCAST GAME COMPLETED STATE
             self.broadcast_completed_game_state(lobby_id)
+        else:
+            self.broadcast_game_state(lobby_id, None, False)
         print("started new round")
 
     def find_disconnected_player(self, disconnected_socket):
@@ -140,7 +144,8 @@ class LobbyServer:
         self.database_interaction.remove_player_from_lobby(player.user_id, lobby_id)
 
         # If there is only one player left
-        if len(game.players) == 1:
+        if len(self.get_connected_players(game)) == 1:
+            print("only one player left")
             self._handle_last_player_leaving(lobby_id)
             return {"success": True}
 
@@ -180,6 +185,7 @@ class LobbyServer:
         self.broadcast_player_left_game_state(lobby_id, client_socket)
 
     def _handle_last_player_leaving(self, lobby_id):
+        print(f"Handling last player leaving lobby: {lobby_id}")
         # If the game has not yet started (not enough players connected), it is an abandoned lobby
         if self.lobbies[lobby_id].game_completed:
             self.database_interaction.set_lobby_status(lobby_id, "completed")

@@ -218,7 +218,7 @@ class Game:
 
     def only_one_player_active(self):
         active_players = self.get_players_for_showdown()
-        print(f"(ONLY_ONE_PLAYER_ACTIVE) activer_players: {active_players}")
+        print(f"(ONLY_ONE_PLAYER_ACTIVE) active_players: {active_players}")
         return len(active_players) == 1
 
     def progress_to_next_betting_round(self):
@@ -232,13 +232,13 @@ class Game:
             self.turn_river()
             self.current_round = "river"
         elif self.current_round == "river":
-            message = self.showdown()
+            showdown_data = self.showdown()
 
             if self.start_round() == "game_completed":
                 print("game completed!")
-                return {"success": True, "type": "game_completed"}
+                return {"success": True, "game_completed": True, "showdown_data": showdown_data}
 
-            return message
+            return {"success": True, "type": "showdown_data", "showdown_data": showdown_data}
 
         self.start_new_round(self.current_round)
 
@@ -330,6 +330,7 @@ class Game:
                                  f"{self.hand_rankings[best_hand_per_player[winning_players[0]][0]]}!"
                 winning_players[0].chips += pot_amount
                 winning_players[0].won_round = True
+                print(f"set {winning_players[0].name}.won_round to True")
             else:
                 winner_message = "It's a tie between " + ", ".join(
                     [player.name for player in winning_players]) + f" for {pot_amount} chips!"
@@ -337,6 +338,7 @@ class Game:
                 extra_chips = pot_amount % num_winners
                 for player in winning_players:
                     player.won_round = True
+                    print(f"set {player.name}.won_round to True")
                     player.chips += pot_share
 
                 # Give the extra chip to only one of the winners
@@ -375,7 +377,8 @@ class Game:
         state = {
             'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet,
                          "blinds": p.blinds, "dealer": p.dealer, "folded": p.folded, "disconnected": p.disconnected,
-                         "busted": p.busted, "hand": [str(card) for card in p.hand.cards], "won": p.won_round} for p in self.players],
+                         "busted": p.busted, "hand": [str(card) for card in p.hand.cards], "won_round": p.won_round} for
+                        p in self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board],
             'current_player_turn': self.current_player_turn
@@ -475,6 +478,7 @@ class Game:
                 player.folded = True
 
         if len(self.get_active_players()) == 1:
+            print("start_round: get_active_players() == 1")
             # end the game
             self.game_completed = True
             return "game_completed"
@@ -584,7 +588,6 @@ class Game:
             return {"success": False, "error": "The game has not started yet."}
 
         # IF THERE IS ONLY 1 PLAYER LEFT, EVALUATE THE WIN CONDITION OR ELSE THERE WILL BE AN INFINITE LOOP
-        last_player_folded = False
         if player.folded:
             return {"success": False, "error": "This player has folded."}
         if action == 'fold':
@@ -601,7 +604,9 @@ class Game:
             if not action_response['success']:
                 return action_response
 
-        print(f"About to check if only one player active in list of active players: {self.get_active_players()}")
+        player.amount_of_times_acted += 1
+
+        print(f"About to check if only one player active in list of active players: {self.get_players_for_showdown()}")
         # Check if everyone has folded apart from one player
         if self.only_one_player_active():
             # The remaining active player wins the pot
@@ -613,14 +618,20 @@ class Game:
                 print("game completed!")
                 return {"success": True, "type": "game_completed"}
         else:
+            # Check if everyone is all in apart from one player
+            if [player.all_in for player in self.get_players_for_showdown()].count(False) == 1:
+                pass
+
             # If not, the current Poker round is still in action, so check if the betting round is over
             if self.is_betting_round_over():
                 print(f"{self.current_round} round over!")
                 # If the betting round is over, check if all current players are "all in"
-                if False in [player.all_in for player in self.get_players_for_showdown()] and self.current_round != \
-                        "river":
+                print(f"all_in_count: {[player.all_in for player in self.get_players_for_showdown()].count(False)}")
+                if [player.all_in for player in self.get_players_for_showdown()].count(False) > 1 and self.current_round != "river":
+
                     self.progress_to_next_betting_round()
                 else:
+                    print("skipping through Poker rounds")
                     self.skip_through_poker_rounds()
                     return {"success": True, "type": "skip_round", "showdown": True}
             else:
@@ -630,7 +641,6 @@ class Game:
             print(
                 f"Next player's turn: Player index {self.current_player_turn}, {self.players[self.current_player_turn]}")
 
-        player.amount_of_times_acted += 1
         return {"success": True, "message": message}
 
 
