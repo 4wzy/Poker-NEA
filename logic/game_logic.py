@@ -617,29 +617,24 @@ class Game:
             if self.start_round() == "game_completed":
                 print("game completed!")
                 return {"success": True, "type": "game_completed"}
-        else:
-            # Check if everyone is all in apart from one player
-            if [player.all_in for player in self.get_players_for_showdown()].count(False) == 1:
-                pass
-
-            # If not, the current Poker round is still in action, so check if the betting round is over
-            if self.is_betting_round_over():
+        elif self.is_betting_round_over():
+            #
+            #
+            # GET_NEXT_ACTIVE_PLAYER LOOPING BECAUSE OF SOMETHING AROUND HERE...
+            #
+            #
+            if [player.all_in for player in self.get_players_for_showdown()].count(False) <= 1 and self.current_round != "river":
+                print("skipping through Poker rounds")
+                self.skip_through_poker_rounds()
+                return {"success": True, "type": "skip_round", "showdown": True}
+            else:
                 print(f"{self.current_round} round over!")
                 # If the betting round is over, check if all current players are "all in"
-                print(f"all_in_count: {[player.all_in for player in self.get_players_for_showdown()].count(False)}")
-                if [player.all_in for player in self.get_players_for_showdown()].count(False) > 1 and self.current_round != "river":
-
-                    self.progress_to_next_betting_round()
-                else:
-                    print("skipping through Poker rounds")
-                    self.skip_through_poker_rounds()
-                    return {"success": True, "type": "skip_round", "showdown": True}
-            else:
-                # If the betting round is not over, go to next player's turn
-                print("betting round not over, so getting next active player turn.")
-                self.current_player_turn = self.get_next_active_player(self.current_player_turn, False)
-            print(
-                f"Next player's turn: Player index {self.current_player_turn}, {self.players[self.current_player_turn]}")
+                self.progress_to_next_betting_round()
+        else:
+            # If the betting round is not over, go to next player's turn
+            print("betting round not over, so getting next active player turn.")
+            self.current_player_turn = self.get_next_active_player(self.current_player_turn, False)
 
         return {"success": True, "message": message}
 
