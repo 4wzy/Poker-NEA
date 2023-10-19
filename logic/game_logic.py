@@ -242,7 +242,7 @@ class Game:
 
         self.start_new_round(self.current_round)
 
-    def skip_through_poker_rounds(self):
+    def skip_through_betting_rounds(self):
         if self.current_round == "preflop":
             self.flop()
             self.current_round = "flop"
@@ -388,7 +388,7 @@ class Game:
 
     def get_game_state_for_completed(self):
         state = {
-            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, "won_game": p.won_game} for p in
+            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, "won_game": p.won_game, "folded": p.folded, "disconnected": p.disconnected, "busted": p.busted} for p in
                         self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board]
@@ -623,14 +623,14 @@ class Game:
             # GET_NEXT_ACTIVE_PLAYER LOOPING BECAUSE OF SOMETHING AROUND HERE...
             #
             #
-            if [player.all_in for player in self.get_players_for_showdown()].count(False) <= 1 and self.current_round != "river":
-                print("skipping through Poker rounds")
-                self.skip_through_poker_rounds()
-                return {"success": True, "type": "skip_round", "showdown": True}
-            else:
+            if [player.all_in for player in self.get_players_for_showdown()].count(False) > 1 and self.current_round != "river":
                 print(f"{self.current_round} round over!")
                 # If the betting round is over, check if all current players are "all in"
                 self.progress_to_next_betting_round()
+            else:
+                print("skipping through Poker rounds")
+                self.skip_through_betting_rounds()
+                return {"success": True, "type": "skip_round", "showdown": True}
         else:
             # If the betting round is not over, go to next player's turn
             print("betting round not over, so getting next active player turn.")

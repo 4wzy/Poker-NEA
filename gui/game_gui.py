@@ -293,7 +293,8 @@ class GameGUI(tk.Tk):
         game_state = game_state["game_state"]
         print(f"(game_gui): new game_state: {game_state}")
 
-
+        self.indicate_active_players(game_state)
+        self.indicate_folded_and_busted_and_disconnected_players(game_state)
         winning_player = [player for player in game_state["players"] if player["won_game"]]
         self.indicate_game_winner(winning_player)
 
