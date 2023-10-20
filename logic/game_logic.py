@@ -63,6 +63,7 @@ class Player:
         self.amount_of_times_acted = 0
         self.won_round = False
         self.won_game = False
+        self.finishing_position = 0
 
     def add_card(self, card):
         self.hand.cards.append(card)
@@ -114,6 +115,23 @@ class Game:
         print("------------------------------")
 
         active_players = self.get_players_for_showdown()
+        last_player = self.players[self.last_player_to_act]
+
+        print(f"Active players: {[player.name for player in active_players]}")
+        print(f"Last player: {last_player.name}, all in: {last_player.all_in}")
+
+        # If the last player to act is all-in
+        if last_player.all_in:
+            # First, check if every active player has acted.
+            for player in active_players:
+                if player not in self.players_acted:
+                    return False
+            # If all have acted, check if their bet amounts match.
+            non_all_in_bets = [player.current_bet for player in active_players if not player.all_in]
+            print(f"non_all_in_bets: {non_all_in_bets}")
+            if len(set(non_all_in_bets)) == 1:
+                return True
+            return False
 
         # If there's a player who hasn't acted yet, the betting round isn't over
         for player in active_players:

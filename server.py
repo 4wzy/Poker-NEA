@@ -1,3 +1,4 @@
+import datetime
 import socket
 import threading
 import json
@@ -92,6 +93,10 @@ class LobbyServer:
                         response = self.database_interaction.get_top_players_by_attribute(request["attribute"], request["limit"])
                     elif request["type"] == 'get_top_players_by_chips':
                         response = self.database_interaction.get_top_players_by_chips(request["limit"])
+                    elif request["type"] == 'add_to_attribute_for_user':
+                        response = self.database_interaction.add_to_attribute_for_user(request['user_id'],
+                                                                                       request['attribute'],
+                                                                                       request['amount'])
 
                     if response is not None:
                         client_socket.sendall((json.dumps(response) + '\n').encode('utf-8'))
@@ -120,6 +125,11 @@ class LobbyServer:
             winning_player = [player for player in game.players if player.won_game][0]
             print(f"Adding {game.total_pot} chips to {winning_player.name}")
             self.database_interaction.add_to_chip_balance_for_user(winning_player.user_id, game.total_pot)
+            self.database_interaction.add_to_attribute_for_user(winning_player.user_id, "games_won", 1)
+            self.database_interaction.insert_game(lobby_id, datetime.datetime.now())
+
+            for player in game.players:
+                self.database_interaction.add_to_attribute_for_user(player.user_id, "games_played", 1)
 
             # BROADCAST GAME COMPLETED STATE
             self.broadcast_completed_game_state(lobby_id)

@@ -117,6 +117,39 @@ class DatabaseInteraction(DatabaseBase):
             for command in commands:
                 cursor.execute(command)
 
+    def add_to_attribute_for_user(self, user_id, attribute, amount):
+        valid_attributes = ["games_played", "games_won", "rgscore", "aggressiveness_score", "conservativeness_score",
+                            "total_play_time"]
+        if attribute not in valid_attributes:
+            raise ValueError("Invalid attribute provided")
+
+        with self.db_cursor() as cursor:
+            query = f"""
+            UPDATE game_statistics
+            SET {attribute} = {attribute} + %s
+            WHERE user_id = %s;
+            """
+            cursor.execute(query, (amount, user_id))
+
+    def insert_game(self, lobby_id, end_time):
+        with self.db_cursor() as cursor:
+            query = """
+            INSERT INTO games (lobby_id, end_time)
+            VALUES (%s, %s);
+            """
+            cursor.execute(query, (lobby_id, end_time))
+            # Get the last inserted game_id
+            game_id = cursor.lastrowid
+            return game_id
+
+    def insert_game_results(self, game_id, user_id, pos, winnings):
+        with self.db_cursor() as cursor:
+            query = """
+            INSERT INTO game_results (game_id, user_id, pos, winnings)
+            VALUES (%s, %s, %s, %s);
+            """
+            cursor.execute(query, (game_id, user_id, pos, winnings))
+
     def get_top_players_by_attribute(self, attribute, limit=50):
         if attribute not in ["rgscore", "aggressiveness_score", "conservativeness_score", "games_won"]:
             raise ValueError("Invalid attribute provided")
