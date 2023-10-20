@@ -341,10 +341,15 @@ class GameGUI(tk.Tk):
         self.indicate_winning_players(game_state)
 
         winning_players = [player["name"] for player in game_state["players"] if player["won_round"]]
-        winning_players_str = ""
-        # You might want to use for idx, player in winning_players and then check the length of the string
-        for player in winning_players:
-            winning_players_str += player + ", "
+
+        # The following code simply handles the win message being displayed grammatically correctly to players
+        if len(winning_players) == 1:
+            winning_players_str = winning_players[0]
+        elif len(winning_players) == 2:
+            winning_players_str = " and ".join(winning_players)
+        else:
+            winning_players_str = ", ".join(winning_players[:-1]) + " and " + winning_players[-1]
+
         self.update_game_messages_label(f"{winning_players_str} won the previous round")
 
         self.show_everyones_cards(game_state)
@@ -569,11 +574,6 @@ class GameGUI(tk.Tk):
                 print("about to send start_next_round signal")
                 task_id = self.after(9000, self.controller.network_manager.send_signal, signal_message)
                 self.scheduled_tasks.append(task_id)
-
-                # signal_message = {"type": "broadcast_new_game_state", "lobby_id": self.lobby_id}
-                # print("about to send broadcast_new_game_state signal")
-                # task_id = self.after(10000, self.controller.network_manager.send_signal, signal_message)
-                # self.scheduled_tasks.append(task_id)
             else:
                 # send signal to broadcast update game state
                 print("about to send broadcast_new_game_state signal")

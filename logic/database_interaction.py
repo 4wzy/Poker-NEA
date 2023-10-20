@@ -41,6 +41,13 @@ class DatabaseInteraction(DatabaseBase):
             """,
 
             """
+            INSERT INTO game_statistics (user_id, games_played, games_won, rgscore, aggressiveness_score, conservativeness_score, total_play_time)
+            SELECT user_id, 0, 0, 0, 0.0, 0.0, 0
+            FROM users
+            WHERE user_id NOT IN (SELECT user_id FROM game_statistics);
+            """,
+
+            """
             CREATE TABLE user_game_limits (
             user_id INT UNIQUE PRIMARY KEY,
             daily_game_limit INT DEFAULT 5,
@@ -207,7 +214,7 @@ class DatabaseInteraction(DatabaseBase):
                     'buy_in': lobby[7]
                 } for lobby in lobbies]
 
-                # USE A MERGE SORT HERE!
+                # I have decided to use a merge sort here
                 sorted_lobbies = self.sort_lobbies_using_merge(lobbies_list)
 
                 return sorted_lobbies

@@ -77,7 +77,6 @@ class Game:
         self.last_position_index = -1
         self.pot = Pot()
         self.starting_chips = starting_chips
-        self.total_pot = starting_chips * player_limit
         self.board = []
         self.deck = Deck()
         self.current_player_turn = -1
@@ -90,6 +89,7 @@ class Game:
         self.current_highest_bet = self.big_blind
         self.current_round = "preflop"
         self.player_limit = player_limit
+        self.total_pot = self.starting_chips * self.player_limit
         self.first_player_to_act = None
         self.last_player_to_act = None
         self.first_player_acted = False
@@ -98,6 +98,7 @@ class Game:
                               "Straight Flush", "Royal Flush"]
         self.non_active_player = None
         self.game_completed = False
+        self.players_acted = []
 
     def is_betting_round_over(self):
         if not self.first_player_acted:
@@ -112,12 +113,14 @@ class Game:
         print(f"non_active_player: {self.non_active_player}")
         print("------------------------------")
 
-        # Check if all active players have bet the same amount
         active_players = self.get_players_for_showdown()
-        if len(set(player.current_bet for player in active_players)) > 1:
-            print("Current betting round not over as not all players have gone")
-            return False
 
+        # If there's a player who hasn't acted yet, the betting round isn't over
+        for player in active_players:
+            if player not in self.players_acted:
+                return False
+
+        # If the above condition is not met, then all players have acted and the round is over
         if self.non_active_player:
             return self.first_player_acted and self.players[self.current_player_turn] == self.non_active_player
         else:
@@ -219,10 +222,12 @@ class Game:
 
     def only_one_player_active(self):
         active_players = self.get_players_for_showdown()
-        print(f"(ONLY_ONE_PLAYER_ACTIVE) active_players: {active_players}")
+        print(f"(ONLY_ONE_PLAYER_ACTIVE) active_players: {[player.name for player in active_players]}")
         return len(active_players) == 1
 
     def progress_to_next_betting_round(self):
+        # Reset the players who have acted this betting round
+        self.players_acted = []
         if self.current_round == "preflop":
             self.flop()
             self.current_round = "flop"
@@ -261,16 +266,25 @@ class Game:
         # Filter out the best hands only for eligible players
         eligible_best_hands = {player: hand for player, hand in best_hands.items() if player in eligible_players}
 
-        # Determine the winner(s)
-        winners = []
-        print(f"GETTING MAX RANK using max({eligible_best_hands}, values: {eligible_best_hands.values()})")
+        # Determine the maximum rank among eligible players
         max_rank = max(eligible_best_hands.values(), key=lambda x: x[0])[0]
-        for player, (rank, cards) in eligible_best_hands.items():
-            if rank == max_rank:
-                if not winners or cards > best_hands[winners[0]][1]:
-                    winners = [player]
-                elif cards == best_hands[winners[0]][1]:
-                    winners.append(player)
+
+        # Filter players with the max rank
+        max_rank_players = {player: cards for player, (rank, cards) in eligible_best_hands.items() if rank == max_rank}
+
+        # Sort players based on their card values
+        sorted_players = sorted(max_rank_players.keys(), key=lambda x: max_rank_players[x], reverse=True)
+
+        # The first player is the one with the best cards
+        winners = [sorted_players[0]]
+
+        # Check for ties
+        for player in sorted_players[1:]:
+            if max_rank_players[player] == max_rank_players[winners[0]]:
+                winners.append(player)
+            else:
+                break
+
         return winners
 
     def evaluate_player_hands(self, remaining_players):
@@ -338,9 +352,11 @@ class Game:
                 winning_player.won_round = True
                 print(f"set {winning_player.name}.won_round to True")
                 # Check if the player has won the game
+                total_chips_of_connected_players = sum([player.chips for player in self.players if not \
+                    player.disconnected])
                 print(f"{winning_player.name}: chips: {winning_player.chips}, current_bet: "
-                      f"{winning_player.current_bet}, self.total_pot: {self.total_pot}")
-                if winning_player.chips == self.total_pot:
+                      f"{winning_player.current_bet}, total_chips_of_connected_players: {total_chips_of_connected_players}")
+                if winning_player.chips == total_chips_of_connected_players:
                     winning_player.won_game = True
             else:
                 winner_message = "It's a tie between " + ", ".join(
@@ -399,8 +415,10 @@ class Game:
 
     def get_game_state_for_completed(self):
         state = {
-            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, "won_game": p.won_game, "folded": p.folded, "disconnected": p.disconnected, "busted": p.busted} for p in
-                        self.players],
+            'players': [
+                {'name': p.name, 'user_id': p.user_id, 'chips': p.chips, "won_game": p.won_game, "folded": p.folded,
+                 "disconnected": p.disconnected, "busted": p.busted} for p in
+                self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board]
         }
@@ -494,6 +512,9 @@ class Game:
             self.game_completed = True
             return "game_completed"
 
+        # Reset the list of players who have acted in this round
+        self.players_acted = []
+
         self.current_highest_bet = self.big_blind
         self.current_round = "preflop"
         self.first_player_to_act = 0
@@ -561,6 +582,8 @@ class Game:
             player.amount_of_times_checked += 1
         else:
             player.amount_of_times_called += 1
+
+        self.players_acted.append(player)
         return {"success": True}
 
     def player_raise(self, player, raise_amount):
@@ -585,6 +608,10 @@ class Game:
                 self.non_active_player = player
 
             player.amount_of_times_raised += 1
+
+            # Reset the players acted list as everyone needs to agree on a new amount to bet on
+            self.players_acted = []
+            self.players_acted.append(player)
             return {"success": True}
 
     def process_player_action(self, player, action, raise_amount):
@@ -629,7 +656,8 @@ class Game:
                 print("game completed!")
                 return {"success": True, "type": "game_completed"}
         elif self.is_betting_round_over():
-            if [player.all_in for player in self.get_players_for_showdown()].count(False) > 1 and self.current_round != "river":
+            if [player.all_in for player in self.get_players_for_showdown()].count(
+                    False) > 1 and self.current_round != "river":
                 print(f"{self.current_round} round over!")
                 # If the betting round is over, check if all current players are "all in"
                 self.progress_to_next_betting_round()
