@@ -7,6 +7,7 @@ import json
 from tkinter import ttk
 from datetime import datetime
 
+
 class LobbyBrowser(tk.Tk):
     def __init__(self, controller, user_id, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -219,7 +220,7 @@ class LobbyCard(tk.Frame):
         player_count_label.pack(side="top", fill="x", padx=5, pady=2)
 
         buy_in_label = tk.Label(self, text=f"Buy in: {lobby_info['buy_in']}",
-                                      font=tkfont.Font(family="Cambria", size=10), fg="#FFFFFF", bg="#444444")
+                                font=tkfont.Font(family="Cambria", size=10), fg="#FFFFFF", bg="#444444")
         buy_in_label.pack(side="top", fill="x", padx=5, pady=2)
 
         if allow_reconnect:
@@ -268,7 +269,7 @@ class CreateLobbyWindow(tk.Toplevel):
 
         # Chips entry
         chips_label = tk.Label(container, text="Buy-in:", font=tkfont.Font(family="Cambria",
-                               size=16), fg="#FFFFFF", bg="#333333")
+                                                                           size=16), fg="#FFFFFF", bg="#333333")
         chips_label.grid(row=3, column=0, sticky="e")
 
         self.chips_entry = tk.Entry(container, font=tkfont.Font(family="Cambria", size=16), width=32,
@@ -356,4 +357,3 @@ class CreateLobbyWindow(tk.Toplevel):
         except Exception as e:
             print(f"Error while creating lobby: {e}")
             messagebox.showinfo("Error", "An error occurred while creating the lobby")
-

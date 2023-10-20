@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import font as tkfont
 from PIL import Image, ImageDraw, ImageTk
-from logic.database_interaction import DatabaseInteraction
 
 
 class MainMenu(tk.Tk):
@@ -10,8 +9,7 @@ class MainMenu(tk.Tk):
         self.controller = controller
         self.user_id = user_id
         print(f"USING MAIN MENU WITH USER_ID: {self.user_id}")
-        self.database_interaction = DatabaseInteraction()
-        self.username = self.database_interaction.get_username(self.user_id)
+        self.username = self.controller.network_manager.send_message({"type": "get_username", "user_id": self.user_id})
         self.controller.network_manager.reset_connection()
 
         self.title("AceAware Poker")
@@ -65,7 +63,7 @@ class MainMenu(tk.Tk):
 
         hall_of_fame_button = tk.Button(left_buttons_frame, text="Hall of Fame",
                                         font=tkfont.Font(family="Cambria", size=16), fg="#FFFFFF", bg="#444444", bd=0,
-                                        padx=20, pady=10, borderwidth=1)
+                                        padx=20, pady=10, borderwidth=1, command=lambda: self.controller.open_hall_of_fame(self.user_id))
         hall_of_fame_button.pack(side="top", fill="x", pady=5)
 
         settings_button = tk.Button(left_buttons_frame, text="Settings", font=tkfont.Font(family="Cambria", size=16),

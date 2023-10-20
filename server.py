@@ -88,6 +88,11 @@ class LobbyServer:
                                                                                           request["amount"])
                     elif request["type"] == 'get_username':
                         response = self.database_interaction.get_username(request["user_id"])
+                    elif request["type"] == 'get_top_players_by_attribute':
+                        response = self.database_interaction.get_top_players_by_attribute(request["attribute"], request["limit"])
+                    elif request["type"] == 'get_top_players_by_chips':
+                        response = self.database_interaction.get_top_players_by_chips(request["limit"])
+
                     if response is not None:
                         client_socket.sendall((json.dumps(response) + '\n').encode('utf-8'))
                         print(f"(handle client): Response: {response}")

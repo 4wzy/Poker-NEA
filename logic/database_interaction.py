@@ -110,6 +110,35 @@ class DatabaseInteraction(DatabaseBase):
             for command in commands:
                 cursor.execute(command)
 
+    def get_top_players_by_attribute(self, attribute, limit=50):
+        if attribute not in ["rgscore", "aggressiveness_score", "conservativeness_score", "games_won"]:
+            raise ValueError("Invalid attribute provided")
+
+        with self.db_cursor() as cursor:
+            query = f"""
+            SELECT users.user_id, users.username, users.profile_picture, game_statistics.{attribute}
+            FROM game_statistics
+            JOIN users ON game_statistics.user_id = users.user_id
+            ORDER BY game_statistics.{attribute} DESC
+            LIMIT %s;
+            """
+            cursor.execute(query, (limit,))
+            results = cursor.fetchall()
+            return results
+
+    def get_top_players_by_chips(self, limit=50):
+        with self.db_cursor() as cursor:
+            query = """
+            SELECT users.user_id, users.username, users.profile_picture, user_chips.chips_balance
+            FROM user_chips
+            JOIN users ON user_chips.user_id = users.user_id
+            ORDER BY user_chips.chips_balance DESC
+            LIMIT %s;
+            """
+            cursor.execute(query, (limit,))
+            results = cursor.fetchall()
+            return results
+
     def get_buy_in_for_lobby(self, lobby_id):
         with self.db_cursor() as cursor:
             cursor.execute("SELECT buy_in FROM lobbies WHERE lobby_id = %s", (lobby_id,))
@@ -179,12 +208,45 @@ class DatabaseInteraction(DatabaseBase):
                 } for lobby in lobbies]
 
                 # USE A MERGE SORT HERE!
-                sorted_lobbies = sorted(lobbies_list, key=lambda x: x['player_count'], reverse=True)
+                sorted_lobbies = self.sort_lobbies_using_merge(lobbies_list)
 
                 return sorted_lobbies
         except Exception as e:
             print(f"Error: {e}")
             return []
+
+    def merge_sorted_lobbies(self, left_lobbies, right_lobbies):
+        merged_lobbies = []
+        left_index, right_index = 0, 0
+
+        while left_index < len(left_lobbies) and right_index < len(right_lobbies):
+            # Comparing player counts for sorting
+            if left_lobbies[left_index]['player_count'] > right_lobbies[right_index]['player_count']:
+                merged_lobbies.append(left_lobbies[left_index])
+                left_index += 1
+            else:
+                merged_lobbies.append(right_lobbies[right_index])
+                right_index += 1
+
+        # Append any remaining lobbies from both lists (one of them will be empty)
+        while left_index < len(left_lobbies):
+            merged_lobbies.append(left_lobbies[left_index])
+            left_index += 1
+        while right_index < len(right_lobbies):
+            merged_lobbies.append(right_lobbies[right_index])
+            right_index += 1
+
+        return merged_lobbies
+
+    def sort_lobbies_using_merge(self, lobbies):
+        if len(lobbies) <= 1:
+            return lobbies
+
+        middle_index = len(lobbies) // 2
+        left_partition = self.sort_lobbies_using_merge(lobbies[:middle_index])
+        right_partition = self.sort_lobbies_using_merge(lobbies[middle_index:])
+
+        return self.merge_sorted_lobbies(left_partition, right_partition)
 
     def create_lobby(self, lobby_data):
         response = {"success": True, "error": None, "lobby_id": None}
