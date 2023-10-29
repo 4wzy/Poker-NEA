@@ -43,11 +43,6 @@ class HallOfFame(tk.Tk):
         self.scroll_frame.bind("<Configure>", self.on_frame_configure)
         self.canvas.bind("<Configure>", self.on_canvas_configure)
 
-        # Placeholder banners
-        # When implementing custom player profile pictures, this needs to be modified
-        # for i in range(10):  # Adding 10 placeholders
-        #     self.add_player_banner(f"Player{i}", "gui/Images/Pfps/default.png", "Attribute Value")
-
     def on_frame_configure(self, event):
         """Reset the scroll region to encompass the inner frame."""
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
