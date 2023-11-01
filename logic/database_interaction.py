@@ -58,6 +58,12 @@ class DatabaseInteraction(DatabaseBase):
             """,
 
             """
+            INSERT INTO user_game_limits (user_id, daily_game_limit, last_game_timestamp, games_played_today)
+            SELECT user_id, 10, NOW(), 0
+            FROM users;
+            """,
+
+            """
             CREATE TABLE lobbies (
             lobby_id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -131,16 +137,25 @@ class DatabaseInteraction(DatabaseBase):
             """
             cursor.execute(query, (amount, user_id))
 
-    def insert_game(self, lobby_id, end_time):
+    def insert_game(self, lobby_id):
         with self.db_cursor() as cursor:
             query = """
-            INSERT INTO games (lobby_id, end_time)
-            VALUES (%s, %s);
+            INSERT INTO games (lobby_id, start_time)
+            VALUES (%s, CURRENT_TIMESTAMP);
             """
-            cursor.execute(query, (lobby_id, end_time))
+            cursor.execute(query, (lobby_id,))
             # Get the last inserted game_id
             game_id = cursor.lastrowid
             return game_id
+
+    def end_game(self, game_id):
+        with self.db_cursor() as cursor:
+            query = """
+            UPDATE games
+            SET end_time = CURRENT_TIMESTAMP
+            WHERE game_id = %s;
+            """
+            cursor.execute(query, (game_id,))
 
     def insert_game_results(self, game_id, user_id, pos, winnings):
         with self.db_cursor() as cursor:
@@ -149,6 +164,22 @@ class DatabaseInteraction(DatabaseBase):
             VALUES (%s, %s, %s, %s);
             """
             cursor.execute(query, (game_id, user_id, pos, winnings))
+
+    def update_daily_game_limit(self, user_id, new_limit):
+        with self.db_cursor() as cursor:
+            query = """
+            UPDATE user_game_limits
+            SET daily_game_limit = %s
+            WHERE user_id = %s;
+            """
+            cursor.execute(query, (new_limit, user_id))
+
+    def get_daily_game_limit(self, user_id):
+        with self.db_cursor() as cursor:
+            query = "SELECT daily_game_limit FROM user_game_limits WHERE user_id = %s;"
+            cursor.execute(query, (user_id,))
+            result = cursor.fetchone()
+            return result[0] if result else None
 
     def get_top_players_by_attribute(self, attribute, limit=50):
         if attribute not in ["rgscore", "aggressiveness_score", "conservativeness_score", "games_won"]:
@@ -194,6 +225,7 @@ class DatabaseInteraction(DatabaseBase):
     def update_chip_balance_for_user(self, user_id, new_balance):
         with self.db_cursor() as cursor:
             cursor.execute("UPDATE user_chips SET chips_balance = %s WHERE user_id = %s", (new_balance, user_id))
+        return {"success": True, "balance": new_balance}
 
     def add_to_chip_balance_for_user(self, user_id, amount_to_add):
         # Get the current chip balance for the user
@@ -283,10 +315,10 @@ class DatabaseInteraction(DatabaseBase):
             return lobbies
 
         middle_index = len(lobbies) // 2
-        left_partition = self.sort_lobbies_using_merge(lobbies[:middle_index])
-        right_partition = self.sort_lobbies_using_merge(lobbies[middle_index:])
+        left_part = self.sort_lobbies_using_merge(lobbies[:middle_index])
+        right_part = self.sort_lobbies_using_merge(lobbies[middle_index:])
 
-        return self.merge_sorted_lobbies(left_partition, right_partition)
+        return self.merge_sorted_lobbies(left_part, right_part)
 
     def create_lobby(self, lobby_data):
         response = {"success": True, "error": None, "lobby_id": None}

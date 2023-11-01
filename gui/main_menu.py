@@ -67,7 +67,7 @@ class MainMenu(tk.Tk):
         hall_of_fame_button.pack(side="top", fill="x", pady=5)
 
         settings_button = tk.Button(left_buttons_frame, text="Settings", font=tkfont.Font(family="Cambria", size=16),
-                                    fg="#FFFFFF", bg="#444444", bd=0, padx=20, pady=10, borderwidth=1)
+                                    fg="#FFFFFF", bg="#444444", bd=0, padx=20, pady=10, borderwidth=1, command=lambda: self.controller.open_settings(self.user_id))
         settings_button.pack(side="top", fill="x", pady=5)
 
         self.logo = Image.open("gui/Images/logo.png")
@@ -84,7 +84,7 @@ class MainMenu(tk.Tk):
 
         responsible_gambling_button = tk.Button(container, text="Responsible Gambling",
                                                 font=tkfont.Font(family="Cambria", size=16), fg="#FFFFFF", bg="#444444",
-                                                bd=0, padx=20, pady=10, borderwidth=1)
+                                                bd=0, padx=20, pady=10, borderwidth=1, command=lambda: self.controller.open_responsible_gambling_menu(self.user_id))
         responsible_gambling_button.grid(row=5, column=0, columnspan=4, sticky="ew", pady=5)
 
         text_frame = tk.Frame(container, bg="#555555", padx=10, pady=5)

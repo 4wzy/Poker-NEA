@@ -36,13 +36,11 @@ class LobbyBrowser(tk.Tk):
                                fg="#FFD700", bg="#333333", padx=20)
         title_label.pack(side="left")
 
-        # Adjusted font size, padding, and colors to make it stand out less than the main title
         user_chips_label = tk.Label(header_frame, text=f"Chips: {self.user_chips}",
                                     font=tkfont.Font(family="Cambria", size=16),
                                     fg="#FFFFFF", bg="#444444", padx=10, pady=5)
         user_chips_label.pack(side="right")
 
-        # Checkbuttons for filters
         filter_frame = tk.Frame(container, bg="#333333")
         filter_frame.grid(row=1, column=0, columnspan=2, sticky="ew")
 
@@ -55,7 +53,6 @@ class LobbyBrowser(tk.Tk):
                                           selectcolor="grey", fg="white", command=self.refresh_lobby_list)
         odds_checkbutton.pack(side="left")
 
-        # Setting up a place for each lobby card to go
         self.lobby_container_canvas = tk.Canvas(container, bg="#555555")
         self.lobby_container_canvas.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
 
@@ -105,7 +102,7 @@ class LobbyBrowser(tk.Tk):
 
         buffer = ""
         try:
-            # Sending the message with a newline character as a delimiter
+            # Send the message with a newline character as the delimiter
             self.controller.network_manager.client_socket.sendall(
                 (json.dumps({"type": "get_all_lobbies", "status": status_filter, "odds": odds_filter,
                              "user_id": self.user_id}) + '\n').encode(
@@ -122,7 +119,7 @@ class LobbyBrowser(tk.Tk):
                 return
             buffer += data.decode('utf-8')
 
-            # Checking if a complete message is available in the buffer
+            # Checking if a complete message is in the buffer
             if '\n' in buffer:
                 message, buffer = buffer.split('\n', 1)
                 lobbies = json.loads(message)
@@ -139,8 +136,6 @@ class LobbyBrowser(tk.Tk):
 
         print(f"Received lobbies: {lobbies}")
         self.populate_lobby_list(lobbies)
-
-    # NOTE: COULD MAKE UP NEED FOR MERGE SORT HERE!! INSTEAD OF USING SQL SORT
     def populate_lobby_list(self, lobbies):
         print(f"Populating lobby list with {lobbies}")
 

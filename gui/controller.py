@@ -7,6 +7,8 @@ from gui.main_menu import MainMenu
 from gui.game_gui import GameGUI
 from gui.hall_of_fame import HallOfFame
 from logic.network_manager import NetworkManager
+from gui.settings_menu import SettingsMenu
+from gui.responsible_gambling_menu import ResponsibleGamblingMenu
 
 
 class Controller:
@@ -18,7 +20,7 @@ class Controller:
     def run(self):
         # self.open_login_menu()
         # The call to open_main_menu() is for debugging purposes only - to skip the login stage for time efficiency
-        self.open_main_menu(17)
+        self.open_main_menu(14)
         tk.mainloop()
 
     def open_login_menu(self):
@@ -45,6 +47,16 @@ class Controller:
         if self.current_menu:
             self.current_menu.destroy()
         self.current_menu = HallOfFame(self, user_id)
+
+    def open_settings(self, user_id):
+        if self.current_menu:
+            self.current_menu.destroy()
+        self.current_menu = SettingsMenu(self, user_id)
+
+    def open_responsible_gambling_menu(self, user_id):
+        if self.current_menu:
+            self.current_menu.destroy()
+        self.current_menu = ResponsibleGamblingMenu(self, user_id)
 
     def join_lobby(self, user_id, lobby_id):
         response_data = self.network_manager.join_lobby(user_id, lobby_id)

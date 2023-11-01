@@ -100,6 +100,7 @@ class Game:
         self.non_active_player = None
         self.game_completed = False
         self.players_acted = []
+        self.next_available_finishing_position = self.player_limit + 1
 
     def is_betting_round_over(self):
         if not self.first_player_acted:
@@ -518,6 +519,7 @@ class Game:
                 self.deal_cards(2, player)
             if not player.busted and player.chips == 0 and player.all_in:
                 player.busted = True
+                player.finishing_position = self.next_available_finishing_position - 1
             else:
                 player.all_in = False
 

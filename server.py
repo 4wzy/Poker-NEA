@@ -57,16 +57,16 @@ class LobbyServer:
                     print(f"Client socket: {client_socket}")
 
                     response = None
-                    if request["type"] == "get_all_lobbies":
+                    if request['type'] == 'get_all_lobbies':
                         print("getting lobbies")
                         response = self.get_all_lobbies(request)
-                    elif request["type"] == "create_lobby":
+                    elif request['type'] == 'create_lobby':
                         print("creating lobby")
                         response = self.create_lobby(request)
-                    elif request["type"] == "join_lobby":
+                    elif request['type'] == 'join_lobby':
                         print("joining lobby")
                         response = self.join_lobby(request, client_socket)
-                    elif request["type"] == 'leave_lobby':
+                    elif request['type'] == 'leave_lobby':
                         print(f"PLAYER LEAVING LOBBY: {client_socket}")
                         response = self.leave_lobby(request['user_id'], request['lobby_id'], client_socket)
                     elif request["type"] == "start_game":
@@ -83,17 +83,23 @@ class LobbyServer:
                     elif request["type"] == 'broadcast_completed_game_state':
                         self.broadcast_completed_game_state(request['lobby_id'])
                     elif request["type"] == 'request_user_chips':
-                        response = self.database_interaction.get_chip_balance_for_user(request["user_id"])
+                        response = self.database_interaction.get_chip_balance_for_user(request['user_id'])
                     elif request["type"] == 'add_to_chip_balance_for_user':
-                        response = self.database_interaction.add_to_chip_balance_for_user(request["user_id"],
-                                                                                          request["amount"])
-                    elif request["type"] == 'get_username':
-                        response = self.database_interaction.get_username(request["user_id"])
-                    elif request["type"] == 'get_top_players_by_attribute':
-                        response = self.database_interaction.get_top_players_by_attribute(request["attribute"], request["limit"])
-                    elif request["type"] == 'get_top_players_by_chips':
-                        response = self.database_interaction.get_top_players_by_chips(request["limit"])
-                    elif request["type"] == 'add_to_attribute_for_user':
+                        response = self.database_interaction.add_to_chip_balance_for_user(request['user_id'],
+                                                                                          request['amount'])
+                    elif request['type'] == 'update_chip_balance_for_user':
+                        response = self.database_interaction.update_chip_balance_for_user(request['user_id'], request['amount'])
+                    elif request['type'] == 'update_daily_game_limit':
+                        response = self.database_interaction.update_daily_game_limit(request['user_id'], request['new_limit'])
+                    elif request['type'] == 'get_daily_game_limit':
+                        response = self.database_interaction.get_daily_game_limit(request['user_id'])
+                    elif request['type'] == 'get_username':
+                        response = self.database_interaction.get_username(request['user_id'])
+                    elif request['type'] == 'get_top_players_by_attribute':
+                        response = self.database_interaction.get_top_players_by_attribute(request['attribute'], request['limit'])
+                    elif request['type'] == 'get_top_players_by_chips':
+                        response = self.database_interaction.get_top_players_by_chips(request['limit'])
+                    elif request['type'] == 'add_to_attribute_for_user':
                         response = self.database_interaction.add_to_attribute_for_user(request['user_id'],
                                                                                        request['attribute'],
                                                                                        request['amount'])
@@ -126,13 +132,19 @@ class LobbyServer:
             print(f"Adding {game.total_pot} chips to {winning_player.name}")
             self.database_interaction.add_to_chip_balance_for_user(winning_player.user_id, game.total_pot)
             self.database_interaction.add_to_attribute_for_user(winning_player.user_id, "games_won", 1)
-            self.database_interaction.insert_game(lobby_id, datetime.datetime.now())
+            self.database_interaction.end_game(lobby_id)
 
             for player in game.players:
                 self.database_interaction.add_to_attribute_for_user(player.user_id, "games_played", 1)
+                if player.won_game:
+                    self.database_interaction.insert_game_results(lobby_id, player.user_id, player.finishing_position, 0)
+                else:
+                    self.database_interaction.insert_game_results(lobby_id, player.user_id, player.finishing_position, game.total_pot)
 
             # BROADCAST GAME COMPLETED STATE
             self.broadcast_completed_game_state(lobby_id)
+
+            # Handle updating the database for each player (aggressiveness_score, conservativeness_score, time_played, games_played, etc..)
         else:
             self.broadcast_game_state(lobby_id, None, False)
         print("started new round")
@@ -148,9 +160,9 @@ class LobbyServer:
         return next((player for player in game.players if player.user_id == user_id), None)
 
     def process_player_action(self, request, client_socket):
-        user_id = request["user_id"]
-        action = request["action"]
-        lobby_id = request["lobby_id"]
+        user_id = request['user_id']
+        action = request['action']
+        lobby_id = request['lobby_id']
         game = self.lobbies[lobby_id]
         player = self.find_player_from_user_id(user_id, game)
         raise_amount = request.get('amount', 0)
@@ -174,7 +186,7 @@ class LobbyServer:
         if len(self.get_connected_players(game)) == 1:
             print("only one player left")
             self._handle_last_player_leaving(lobby_id)
-            return {"success": True}
+            return {'success': True}
 
         if not game.game_started:
             game.remove_player(user_id, completely_remove=True)
@@ -186,7 +198,7 @@ class LobbyServer:
             game.remove_player(user_id, completely_remove=False)
             self.broadcast_game_state(lobby_id, client_socket, False)
 
-        return {"success": True}
+        return {'success': True}
 
     def _update_lobby_after_player_left(self, game, player, lobby_id, client_socket):
         all_positions = ["top_left", "top_middle", "top_right", "bottom_right", "bottom_middle", "bottom_left"]
@@ -385,6 +397,7 @@ class LobbyServer:
         print("running handle_start_game")
         game = self.lobbies[lobby_id]
         if game.game_started:  # Check if the game is ready to start
+            self.database_interaction.insert_game(lobby_id)  # Add the game to the games table
             self.broadcast_game_state(lobby_id, None, False)
 
     def get_all_lobbies(self, request):
