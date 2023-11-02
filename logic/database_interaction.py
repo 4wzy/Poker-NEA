@@ -304,24 +304,34 @@ class DatabaseInteraction(DatabaseBase):
 
     def get_and_check_to_reset_daily_games_played(self, user_id):
         with self.db_cursor() as cursor:
-            # Check if the last game timestamp was from yesterday compared to the current date
-            reset_query = """
-                    UPDATE user_game_limits
-                    SET games_played_today = 0
-                    WHERE user_id = %s AND DATE(last_logged_in) = DATE(CURRENT_TIMESTAMP - INTERVAL 1 DAY);
-                    """
-            cursor.execute(reset_query, (user_id,))
-
-            # Select the current number of games played today to return
+            # Check if the user has logged in today
             select_query = """
-                    SELECT games_played_today
+                    SELECT DATE(last_logged_in), games_played_today
                     FROM user_game_limits
                     WHERE user_id = %s;
                     """
             cursor.execute(select_query, (user_id,))
-            result = cursor.fetchone()
-            print(f"Result from get_and_check: {result}")
-            return result[0] if result else None
+            last_login_date, games_played_today = cursor.fetchone() or (None, None)
+
+            # Reset daily games played if the last login was not today
+            if last_login_date is not None and last_login_date < datetime.date.today():
+                reset_query = """
+                        UPDATE user_game_limits
+                        SET games_played_today = 0
+                        WHERE user_id = %s;
+                        """
+                cursor.execute(reset_query, (user_id,))
+                games_played_today = 0  # Reset the count
+
+            # Update the last_logged_in to the current timestamp
+            update_login_query = """
+                    UPDATE user_game_limits
+                    SET last_logged_in = CURRENT_TIMESTAMP
+                    WHERE user_id = %s;
+                    """
+            cursor.execute(update_login_query, (user_id,))
+
+            return games_played_today
 
     def update_daily_game_limit(self, user_id, new_limit):
         with self.db_cursor() as cursor:
