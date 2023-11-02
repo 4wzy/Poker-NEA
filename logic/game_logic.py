@@ -186,7 +186,8 @@ class Game:
         while True:
             if checked_once:
                 if current_position == original_player:
-                    return original_player
+                    print("Returning 999")
+                    return 999
 
             current_position = (current_position + 1) % len(self.players)
             print(f"(get_next_active_player): {current_position}")
@@ -612,6 +613,7 @@ class Game:
             self.current_highest_bet = total_bet
             message = f"{player.name} raises by {raise_amount} chips to a total of {total_bet} chips"
             print(message)
+
             if player.chips == 0:
                 player.all_in = True
                 player.amount_of_times_all_in += 1
@@ -678,7 +680,13 @@ class Game:
         else:
             # If the betting round is not over, go to next player's turn
             print("betting round not over, so getting next active player turn.")
-            self.current_player_turn = self.get_next_active_player(self.current_player_turn, False)
+            next_player_index = self.get_next_active_player(self.current_player_turn, False)
+            if next_player_index == 999:
+                print("skipping through Poker rounds")
+                self.skip_through_betting_rounds()
+                return {"success": True, "type": "skip_round", "showdown": True}
+            else:
+                self.current_player_turn = next_player_index
 
         return {"success": True, "message": message}
 
