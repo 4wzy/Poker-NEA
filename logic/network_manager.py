@@ -23,7 +23,8 @@ class NetworkManager:
             self.client_socket.sendall((json.dumps(message) + '\n').encode('utf-8'))
             response = self.receive_message()
             print(f"2. {response}")
-            if response:
+            # THIS MAY CAUSE ISSUES. IF THERE ARE SERVER ISSUES, CHANGE TO "if response:"
+            if response is not None:
                 return response
         except BrokenPipeError:
             print("Connection to the server is broken")

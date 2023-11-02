@@ -1,3 +1,5 @@
+import math
+
 from logic.database_base import DatabaseBase
 from datetime import datetime
 import mysql.connector
@@ -27,38 +29,38 @@ class DatabaseInteraction(DatabaseBase):
             """,
 
             """
-            CREATE TABLE game_statistics(
+            CREATE TABLE user_statistics(
             stat_id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT UNIQUE,
             games_played INT DEFAULT 0,
             games_won INT DEFAULT 0,
             rgscore INT DEFAULT 0,
-            aggressiveness_score FLOAT DEFAULT 0,
-            conservativeness_score FLOAT DEFAULT 0,
+            average_aggressiveness_score FLOAT DEFAULT 0,
+            average_conservativeness_score FLOAT DEFAULT 0,
             total_play_time INT DEFAULT 0,
             FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
             );
             """,
 
             """
-            INSERT INTO game_statistics (user_id, games_played, games_won, rgscore, aggressiveness_score, conservativeness_score, total_play_time)
+            INSERT INTO user_statistics (user_id, games_played, games_won, rgscore, aggressiveness_score, conservativeness_score, total_play_time)
             SELECT user_id, 0, 0, 0, 0.0, 0.0, 0
             FROM users
-            WHERE user_id NOT IN (SELECT user_id FROM game_statistics);
+            WHERE user_id NOT IN (SELECT user_id FROM user_statistics);
             """,
 
             """
             CREATE TABLE user_game_limits (
             user_id INT UNIQUE PRIMARY KEY,
             daily_game_limit INT DEFAULT 10,
-            last_game_timestamp TIMESTAMP,
+            last_logged_in TIMESTAMP,
             games_played_today INT DEFAULT 0,
             FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
             );
             """,
 
             """
-            INSERT INTO user_game_limits (user_id, daily_game_limit, last_game_timestamp, games_played_today)
+            INSERT INTO user_game_limits (user_id, daily_game_limit, last_logged_in, games_played_today)
             SELECT user_id, 10, NOW(), 0
             FROM users;
             """,
@@ -105,6 +107,8 @@ class DatabaseInteraction(DatabaseBase):
             user_id INT,
             pos INT,
             winnings INT,
+            aggressiveness_score FLOAT DEFAULT 0,
+            conservativeness_score FLOAT DEFAULT 0,
             FOREIGN KEY (game_id) REFERENCES games(game_id) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
             );
@@ -131,11 +135,38 @@ class DatabaseInteraction(DatabaseBase):
 
         with self.db_cursor() as cursor:
             query = f"""
-            UPDATE game_statistics
+            UPDATE user_statistics
             SET {attribute} = {attribute} + %s
             WHERE user_id = %s;
             """
             cursor.execute(query, (amount, user_id))
+
+    def update_average_scores(self, user_id, game_aggressiveness_score, game_conservativeness_score):
+        with self.db_cursor() as cursor:
+            # Fetch current statistics
+            cursor.execute("""
+                SELECT games_played, average_aggressiveness_score, average_conservativeness_score
+                FROM user_statistics
+                WHERE user_id = %s;
+            """, (user_id,))
+            user_data = cursor.fetchone()
+
+            if user_data:
+                games_played, current_avg_aggressiveness, current_avg_conservativeness = user_data
+
+                # Calculate the new average scores
+                new_avg_aggressiveness = round(((current_avg_aggressiveness * (
+                            games_played - 1)) + game_aggressiveness_score) / games_played, 2)
+                new_avg_conservativeness = round(((current_avg_conservativeness * (
+                            games_played - 1)) + game_conservativeness_score) / games_played, 2)
+
+                # Update the average scores in the user_statistics table
+                cursor.execute("""
+                    UPDATE user_statistics
+                    SET average_aggressiveness_score = %s,
+                        average_conservativeness_score = %s
+                    WHERE user_id = %s;
+                """, (new_avg_aggressiveness, new_avg_conservativeness, user_id,))
 
     def insert_game(self, lobby_id):
         with self.db_cursor() as cursor:
@@ -157,23 +188,119 @@ class DatabaseInteraction(DatabaseBase):
             """
             cursor.execute(query, (game_id,))
 
-    def insert_game_results(self, game_id, user_id, pos, winnings):
+    def insert_game_results(self, game_id, user_id, pos, winnings, aggressiveness_score, conservativeness_score):
         with self.db_cursor() as cursor:
             query = """
-            INSERT INTO game_results (game_id, user_id, pos, winnings)
-            VALUES (%s, %s, %s, %s);
+            INSERT INTO game_results (game_id, user_id, pos, winnings, aggressiveness_score, conservativeness_score)
+            VALUES (%s, %s, %s, %s, %s, %s);
             """
-            cursor.execute(query, (game_id, user_id, pos, winnings))
+            cursor.execute(query, (game_id, user_id, pos, winnings, aggressiveness_score, conservativeness_score))
+
+    def get_game_duration(self, game_id):
+        with self.db_cursor() as cursor:
+            # Get the duration of the game in seconds
+            query_duration = """
+            SELECT TIMESTAMPDIFF(SECOND, start_time, end_time) AS game_duration
+            FROM games
+            WHERE game_id = %s;
+            """
+            cursor.execute(query_duration, (game_id,))
+            result = cursor.fetchone()
+            return result[0] if result else 0
+
+    def update_user_play_time(self, user_id, additional_time_seconds):
+        with self.db_cursor() as cursor:
+            # Update the total play time for a user
+            query_update_play_time = """
+            UPDATE user_statistics
+            SET total_play_time = total_play_time + %s
+            WHERE user_id = %s;
+            """
+            cursor.execute(query_update_play_time, (additional_time_seconds, user_id))
 
     def update_game_limit_after_completion(self, user_id):
         with self.db_cursor() as cursor:
-            # Update the last game timestamp and increment the games played today by 1
+            # Increment the amount of games played today by 1
             query = """
             UPDATE user_game_limits
-            SET last_game_timestamp = CURRENT_TIMESTAMP, games_played_today = games_played_today + 1
+            SET games_played_today = games_played_today + 1
             WHERE user_id = %s;
             """
             cursor.execute(query, (user_id,))
+
+    def update_rg_score(self, user_id):
+        with self.db_cursor() as cursor:
+            # Fetch the current RGScore, streak, and games_played_above_limit data
+            cursor.execute("""
+                    SELECT rgscore, streak, games_played_above_limit
+                    FROM user_statistics
+                    WHERE user_id = %s;
+                    """, (user_id,))
+            rgscore_data = cursor.fetchone()
+
+            # If there's no rgscore_data, handle it appropriately
+            if rgscore_data is None:
+                # Handle new user or missing data scenario
+                pass  # You would insert default values or take other appropriate action here
+
+            current_rgscore, current_streak, games_played_above_limit = rgscore_data or (100, 0, 0)
+
+            # Fetch the daily game limit and last login date
+            cursor.execute("""
+                    SELECT daily_game_limit, last_logged_in
+                    FROM user_game_limits
+                    WHERE user_id = %s;
+                    """, (user_id,))
+            limit_data = cursor.fetchone()
+
+            daily_game_limit, last_logged_in = limit_data or (5, None)  # Use default values if no data found
+
+            # Check if the user is logging in on a new day
+            if not last_logged_in or last_logged_in.date() < datetime.date.today():
+                # Update the last_logged_in field to today
+                cursor.execute("""
+                        UPDATE user_game_limits
+                        SET last_logged_in = CURRENT_DATE
+                        WHERE user_id = %s;
+                        """, (user_id,))
+
+                # If the last game played date was yesterday, we consider whether to update the streak
+                if last_logged_in and last_logged_in.date() == datetime.date.today() - datetime.timedelta(days=1):
+                    # Check if the user stayed within their limit yesterday
+                    stayed_within_limit = self.check_if_within_limit(user_id, daily_game_limit)
+
+                    # Update streak and games_played_above_limit accordingly
+                    if stayed_within_limit:
+                        current_streak += 1
+                    else:
+                        current_streak = 0  # Reset streak if they went over their limit
+                        games_played_above_limit += self.get_games_played_above_limit(user_id, daily_game_limit)
+
+                    # Update the RGScore based on the new information
+                    influence = 0.5  # This is an example value for the influence of the streak
+                    # Deduct points based on games played above limit, add based on streak
+                    rgscore_adjustment = -math.log2(1 + games_played_above_limit) + influence * current_streak
+                    new_rgscore = max(0, current_rgscore + rgscore_adjustment)  # Prevent negative score
+
+                    # Update the user_statistics with the new RGScore and streak
+                    cursor.execute("""
+                            UPDATE user_statistics
+                            SET rgscore = %s, streak = %s, games_played_above_limit = %s
+                            WHERE user_id = %s;
+                            """, (new_rgscore, current_streak, games_played_above_limit, user_id,))
+
+                # Commit the transaction to save the changes
+                self.connection.commit()
+
+            return current_rgscore  # Or any other data you need to return
+
+    def check_if_within_limit(self, user_id, daily_game_limit):
+        # Logic to check if the user stayed within the daily game limit yesterday
+        pass
+
+    def get_games_played_above_limit(self, user_id, daily_game_limit):
+        # Logic to determine how many games the user played over the limit yesterday
+        pass
 
     def get_and_check_to_reset_daily_games_played(self, user_id):
         with self.db_cursor() as cursor:
@@ -181,7 +308,7 @@ class DatabaseInteraction(DatabaseBase):
             reset_query = """
                     UPDATE user_game_limits
                     SET games_played_today = 0
-                    WHERE user_id = %s AND DATE(last_game_timestamp) = DATE(CURRENT_TIMESTAMP - INTERVAL 1 DAY);
+                    WHERE user_id = %s AND DATE(last_logged_in) = DATE(CURRENT_TIMESTAMP - INTERVAL 1 DAY);
                     """
             cursor.execute(reset_query, (user_id,))
 
@@ -219,10 +346,10 @@ class DatabaseInteraction(DatabaseBase):
 
         with self.db_cursor() as cursor:
             query = f"""
-            SELECT users.user_id, users.username, users.profile_picture, game_statistics.{attribute}
-            FROM game_statistics
-            JOIN users ON game_statistics.user_id = users.user_id
-            ORDER BY game_statistics.{attribute} DESC
+            SELECT users.user_id, users.username, users.profile_picture, user_statistics.{attribute}
+            FROM user_statistics
+            JOIN users ON user_statistics.user_id = users.user_id
+            ORDER BY user_statistics.{attribute} DESC
             LIMIT %s;
             """
             cursor.execute(query, (limit,))

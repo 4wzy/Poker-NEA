@@ -64,6 +64,8 @@ class Player:
         self.won_round = False
         self.won_game = False
         self.finishing_position = 0
+        self.aggressiveness_score = 0
+        self.conservativeness_score = 0
 
     def add_card(self, card):
         self.hand.cards.append(card)
@@ -538,10 +540,21 @@ class Game:
         self.current_player_turn = self.get_next_active_player(self.big_blind_position, False)
         print(f"Current player turn: {self.current_player_turn}")
 
-        self.players[self.small_blind_position].chips -= self.small_blind
-        self.players[self.big_blind_position].chips -= self.big_blind
-        self.players[self.small_blind_position].current_bet = self.small_blind
-        self.players[self.big_blind_position].current_bet = self.big_blind
+        if self.players[self.small_blind_position].chips > self.small_blind:
+            self.players[self.small_blind_position].chips -= self.small_blind
+            self.players[self.small_blind_position].current_bet = self.small_blind
+        else:
+            self.players[self.small_blind_position].current_bet = self.players[self.small_blind_position].chips
+            self.players[self.small_blind_position].chips = 0
+            self.players[self.small_blind_position].all_in = True
+
+        if self.players[self.big_blind_position].chips > self.big_blind:
+            self.players[self.big_blind_position].chips -= self.big_blind
+            self.players[self.big_blind_position].current_bet = self.big_blind
+        else:
+            self.players[self.big_blind_position].current_bet = self.players[self.big_blind_position].chips
+            self.players[self.big_blind_position].chips = 0
+            self.players[self.big_blind_position].all_in = True
 
         self.players[self.small_blind_position].blinds.append("SB")
         self.players[self.big_blind_position].blinds.append("BB")

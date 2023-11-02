@@ -28,6 +28,7 @@ class ResponsibleGamblingMenu(tk.Tk):
 
         self.new_limit_var = tk.StringVar(self)
         self.new_limit_var.set("Set New Limit")
+
         new_limit_entry = tk.Entry(self, textvariable=self.new_limit_var, font=tkfont.Font(family="Cambria", size=16),
                                    fg="#333333", bg="#FFFFFF", width=15)
         new_limit_entry.grid(row=2, column=0, columnspan=2, pady=10)

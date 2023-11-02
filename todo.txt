@@ -1,9 +1,5 @@
 Use https://williamvenner.github.io/AQA-Computer-Science-NEA-Checklist/
 
-Update winning player chips when game completed
-
-Create the hall of fame. You may have to just stick to who has the most chips instead of the RGScore system.
-
 Allow players to export the hall of fame as a text file (to get the writing and reading from files mark)
 
 Somehow implement inheritance, possibly polymorphism?
@@ -11,16 +7,41 @@ Somehow implement inheritance, possibly polymorphism?
 Implement hash tables and use hashing to store passwords.
 Find a way to use stacks if you can.
 
+FIGURED OUT BUG POSSIBLY??
+The bug with multiple winners being displayed may have to do with when 2 players both still have money after 1 of them
+has gone all in.
+
+For example if players 1, 2, and 3 have 50 chips and player 4 has 200 chips.
+If player 4 raises 50 chips and all players go all in and player 3 wins..
+Player 3 and 4 will be displayed as winners instead of just player 3
 
 ------------------
 
+SIDE NOTE:
+SIDE POTS SEEM TO ACTUALLY BE WORKING PROPERLY!
+TEST THIS OUT WITH 2 PLAYERS AT THE END OF A POKER GAME and show on video :)
 
-7. Update game statistics tables after poker game finished
-8. Add to user statistics tables
-
-
+------------------
 
 This exception handling from the sockets
 Add decorator to controller.py lines 22 and 23
 
+---
+
+To update database on new computer:
+
+-- Rename the game_statistics table to user_statistics
+RENAME TABLE game_statistics TO user_statistics;
+
+-- Add new fields to game_results table
+ALTER TABLE game_results
+ADD COLUMN aggressiveness_score FLOAT DEFAULT 0,
+ADD COLUMN conservativeness_score FLOAT DEFAULT 0;
+
+-- Rename columns in user_statistics table
+ALTER TABLE user_statistics
+CHANGE aggressiveness_score average_aggressiveness_score FLOAT DEFAULT 0,
+CHANGE conservativeness_score average_conservativeness_score FLOAT DEFAULT 0;
+
+ALTER TABLE user_game_limits CHANGE last_game_timestamp last_logged_in TIMESTAMP;
 

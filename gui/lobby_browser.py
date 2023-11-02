@@ -18,6 +18,7 @@ class LobbyBrowser(tk.Tk):
         self.username = self.controller.network_manager.send_message({"type": "get_username", "user_id": self.user_id})
         self.user_chips = self.controller.network_manager.send_message({"type": "request_user_chips", "user_id":
             self.user_id})
+        print(f"USER CHIPS: {self.user_chips}")
         self.daily_game_limit = self.controller.network_manager.send_message({"type": "get_daily_game_limit", "user_id": self.user_id})
 
         # For the checkboxes to filter lobbies based on game options
@@ -43,8 +44,21 @@ class LobbyBrowser(tk.Tk):
                                     fg="#FFFFFF", bg="#444444", padx=10, pady=5)
         user_chips_label.pack(side="right")
 
+        daily_games_frame = tk.Frame(container, bg="#333333")
+        daily_games_frame.grid(row=1, column=0, columnspan=2, sticky="ew")
+
+        games_played_label = tk.Label(daily_games_frame, text=f"Games played today: {self.games_played_today}",
+                                    font=tkfont.Font(family="Cambria", size=16),
+                                    fg="#FFFFFF", bg="#444444", padx=10, pady=5)
+        games_played_label.pack(side="left")
+
+        daily_game_limit_label = tk.Label(daily_games_frame, text=f"Daily limit: {self.daily_game_limit}",
+                                    font=tkfont.Font(family="Cambria", size=16),
+                                    fg="#FFFFFF", bg="#444444", padx=10, pady=5)
+        daily_game_limit_label.pack(side="right")
+
         filter_frame = tk.Frame(container, bg="#333333")
-        filter_frame.grid(row=1, column=0, columnspan=2, sticky="ew")
+        filter_frame.grid(row=2, column=0, columnspan=2, sticky="ew")
 
         status_checkbutton = tk.Checkbutton(filter_frame, text="Show Lobbies In Progress", variable=self.status_var,
                                             onvalue="in_progress", offvalue="waiting", bg="#333333",
@@ -56,13 +70,13 @@ class LobbyBrowser(tk.Tk):
         odds_checkbutton.pack(side="left")
 
         self.lobby_container_canvas = tk.Canvas(container, bg="#555555")
-        self.lobby_container_canvas.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
+        self.lobby_container_canvas.grid(row=3, column=0, padx=10, pady=10, sticky="nsew")
 
         self.lobby_container_frame = tk.Frame(self.lobby_container_canvas, bg="#555555")
         self.lobby_container_canvas.create_window((0, 0), window=self.lobby_container_frame, anchor="nw")
 
         scrollbar = tk.Scrollbar(container, orient="vertical", command=self.lobby_container_canvas.yview)
-        scrollbar.grid(row=2, column=1, sticky="ns")
+        scrollbar.grid(row=3, column=1, sticky="ns")
         self.lobby_container_canvas.config(yscrollcommand=scrollbar.set)
         self.lobby_container_canvas.yview_moveto(0)
 
@@ -70,7 +84,7 @@ class LobbyBrowser(tk.Tk):
             scrollregion=self.lobby_container_canvas.bbox("all")))
 
         button_frame = tk.Frame(container, bg="#333333")
-        button_frame.grid(row=3, column=0, columnspan=2, sticky="ew")
+        button_frame.grid(row=4, column=0, columnspan=2, sticky="ew")
 
         create_lobby_button = tk.Button(button_frame, text="Create Lobby", font=tkfont.Font(family="Cambria", size=16),
                                         fg="#FFFFFF", bg="#444444", bd=0, padx=20, pady=10, borderwidth=1,
@@ -86,7 +100,7 @@ class LobbyBrowser(tk.Tk):
         back_button = tk.Button(container, text="Back", font=tkfont.Font(family="Cambria", size=16), fg="#FFFFFF",
                                 bg="#444444", bd=0, padx=20, pady=10, command=lambda: self.controller.open_main_menu(
                 self.user_id))
-        back_button.grid(row=4, column=0, columnspan=2, sticky="ew", pady=10, padx=10)
+        back_button.grid(row=5, column=0, columnspan=2, sticky="ew", pady=10, padx=10)
 
         self.lobby_container_frame.grid_columnconfigure(0, minsize=130)
         self.lobby_container_frame.grid_columnconfigure(1, minsize=130)
@@ -98,7 +112,7 @@ class LobbyBrowser(tk.Tk):
             messagebox.showinfo("Info",f"Your daily game limit is {self.daily_game_limit} and you have already played {self.games_played_today}")
 
     def open_create_lobby_window(self):
-        CreateLobbyWindow(self.controller, self.user_id)
+        CreateLobbyWindow(self.controller, self.user_id, self.user_chips)
 
     def fetch_and_populate_lobby_list(self):
         print("Fetching lobby list...")
@@ -174,18 +188,13 @@ class LobbyBrowser(tk.Tk):
         self.lobby_container_canvas.yview_moveto(0)
 
     def join_selected_lobby(self, lobby_info, allow_reconnect):
-        request_user_chips_data = {
-            "type": "request_user_chips",
-            "user_id": self.user_id
-        }
-        user_chips = self.controller.network_manager.send_message(request_user_chips_data)
-        if not user_chips:
+        if self.user_chips is None:
             messagebox.showerror("Error", "Error getting user_chips back from server")
             return
 
         # If the player is not reconnecting, charge them the buy-in fee.
         if not allow_reconnect:
-            if user_chips < lobby_info["buy_in"]:
+            if self.user_chips < lobby_info["buy_in"]:
                 messagebox.showerror("Error", "You do not have enough chips to join this lobby")
                 return
 
@@ -232,10 +241,11 @@ class LobbyCard(tk.Frame):
 
 
 class CreateLobbyWindow(tk.Toplevel):
-    def __init__(self, controller, user_id, *args, **kwargs):
+    def __init__(self, controller, user_id, user_chips, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.controller = controller
         self.user_id = user_id
+        self.user_chips = user_chips
         self.title("Create a Lobby - AceAware Poker")
         self.configure(bg="#333333")
 
@@ -303,12 +313,7 @@ class CreateLobbyWindow(tk.Toplevel):
             messagebox.showinfo("Error", "Please enter a valid lobby name (1-16 characters)")
             return
 
-        request_user_chips_data = {
-            "type": "request_user_chips",
-            "user_id": self.user_id
-        }
-        user_chips = self.controller.network_manager.send_message(request_user_chips_data)
-        if not user_chips:
+        if self.user_chips is None:
             messagebox.showerror("Error", "Error getting user_chips back from server")
             return
 
@@ -323,7 +328,7 @@ class CreateLobbyWindow(tk.Toplevel):
         if buy_in < 100:
             messagebox.showerror("Error", "The buy in amount should be at least 100 chips.")
             return
-        elif buy_in > user_chips:
+        elif buy_in > self.user_chips:
             messagebox.showerror("Error", "You do not have enough chips to host this lobby.")
             return
 
