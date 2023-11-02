@@ -9,14 +9,16 @@ from datetime import datetime
 
 
 class LobbyBrowser(tk.Tk):
-    def __init__(self, controller, user_id, *args, **kwargs):
+    def __init__(self, controller, user_id, games_played_today, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.controller = controller
         self.user_id = user_id
+        self.games_played_today = games_played_today
         print(f"USING LOBBY BROWSER WITH USER_ID: {self.user_id}")
         self.username = self.controller.network_manager.send_message({"type": "get_username", "user_id": self.user_id})
         self.user_chips = self.controller.network_manager.send_message({"type": "request_user_chips", "user_id":
             self.user_id})
+        self.daily_game_limit = self.controller.network_manager.send_message({"type": "get_daily_game_limit", "user_id": self.user_id})
 
         # For the checkboxes to filter lobbies based on game options
         self.status_var = tk.StringVar(value="waiting")
@@ -91,6 +93,9 @@ class LobbyBrowser(tk.Tk):
         self.lobby_container_frame.grid_columnconfigure(2, minsize=130)
 
         self.refresh_lobby_list()
+
+        if self.games_played_today is not None and self.games_played_today >= self.daily_game_limit:
+            messagebox.showinfo("Info",f"Your daily game limit is {self.daily_game_limit} and you have already played {self.games_played_today}")
 
     def open_create_lobby_window(self):
         CreateLobbyWindow(self.controller, self.user_id)
@@ -191,7 +196,7 @@ class LobbyBrowser(tk.Tk):
 
         response_data = self.controller.join_lobby(self.user_id, lobby_info['lobby_id'])
         if not response_data['success']:
-            messagebox.showinfo("Error", response_data['error'])
+            messagebox.showerror("Error", response_data['error'])
             return
 
 

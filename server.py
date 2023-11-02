@@ -93,6 +93,10 @@ class LobbyServer:
                         response = self.database_interaction.update_daily_game_limit(request['user_id'], request['new_limit'])
                     elif request['type'] == 'get_daily_game_limit':
                         response = self.database_interaction.get_daily_game_limit(request['user_id'])
+                    elif request['type'] == 'get_and_check_to_reset_daily_games_played':
+                        response = self.database_interaction.get_and_check_to_reset_daily_games_played(request['user_id'])
+                    elif request['type'] == 'update_game_limit_after_completion':
+                        response = ['type'] == self.database_interaction.update_game_limit_after_completion(request['user_id'])
                     elif request['type'] == 'get_username':
                         response = self.database_interaction.get_username(request['user_id'])
                     elif request['type'] == 'get_top_players_by_attribute':
@@ -136,10 +140,12 @@ class LobbyServer:
 
             for player in game.players:
                 self.database_interaction.add_to_attribute_for_user(player.user_id, "games_played", 1)
+                self.database_interaction.update_game_limit_after_completion(player.user_id)
+                game_id = self.database_interaction.get_game_id_from_lobby_id(lobby_id)
                 if player.won_game:
-                    self.database_interaction.insert_game_results(lobby_id, player.user_id, player.finishing_position, 0)
+                    self.database_interaction.insert_game_results(game_id, player.user_id, player.finishing_position, 0)
                 else:
-                    self.database_interaction.insert_game_results(lobby_id, player.user_id, player.finishing_position, game.total_pot)
+                    self.database_interaction.insert_game_results(game_id, player.user_id, player.finishing_position, game.total_pot)
 
             # BROADCAST GAME COMPLETED STATE
             self.broadcast_completed_game_state(lobby_id)

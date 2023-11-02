@@ -50,7 +50,7 @@ class DatabaseInteraction(DatabaseBase):
             """
             CREATE TABLE user_game_limits (
             user_id INT UNIQUE PRIMARY KEY,
-            daily_game_limit INT DEFAULT 5,
+            daily_game_limit INT DEFAULT 10,
             last_game_timestamp TIMESTAMP,
             games_played_today INT DEFAULT 0,
             FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
@@ -165,6 +165,37 @@ class DatabaseInteraction(DatabaseBase):
             """
             cursor.execute(query, (game_id, user_id, pos, winnings))
 
+    def update_game_limit_after_completion(self, user_id):
+        with self.db_cursor() as cursor:
+            # Update the last game timestamp and increment the games played today by 1
+            query = """
+            UPDATE user_game_limits
+            SET last_game_timestamp = CURRENT_TIMESTAMP, games_played_today = games_played_today + 1
+            WHERE user_id = %s;
+            """
+            cursor.execute(query, (user_id,))
+
+    def get_and_check_to_reset_daily_games_played(self, user_id):
+        with self.db_cursor() as cursor:
+            # Check if the last game timestamp was from yesterday compared to the current date
+            reset_query = """
+                    UPDATE user_game_limits
+                    SET games_played_today = 0
+                    WHERE user_id = %s AND DATE(last_game_timestamp) = DATE(CURRENT_TIMESTAMP - INTERVAL 1 DAY);
+                    """
+            cursor.execute(reset_query, (user_id,))
+
+            # Select the current number of games played today to return
+            select_query = """
+                    SELECT games_played_today
+                    FROM user_game_limits
+                    WHERE user_id = %s;
+                    """
+            cursor.execute(select_query, (user_id,))
+            result = cursor.fetchone()
+            print(f"Result from get_and_check: {result}")
+            return result[0] if result else None
+
     def update_daily_game_limit(self, user_id, new_limit):
         with self.db_cursor() as cursor:
             query = """
@@ -179,6 +210,7 @@ class DatabaseInteraction(DatabaseBase):
             query = "SELECT daily_game_limit FROM user_game_limits WHERE user_id = %s;"
             cursor.execute(query, (user_id,))
             result = cursor.fetchone()
+            print(f"Result from get_daily_game_limit: {result}")
             return result[0] if result else None
 
     def get_top_players_by_attribute(self, attribute, limit=50):
@@ -220,6 +252,8 @@ class DatabaseInteraction(DatabaseBase):
         with self.db_cursor() as cursor:
             cursor.execute("SELECT chips_balance FROM user_chips WHERE user_id = %s", (user_id,))
             result = cursor.fetchone()
+            if result == 0:
+                return 0  # Avoiding an error I was experiencing where Python returns None below
             return result[0] if result else None  # Return None if the requested user isn't found
 
     def update_chip_balance_for_user(self, user_id, new_balance):
@@ -408,3 +442,11 @@ class DatabaseInteraction(DatabaseBase):
             if connection.is_connected():
                 cursor.close()
                 connection.close()
+
+    def get_game_id_from_lobby_id(self, lobby_id):
+        with self.db_cursor() as cursor:
+            query = "SELECT game_id FROM games WHERE lobby_id = %s;"
+            cursor.execute(query, (lobby_id,))
+            result = cursor.fetchone()
+            print(f"Result from get_game_id_from_lobby_id: {result}")
+            return result[0] if result else None

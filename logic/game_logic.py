@@ -103,47 +103,27 @@ class Game:
         self.next_available_finishing_position = self.player_limit + 1
 
     def is_betting_round_over(self):
-        if not self.first_player_acted:
-            if self.current_player_turn == self.first_player_to_act:
-                self.first_player_acted = True
-
-        print("-------------- IS_BETTING_ROUND_OVER ----------------")
-        print(f"first_player_to_act: {self.first_player_to_act}")
-        print(f"last_player_to_act: {self.last_player_to_act}")
-        print(f"current_player_turn: {self.current_player_turn}")
-        print(f"has self.first_player_acted: {self.first_player_acted}")
-        print(f"non_active_player: {self.non_active_player}")
-        print("------------------------------")
-
         active_players = self.get_players_for_showdown()
-        last_player = self.players[self.last_player_to_act]
+        all_in_players = [player for player in active_players if player.all_in]
+        non_all_in_players = [player for player in active_players if not player.all_in]
 
-        print(f"Active players: {[player.name for player in active_players]}")
-        print(f"Last player: {last_player.name}, all in: {last_player.all_in}")
+        # If all but one player are all-in, and the last non-all-in player has acted, the round is over
+        if len(non_all_in_players) == 1 and non_all_in_players[0] in self.players_acted:
+            return True
 
-        # If the last player to act is all-in
-        if last_player.all_in:
-            # First, check if every active player has acted.
-            for player in active_players:
-                if player not in self.players_acted:
-                    return False
-            # If all have acted, check if their bet amounts match.
-            non_all_in_bets = [player.current_bet for player in active_players if not player.all_in]
-            print(f"non_all_in_bets: {non_all_in_bets}")
+        # If all non-all-in players have matching current bets and have acted, the round is over
+        if all(player in self.players_acted for player in non_all_in_players):
+            non_all_in_bets = [player.current_bet for player in non_all_in_players]
             if len(set(non_all_in_bets)) == 1:
                 return True
-            return False
 
-        # If there's a player who hasn't acted yet, the betting round isn't over
-        for player in active_players:
-            if player not in self.players_acted:
-                return False
+        # If all active players have acted at least once and their bet amounts match, the round is over
+        if self.first_player_acted and all(player in self.players_acted for player in active_players):
+            all_bets = [player.current_bet for player in active_players]
+            if len(set(all_bets)) == 1:
+                return True
 
-        # If the above condition is not met, then all players have acted and the round is over
-        if self.non_active_player:
-            return self.first_player_acted and self.players[self.current_player_turn] == self.non_active_player
-        else:
-            return self.first_player_acted and self.current_player_turn == self.last_player_to_act
+        return False
 
     def start_new_round(self, round_type):
         if round_type == "preflop":
@@ -187,6 +167,8 @@ class Game:
             self.current_player_turn = self.get_next_active_player(self.current_player_turn, False)
 
     def get_next_active_player(self, current_position, use_current_player):
+        original_player = current_position
+
         if len(self.get_players_for_showdown()) == 0:
             # If the server is force terminated, stop it from being in an infinite loop
             print("ERROR ERROR ERROR: NO PLAYERS AVAILABLE FOR GET_NEXT_ACTIVE_PLAYER")
@@ -198,11 +180,19 @@ class Game:
                 print(f"(get_next_active_player) FINAL: {current_position}")
                 return current_position
 
+        # The loop below should check if all the players are looped through, and should return the original player
+        # in order to avoid an infinite loop below
+        checked_once = False
         while True:
+            if checked_once:
+                if current_position == original_player:
+                    return original_player
+
             current_position = (current_position + 1) % len(self.players)
             print(f"(get_next_active_player): {current_position}")
             if self.is_player_active(current_position):
                 return current_position
+            checked_once = True
 
     def get_previous_active_player(self, current_position, use_current_player):
         if len(self.get_players_for_showdown()) == 0:

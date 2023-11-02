@@ -38,10 +38,10 @@ class Controller:
             self.current_menu.destroy()
         self.current_menu = MainMenu(self, user_id)
 
-    def open_lobby_browser(self, user_id):
+    def open_lobby_browser(self, user_id, games_played_today):
         if self.current_menu:
             self.current_menu.destroy()
-        self.current_menu = LobbyBrowser(self, user_id)
+        self.current_menu = LobbyBrowser(self, user_id, games_played_today)
 
     def open_hall_of_fame(self, user_id):
         if self.current_menu:

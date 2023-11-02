@@ -11,6 +11,8 @@ class MainMenu(tk.Tk):
         print(f"USING MAIN MENU WITH USER_ID: {self.user_id}")
         self.username = self.controller.network_manager.send_message({"type": "get_username", "user_id": self.user_id})
         self.controller.network_manager.reset_connection()
+        self.games_played_today = self.controller.network_manager.send_message({"type": "get_and_check_to_reset_daily_games_played", "user_id": self.user_id})
+        print(f"Sent get_and_check_daily_games_played request with id {self.user_id}")
 
         self.title("AceAware Poker")
 
@@ -58,7 +60,7 @@ class MainMenu(tk.Tk):
 
         play_button = tk.Button(left_buttons_frame, text="Play", font=tkfont.Font(family="Cambria", size=16),
                                 fg="#FFFFFF", bg="#444444", bd=0, padx=20, pady=10, width=50, borderwidth=1,
-                                command=lambda: self.controller.open_lobby_browser(self.user_id))
+                                command=lambda: self.controller.open_lobby_browser(self.user_id, self.games_played_today))
         play_button.pack(side="top", fill="x", pady=5)
 
         hall_of_fame_button = tk.Button(left_buttons_frame, text="Hall of Fame",
