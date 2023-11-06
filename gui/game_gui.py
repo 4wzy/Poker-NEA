@@ -737,12 +737,8 @@ class GameGUI(tk.Tk):
             bet_label.pack()
 
             # Add card images
-            if self.username == name:
-                card1_photo = Image.open("gui/Images/Cards/black_joker.png")
-                card2_photo = Image.open("gui/Images/Cards/black_joker.png")
-            else:
-                card1_photo = Image.open("gui/Images/Cards/back.png")
-                card2_photo = Image.open("gui/Images/Cards/back.png")
+            card1_photo = Image.open("gui/Images/Cards/back.png")
+            card2_photo = Image.open("gui/Images/Cards/back.png")
 
             card1_photo = card1_photo.resize((60, 90))
             card1_photo = ImageTk.PhotoImage(card1_photo)

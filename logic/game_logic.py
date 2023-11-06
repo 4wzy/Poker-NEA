@@ -564,11 +564,17 @@ class Game:
         self.start_new_round(self.current_round)
 
     def flop(self):
+        # A card is discarded by the dealer before dealing the flop, turn, and river
+        self.deck.deal_card()
+        # Deal 3 cards
         for i in range(3):
             card = self.deck.deal_card()
             self.board.append(card)
 
     def turn_river(self):
+        # A card is discarded by the dealer before dealing the flop, turn, and river
+        self.deck.deal_card()
+
         card = self.deck.deal_card()
         self.board.append(card)
 

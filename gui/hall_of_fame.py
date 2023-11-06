@@ -95,8 +95,8 @@ class HallOfFame(tk.Tk):
         else:
             attribute_mapping = {
                 "RGScore": "rgscore",
-                "Aggressiveness Score": "aggressiveness_score",
-                "Conservativeness Score": "conservativeness_score",
+                "Aggressiveness Score": "average_aggressiveness_score",
+                "Conservativeness Score": "average_conservativeness_score",
                 "Games won": "games_won"
             }
             players = self.controller.network_manager.send_message({

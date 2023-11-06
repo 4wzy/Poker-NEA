@@ -360,7 +360,7 @@ class DatabaseInteraction(DatabaseBase):
             return result[0] if result else None
 
     def get_top_players_by_attribute(self, attribute, limit=50):
-        if attribute not in ["rgscore", "aggressiveness_score", "conservativeness_score", "games_won"]:
+        if attribute not in ["rgscore", "average_aggressiveness_score", "average_conservativeness_score", "games_won"]:
             raise ValueError("Invalid attribute provided")
 
         with self.db_cursor() as cursor:

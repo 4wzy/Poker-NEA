@@ -84,7 +84,8 @@ class MainMenu(tk.Tk):
         logo_label.image = self.logo
 
         how_to_play_button = tk.Button(container, text="How to Play", font=tkfont.Font(family="Cambria", size=16),
-                                       fg="#FFFFFF", bg="#444444", bd=0, padx=40, pady=10, borderwidth=1)
+                                       fg="#FFFFFF", bg="#444444", bd=0, padx=40, pady=10, borderwidth=1,
+                                       command=lambda: self.controller.open_how_to_play(self.user_id))
         how_to_play_button.grid(row=4, column=0, columnspan=4, sticky="ew", pady=5)
 
         responsible_gambling_button = tk.Button(container, text="Responsible Gambling",
