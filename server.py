@@ -90,6 +90,8 @@ class LobbyServer:
                         self.broadcast_game_state(request["lobby_id"], None, True)
                     elif request["type"] == 'broadcast_completed_game_state':
                         self.broadcast_completed_game_state(request['lobby_id'])
+                    elif request["type"] == 'get_data_for_odds':
+                        response = self.get_data_for_odds(request['user_id'], request['lobby_id'])
                     elif request["type"] == 'request_user_chips':
                         response = self.database_interaction.get_chip_balance_for_user(request['user_id'])
                     elif request["type"] == 'add_to_chip_balance_for_user':
@@ -200,6 +202,16 @@ class LobbyServer:
 
     def find_player_from_user_id(self, user_id, game):
         return next((player for player in game.players if player.user_id == user_id), None)
+
+    def get_data_for_odds(self, user_id, lobby_id):
+        game = self.lobbies[lobby_id]
+        player_cards = [[card.rank, card.suit] for card in [player for player in game.players if
+                                                                   player.user_id == user_id][0].hand.cards]
+        print(f"player_cards: {player_cards}")
+        community_cards = [[card.rank, card.suit] for card in game.board]
+        print(f"community_cards: {community_cards}")
+
+        return player_cards, community_cards
 
     def process_player_action(self, request, client_socket):
         user_id = request['user_id']

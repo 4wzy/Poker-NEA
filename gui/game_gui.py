@@ -5,6 +5,7 @@ from tkinter import simpledialog, messagebox
 
 from PIL import Image, ImageDraw, ImageTk
 from logic.database_interaction import DatabaseInteraction
+from logic.odds_logic import monte_carlo_flush_draw
 
 
 class GameGUI(tk.Tk):
@@ -144,7 +145,7 @@ class GameGUI(tk.Tk):
             pass
 
         # Schedule the next call to the network_loop method
-        task_id = self.after(20, self.network_loop)
+        task_id = self.after(10, self.network_loop)
         self.scheduled_tasks.append(task_id)
 
     def destroy(self) -> None:
@@ -174,10 +175,10 @@ class GameGUI(tk.Tk):
                 print("updating game state")
                 # The following call to self.after() is necessary so that the players are placed first before the
                 # game attempts to update game components which don't exist yet
-                self.after(20, self.start_game_update)
+                self.after(10, self.start_game_update)
         if self.reconnecting:
             print("(game_gui): attempting to reconnect...")
-            self.after(20, self.update_game_state, initial_state)
+            self.after(10, self.update_game_state, initial_state)
 
     # Could be made as a private method
     def start_game_update(self):
@@ -688,6 +689,19 @@ class GameGUI(tk.Tk):
         odds_label = tk.Label(self.display_frame, text="Odds will be displayed here.", bg="#444444", fg="#FFFFFF",
                               font=("Cambria", 12))
         odds_label.pack(fill="both", expand=True)
+
+        game_data = self.controller.network_manager.send_message({
+            'type': 'get_data_for_odds',
+            'user_id': self.user_id,
+            'lobby_id': self.lobby_id
+        })
+
+        print(f"GAME DATA: {game_data}")
+        flush_odds = monte_carlo_flush_draw(game_data[0], game_data[1])
+        odds_label.config(text=f"Flush: {flush_odds}")
+
+        # Use this game data to get the odds of different rankings
+
 
     def open_settings(self):
         print("Open settings window")
