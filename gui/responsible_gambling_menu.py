@@ -86,4 +86,5 @@ class ResponsibleGamblingMenu(tk.Tk):
         tk.messagebox.showinfo("Limit Updated", "Your daily game limit has been updated.")
 
     def update_daily_game_limit(self, new_limit):
-        self.daily_game_limit = self.controller.network_manager.send_message({'type': 'get_daily_game_limit', "user_id": self.user_id, "new_limit": new_limit})
+        self.daily_game_limit = self.controller.network_manager.send_message({'type': 'update_daily_game_limit',
+                                                                              "user_id": self.user_id, "new_limit": new_limit})

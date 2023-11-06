@@ -9,8 +9,11 @@ class MainMenu(tk.Tk):
         self.controller = controller
         self.user_id = user_id
         print(f"USING MAIN MENU WITH USER_ID: {self.user_id}")
-        self.username = self.controller.network_manager.send_message({"type": "get_username", "user_id": self.user_id})
         self.controller.network_manager.reset_connection()
+        self.username = self.controller.network_manager.send_message({"type": "get_username", "user_id": self.user_id})
+        self.rg_score = self.controller.network_manager.send_message({"type": "update_rg_score", "user_id":
+            self.user_id})
+        print(self.rg_score)
         self.games_played_today = self.controller.network_manager.send_message({"type": "get_and_check_to_reset_daily_games_played", "user_id": self.user_id})
         print(f"Sent get_and_check_daily_games_played request with id {self.user_id}")
 

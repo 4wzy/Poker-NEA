@@ -95,9 +95,14 @@ class LobbyServer:
                                                                                      request['new_limit'])
                     elif request['type'] == 'get_daily_game_limit':
                         response = self.database_interaction.get_daily_game_limit(request['user_id'])
+                    elif request['type'] == 'update_daily_game_limit':
+                        response = self.database_interaction.update_daily_game_limit(request['user_id'],
+                                                                                  request['new_limit'])
                     elif request['type'] == 'get_and_check_to_reset_daily_games_played':
                         response = self.database_interaction.get_and_check_to_reset_daily_games_played(
                             request['user_id'])
+                    elif request['type'] == 'update_rg_score':
+                        response = self.database_interaction.update_rg_score(request['user_id'])
                     elif request['type'] == 'update_game_limit_after_completion':
                         response = ['type'] == self.database_interaction.update_game_limit_after_completion(
                             request['user_id'])

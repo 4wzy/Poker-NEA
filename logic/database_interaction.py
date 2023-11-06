@@ -1,7 +1,7 @@
 import math
 
 from logic.database_base import DatabaseBase
-from datetime import datetime
+from datetime import datetime, date
 import mysql.connector
 from contextlib import contextmanager
 
@@ -38,13 +38,15 @@ class DatabaseInteraction(DatabaseBase):
             average_aggressiveness_score FLOAT DEFAULT 0,
             average_conservativeness_score FLOAT DEFAULT 0,
             total_play_time INT DEFAULT 0,
+            streak INT DEFAULT 0,
             FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
             );
             """,
 
             """
-            INSERT INTO user_statistics (user_id, games_played, games_won, rgscore, aggressiveness_score, conservativeness_score, total_play_time)
-            SELECT user_id, 0, 0, 0, 0.0, 0.0, 0
+            INSERT INTO user_statistics (user_id, games_played, games_won, rgscore, aggressiveness_score, 
+            conservativeness_score, total_play_time, streak)
+            SELECT user_id, 0, 0, 0, 0.0, 0.0, 0, 0
             FROM users
             WHERE user_id NOT IN (SELECT user_id FROM user_statistics);
             """,
@@ -230,69 +232,74 @@ class DatabaseInteraction(DatabaseBase):
 
     def update_rg_score(self, user_id):
         with self.db_cursor() as cursor:
-            # Fetch the current RGScore, streak, and games_played_above_limit data
+            # Fetch the current RGScore and streak
             cursor.execute("""
-                    SELECT rgscore, streak, games_played_above_limit
+                    SELECT rgscore, streak
                     FROM user_statistics
                     WHERE user_id = %s;
                     """, (user_id,))
             rgscore_data = cursor.fetchone()
 
-            # If there's no rgscore_data, handle it appropriately
-            if rgscore_data is None:
-                # Handle new user or missing data scenario
-                pass  # You would insert default values or take other appropriate action here
+            current_rgscore, current_streak = rgscore_data or (100, 0)
 
-            current_rgscore, current_streak, games_played_above_limit = rgscore_data or (100, 0, 0)
-
-            # Fetch the daily game limit and last login date
+            # Fetch the daily game limit and games played today
             cursor.execute("""
-                    SELECT daily_game_limit, last_logged_in
+                    SELECT daily_game_limit, games_played_today, last_logged_in
                     FROM user_game_limits
                     WHERE user_id = %s;
                     """, (user_id,))
             limit_data = cursor.fetchone()
 
-            daily_game_limit, last_logged_in = limit_data or (5, None)  # Use default values if no data found
+            daily_game_limit, games_played_today, last_logged_in = limit_data or (10, 0, None)
+            print(f"UPDATING RGSCORE FOR USER {user_id}. Current_rgscore: {current_rgscore}, current_streak:"
+                  f" {current_streak}, daily_game_limit: {daily_game_limit}, games_played_today: "
+                  f"{games_played_today}, last_logged_in: {last_logged_in}")
 
-            # Check if the user is logging in on a new day
-            if not last_logged_in or last_logged_in.date() < datetime.date.today():
-                # Update the last_logged_in field to today
+            if last_logged_in is not None:
+                last_logged_in_date = last_logged_in.date()
+                print(f"LAST_LOGGED_IN_DATE: {last_logged_in_date}")
+            else:
+                last_logged_in_date = None
+
+            today = datetime.today().date()
+
+            if last_logged_in_date is None or last_logged_in_date < today:
+                # Calculate games played above limit for yesterday
+                games_played_above_limit = games_played_today - daily_game_limit
+                if games_played_above_limit < 0:
+                    games_played_above_limit = 0
+                print(f"updated games_played_above_limit to: {games_played_above_limit}")
+
+                # Check if the user stayed within their limit yesterday
+                if games_played_today <= daily_game_limit:
+                    current_streak += 1
+                else:
+                    current_streak = 0
+                print(f"current_streak: {current_streak}")
+
+                # Calculate the new RGScore making sure it doesn't go below 0
+                influence = 0.5  # Example value
+                rgscore_adjustment = -math.log2(1 + games_played_above_limit) + influence * current_streak
+                new_rgscore = round(current_rgscore + rgscore_adjustment, 2)
+                if new_rgscore < 0:
+                    new_rgscore = 0
+                print(f"rgscore_adjustment: {rgscore_adjustment}, new_rgscore: {new_rgscore}")
+
+                # Update the user_statistics with the new RGScore and streak
+                cursor.execute("""
+                        UPDATE user_statistics
+                        SET rgscore = %s, streak = %s
+                        WHERE user_id = %s;
+                        """, (new_rgscore, current_streak, user_id,))
+
+                # Reset games_played_today and update last_logged_in
                 cursor.execute("""
                         UPDATE user_game_limits
-                        SET last_logged_in = CURRENT_DATE
+                        SET games_played_today = 0, last_logged_in = CURRENT_TIMESTAMP
                         WHERE user_id = %s;
                         """, (user_id,))
 
-                # If the last game played date was yesterday, we consider whether to update the streak
-                if last_logged_in and last_logged_in.date() == datetime.date.today() - datetime.timedelta(days=1):
-                    # Check if the user stayed within their limit yesterday
-                    stayed_within_limit = self.check_if_within_limit(user_id, daily_game_limit)
-
-                    # Update streak and games_played_above_limit accordingly
-                    if stayed_within_limit:
-                        current_streak += 1
-                    else:
-                        current_streak = 0  # Reset streak if they went over their limit
-                        games_played_above_limit += self.get_games_played_above_limit(user_id, daily_game_limit)
-
-                    # Update the RGScore based on the new information
-                    influence = 0.5  # This is an example value for the influence of the streak
-                    # Deduct points based on games played above limit, add based on streak
-                    rgscore_adjustment = -math.log2(1 + games_played_above_limit) + influence * current_streak
-                    new_rgscore = max(0, current_rgscore + rgscore_adjustment)  # Prevent negative score
-
-                    # Update the user_statistics with the new RGScore and streak
-                    cursor.execute("""
-                            UPDATE user_statistics
-                            SET rgscore = %s, streak = %s, games_played_above_limit = %s
-                            WHERE user_id = %s;
-                            """, (new_rgscore, current_streak, games_played_above_limit, user_id,))
-
-                # Commit the transaction to save the changes
-                self.connection.commit()
-
-            return current_rgscore  # Or any other data you need to return
+            return current_rgscore
 
     def check_if_within_limit(self, user_id, daily_game_limit):
         # Logic to check if the user stayed within the daily game limit yesterday
@@ -314,7 +321,7 @@ class DatabaseInteraction(DatabaseBase):
             last_login_date, games_played_today = cursor.fetchone() or (None, None)
 
             # Reset daily games played if the last login was not today
-            if last_login_date is not None and last_login_date < datetime.date.today():
+            if last_login_date is not None and last_login_date < date.today():
                 reset_query = """
                         UPDATE user_game_limits
                         SET games_played_today = 0
@@ -341,6 +348,8 @@ class DatabaseInteraction(DatabaseBase):
             WHERE user_id = %s;
             """
             cursor.execute(query, (new_limit, user_id))
+
+            return new_limit
 
     def get_daily_game_limit(self, user_id):
         with self.db_cursor() as cursor:
