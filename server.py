@@ -74,6 +74,14 @@ class LobbyServer:
                         continue
                     elif request["type"] == "bet":
                         response = self.process_player_action(request, client_socket)
+                    elif request["type"] == "send_chat":
+                        try:
+                            lobby_id = request['lobby_id']
+                            chat_message = request['message']
+                            self.broadcast_send_message(lobby_id, chat_message, client_socket)
+                            response = {"success": True}
+                        except Exception as e:
+                            response = {"success": False, "error": e}
                     elif request["type"] == "start_next_round":
                         self.start_next_round(request)
                     elif request["type"] == "broadcast_showdown":
@@ -370,6 +378,18 @@ class LobbyServer:
             print("sent game state..")
             print(f"(broadcast_game_state) returning {data_to_return_to_client}")
             return data_to_return_to_client
+
+    def broadcast_send_message(self, lobby_id, message, current_client):
+        print("BROADCASTING chat message TO EVERYONE")
+        if lobby_id in self.lobbies:
+            game = self.lobbies[lobby_id]
+            for player in self.get_connected_players(game):
+                if player.client_socket != current_client:
+                    user_id = player.user_id
+                    player.client_socket.sendall(
+                        (json.dumps({"type": "receive_message", "chat_message": message}) + '\n').encode(
+                            'utf-8'))
+                    print(f"sent message {message} to user {user_id}")
 
     def broadcast_showdown_game_state(self, lobby_id):
         print("BROADCASTING showdown GAME STATE TO EVERYONE")

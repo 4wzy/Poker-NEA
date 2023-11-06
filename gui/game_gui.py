@@ -10,6 +10,7 @@ from logic.database_interaction import DatabaseInteraction
 class GameGUI(tk.Tk):
     def __init__(self, controller, user_id, lobby_id, initial_state, player_starts_game, reconnecting):
         super().__init__()
+        self.is_chatbox_shown = False
         self.last_highlighted_player_id = None
         self.geometry("1280x720")
         self.configure(bg="#333333")
@@ -224,7 +225,10 @@ class GameGUI(tk.Tk):
                 print(f"server_message: {message}")
                 if isinstance(message, dict):
                     message_type = message.get('type')
-                    if message_type == 'initial_state':
+                    if message_type == 'receive_message':
+                        print(f"Received message: {message}")
+                        self.receive_message(message.get('chat_message'))
+                    elif message_type == 'initial_state':
                         print(f"(game gui): Initial state message TYPE: {message}")
                         task_id = self.after(0, self.process_initial_state, message)
                         self.scheduled_tasks.append(task_id)
@@ -610,23 +614,26 @@ class GameGUI(tk.Tk):
         for widget in self.display_frame.winfo_children():
             widget.destroy()
 
+        self.is_chatbox_shown = True
+
         chat_frame = tk.Frame(self.display_frame, bg="#444444")
         chat_frame.pack(fill="both", expand=True)
 
-        chatbox = tk.Text(chat_frame, bg="#555555", fg="#FFFFFF", state="disabled", wrap="word", height=10, width=20,
+        self.chatbox = tk.Text(chat_frame, bg="#555555", fg="#FFFFFF", state="disabled", wrap="word", height=10,
+                              width=20,
                           font=("Cambria", 10))
-        chatbox.grid(row=0, column=0, sticky="nsew")
+        self.chatbox.grid(row=0, column=0, sticky="nsew")
 
-        scrollbar = tk.Scrollbar(chat_frame, command=chatbox.yview, bg="#555555", troughcolor="#444444")
+        scrollbar = tk.Scrollbar(chat_frame, command=self.chatbox.yview, bg="#555555", troughcolor="#444444")
         scrollbar.grid(row=0, column=1, sticky="ns")
-        chatbox.config(yscrollcommand=scrollbar.set)
+        self.chatbox.config(yscrollcommand=scrollbar.set)
 
         message_entry = tk.Entry(chat_frame, bg="#555555", fg="#FFFFFF", width=20, font=("Cambria", 10),
                                  insertbackground="white")
         message_entry.grid(row=1, column=0, sticky="ew")
-        message_entry.bind("<Return>", lambda event: self.send_message(chatbox, message_entry))
+        message_entry.bind("<Return>", lambda event: self.send_message(message_entry))
 
-        send_button = tk.Button(chat_frame, text="Send", command=lambda: self.send_message(chatbox, message_entry),
+        send_button = tk.Button(chat_frame, text="Send", command=lambda: self.send_message(message_entry),
                                 bg="#555555", fg="#FFFFFF", font=("Cambria", 10), relief="flat", padx=5, pady=5)
         send_button.grid(row=1, column=1, sticky="e")
 
@@ -634,25 +641,48 @@ class GameGUI(tk.Tk):
         chat_frame.grid_columnconfigure(0, weight=1)
 
         # Add the previous messages to the chatbox
-        chatbox.config(state="normal")
+        self.chatbox.config(state="normal")
         for message in self.chat_messages:
-            chatbox.insert("end", message + "\n")
-        chatbox.config(state="disabled")
-        chatbox.yview_moveto(1.0)
+            self.chatbox.insert("end", message + "\n")
+        self.chatbox.config(state="disabled")
+        self.chatbox.yview_moveto(1.0)
 
-    def send_message(self, chatbox, message_entry):
-        message = message_entry.get()
-        if message.strip() != "":
-            message = f"{self.username}: {message}"
-            # The chat_messages array is used to store all messages sent
-            self.chat_messages.append(message)
-            chatbox.config(state="normal")
-            chatbox.insert("end", message + "\n")
-            chatbox.config(state="disabled")
-            chatbox.yview_moveto(1.0)
+    def send_message(self, message_entry):
+        raw_message = message_entry.get()
+        # The code below stops users from sending empty messages and prevents users from maliciously impersonating
+        # other users
+        message = raw_message.lstrip()
+
+        if message:
+            formatted_message = f"{self.username}: {message}"
+            message_to_send = {
+                'type': 'send_chat',
+                'lobby_id': self.lobby_id,
+                'message': formatted_message
+            }
+
+            # Send the message to the server
+            response = self.controller.network_manager.send_message(message_to_send)
+            if response.get('success'):
+                self.receive_message(formatted_message)
+            else:
+                messagebox.showerror("Error", f"Unable to send message. Exception: {response.get('exception')}")
+
+            # Clear the message entry box
             message_entry.delete(0, "end")
 
+    def receive_message(self, message):
+        # The chat_messages array is used to store all messages sent
+        self.chat_messages.append(message)
+        if self.is_chatbox_shown:
+            self.chatbox.config(state="normal")
+            self.chatbox.insert("end", message + "\n")
+            self.chatbox.config(state="disabled")
+            self.chatbox.yview_moveto(1.0)
+
     def show_odds(self):
+        self.is_chatbox_shown = False
+
         for widget in self.display_frame.winfo_children():
             widget.destroy()
         odds_label = tk.Label(self.display_frame, text="Odds will be displayed here.", bg="#444444", fg="#FFFFFF",
