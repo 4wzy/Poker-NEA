@@ -127,6 +127,11 @@ class LobbyServer:
                         response = self.database_interaction.add_to_attribute_for_user(request['user_id'],
                                                                                        request['attribute'],
                                                                                        request['amount'])
+                    elif request['type'] == 'get_attribute_from_user':
+                        response = self.database_interaction.get_attribute_from_user(request['user_id'],
+                                                                                     request['attribute'])
+                    elif request['type'] == 'get_user_statistics':
+                        response = self.database_interaction.get_user_statistics(request['user_id'])
 
                     if response is not None:
                         client_socket.sendall((json.dumps(response) + '\n').encode('utf-8'))
@@ -205,10 +210,10 @@ class LobbyServer:
 
     def get_data_for_odds(self, user_id, lobby_id):
         game = self.lobbies[lobby_id]
-        player_cards = [[card.rank, card.suit] for card in [player for player in game.players if
+        player_cards = [[card.suit, card.rank] for card in [player for player in game.players if
                                                                    player.user_id == user_id][0].hand.cards]
         print(f"player_cards: {player_cards}")
-        community_cards = [[card.rank, card.suit] for card in game.board]
+        community_cards = [[card.suit, card.rank] for card in game.board]
         print(f"community_cards: {community_cards}")
 
         return player_cards, community_cards

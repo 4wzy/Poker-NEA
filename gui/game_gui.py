@@ -5,7 +5,7 @@ from tkinter import simpledialog, messagebox
 
 from PIL import Image, ImageDraw, ImageTk
 from logic.database_interaction import DatabaseInteraction
-from logic.odds_logic import monte_carlo_flush_draw
+from logic.odds_logic import monte_carlo_hand_odds
 
 
 class GameGUI(tk.Tk):
@@ -29,6 +29,7 @@ class GameGUI(tk.Tk):
         self.player_starts_game = player_starts_game
         self.community_card_items = []
         self.reconnecting = reconnecting
+        self.odds_iterations = 2000
 
         self.title("Poker Game")
 
@@ -210,6 +211,43 @@ class GameGUI(tk.Tk):
             'bottom_right': (710, 440),
         }
         return positions.get(position, (0, 0))
+
+    def open_settings(self):
+        # Create a new top-level window for settings
+        settings_window = tk.Toplevel(self)
+        settings_window.title("Settings")
+        settings_window.geometry("500x300")
+        settings_window.configure(bg="#333333")
+
+        # Label for iterations input
+        iterations_label = tk.Label(settings_window, text="Set Odds Iterations (10 - 100000):", bg="#333333",
+                                    fg="#FFFFFF")
+        iterations_label.pack(pady=10)
+
+        # Entry for iterations input
+        self.iterations_entry = tk.Entry(settings_window)
+        self.iterations_entry.pack()
+
+        extra_info_label = tk.Label(settings_window, text="The higher the number you choose the longer it will take to "
+                                                          "simulate the odds.\nNumbers that end in 0 will often be "
+                                                          "more resource efficient!", bg="#333333", fg="#FFFFFF")
+        extra_info_label.pack(pady=10)
+
+        # Button to apply settings
+        apply_button = tk.Button(settings_window, text="Apply", command=self.apply_settings, bg="#555555", fg="#FFFFFF")
+        apply_button.pack(pady=10)
+
+    def apply_settings(self):
+        # Get the value from the entry and validate it
+        try:
+            new_iterations = int(self.iterations_entry.get())
+            if 10 <= new_iterations <= 100000:
+                self.odds_iterations = new_iterations
+                print(f"New iterations set to: {self.odds_iterations}")
+            else:
+                raise ValueError("The number of iterations must be between 10 and 100000.")
+        except ValueError as e:
+            tk.messagebox.showerror("Invalid Input", str(e))
 
     def process_server_message(self, data):
         print(f"process_server_message called on {self}")
@@ -697,14 +735,16 @@ class GameGUI(tk.Tk):
         })
 
         print(f"GAME DATA: {game_data}")
-        flush_odds = monte_carlo_flush_draw(game_data[0], game_data[1])
-        odds_label.config(text=f"Flush: {flush_odds}")
+        odds = monte_carlo_hand_odds(game_data[0], game_data[1], self.odds_iterations)
 
-        # Use this game data to get the odds of different rankings
+        if not odds:
+            odds_text = "No odds yet.\nWait for your cards to be dealt!"
+        else:
+            odds_text = "Odds of each hand ranking:\n"
+            for hand_type, probability in odds.items():
+                odds_text += f"{hand_type}: {probability:.2%}\n"
 
-
-    def open_settings(self):
-        print("Open settings window")
+        odds_label.config(text=odds_text)
 
     def leave_game(self):
         player_left = self.controller.network_manager.send_message({

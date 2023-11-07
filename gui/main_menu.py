@@ -56,6 +56,8 @@ class MainMenu(tk.Tk):
         self.profile_pic_image = ImageTk.PhotoImage(self.circular_image)
 
         profile_pic.create_image(75, 25, image=self.profile_pic_image)
+        profile_pic.bind("<Button-1>", lambda event: self.controller.open_user_profile(self.user_id))
+
 
         left_buttons_frame = tk.Frame(container, bg="#333333", width=200, padx=20)
         left_buttons_frame.grid(row=1, column=0, rowspan=3, sticky="ns")

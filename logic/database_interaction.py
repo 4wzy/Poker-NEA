@@ -131,7 +131,7 @@ class DatabaseInteraction(DatabaseBase):
 
     def add_to_attribute_for_user(self, user_id, attribute, amount):
         valid_attributes = ["games_played", "games_won", "rgscore", "aggressiveness_score", "conservativeness_score",
-                            "total_play_time"]
+                            "total_play_time", "streak", "total_play_time"]
         if attribute not in valid_attributes:
             raise ValueError("Invalid attribute provided")
 
@@ -142,6 +142,44 @@ class DatabaseInteraction(DatabaseBase):
             WHERE user_id = %s;
             """
             cursor.execute(query, (amount, user_id))
+
+    def get_attribute_from_user(self, user_id, attribute):
+        valid_attributes = ["games_played", "games_won", "rgscore", "aggressiveness_score", "conservativeness_score",
+                            "total_play_time", "streak", "total_play_time"]
+        if attribute not in valid_attributes:
+            raise ValueError("Invalid attribute provided")
+
+        with self.db_cursor() as cursor:
+            query = f"""
+                    SELECT {attribute}
+                    FROM user_statistics
+                    WHERE user_id = %s;
+                    """
+            cursor.execute(query, (user_id, ))
+            result = cursor.fetchone()
+            return result[0] if result else "Invalid"
+
+    def get_user_statistics(self, user_id):
+        valid_attributes = ["games_played", "games_won", "rgscore", "average_aggressiveness_score",
+                            "average_conservativeness_score", "total_play_time", "streak"]
+
+        attributes_to_select = ", ".join(valid_attributes)
+
+        with self.db_cursor() as cursor:
+            query = f"""
+                    SELECT {attributes_to_select}
+                    FROM user_statistics
+                    WHERE user_id = %s;
+                    """
+            cursor.execute(query, (user_id,))
+            result = cursor.fetchone()
+
+            # If there's a result, return it as a dictionary
+            if result:
+                return dict(zip(valid_attributes, result))
+            else:
+                # Return None if the user is not found
+                return None
 
     def update_average_scores(self, user_id, game_aggressiveness_score, game_conservativeness_score):
         with self.db_cursor() as cursor:

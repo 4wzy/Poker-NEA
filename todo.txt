@@ -1,5 +1,11 @@
 Use https://williamvenner.github.io/AQA-Computer-Science-NEA-Checklist/
 
+--------------------
+Allow users to edit profiles by checking if the user owns the profile in controller.py (using the server side)
+
+Also, actually implement pfps in the database side and allow users to change in the UserProfile GUI
+--------------------
+
 Allow players to export the hall of fame as a text file (to get the writing and reading from files mark)
 
 Somehow implement inheritance, possibly polymorphism?
@@ -14,12 +20,6 @@ has gone all in.
 For example if players 1, 2, and 3 have 50 chips and player 4 has 200 chips.
 If player 4 raises 50 chips and all players go all in and player 3 wins..
 Player 3 and 4 will be displayed as winners instead of just player 3
-
-------------------
-
-SIDE NOTE:
-SIDE POTS SEEM TO ACTUALLY BE WORKING PROPERLY!
-TEST THIS OUT WITH 2 PLAYERS AT THE END OF A POKER GAME and show on video :)
 
 ------------------
 

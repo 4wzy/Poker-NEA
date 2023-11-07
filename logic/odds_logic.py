@@ -1,40 +1,82 @@
 import random
+from logic.game_logic import Card, Deck, Hand
 
 
-def monte_carlo_flush_draw(hand, community, iterations=10000):
-    # Define all suits and ranks
-    suits = ["Clubs", "Diamonds", "Spades", "Hearts"]  # Hearts, Diamonds, Clubs, Spades
-    ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King", "Ace"]
+# I have chosen to get these odds using a Monte Carlo situation due to its good balance between accuracy and
+# computational efficiency, which can be very useful for poker which is a real-time game.
+# Additionally, the option to change the accuracy of the odds is powerful.
+def monte_carlo_hand_odds(hand_cards, community_cards, iterations=2000):
+    print(f"Hand cards: {hand_cards}")
+    print(f"Community cards: {community_cards}")
 
-    # Create a deck of cards and remove known cards
-    deck = [[r, s] for r in ranks for s in suits]
-    known_cards = hand + community
-    print(f"deck: {deck}")
-    print(f"known_cards: {known_cards}")
-    for card in known_cards:
-        deck.remove(card)
-        print(f"removed {card}")
+    if len(hand_cards) != 2:
+        return False
 
-    # Count the number of flush completions
-    flush_completions = 0
+    modified_hand_cards = [Card(hand_cards[0][0], hand_cards[0][1]), Card(hand_cards[1][0], hand_cards[1][1])]
+
+    modified_community_cards = []
+    for i in range(len(community_cards)):
+        modified_community_cards.append(Card(community_cards[i][0], community_cards[i][1]))
+
+    print(f"New hand cards: {modified_hand_cards}")
+    print(f"New community cards: {modified_community_cards}")
+
+    hand_odds = {
+        "Royal Flush": 0,
+        "Straight Flush": 0,
+        "Four of a Kind": 0,
+        "Full House": 0,
+        "Flush": 0,
+        "Straight": 0,
+        "Three of a Kind": 0,
+        "Two Pair": 0,
+        "Pair": 0
+    }
+
+    # Create a deck (and deck copy) and remove known cards
+    deck = Deck()
+
+    for card in modified_hand_cards + modified_community_cards:
+        if card in deck.cards:
+            deck.cards.remove(card)
+        else:
+            print(f"Card {card} not found in deck!")
+
+    remaining_deck = deck.cards.copy()
+
+
+    hand_type_counters = {hand_type: 0 for hand_type in hand_odds}
+    # Simulate the remaining community card draws
     for _ in range(iterations):
-        # Shuffle the deck and draw the next cards
-        random.shuffle(deck)
-        next_cards = deck[:5 - len(community)]  # Draw enough cards to complete the board
+        print("-------------------------")
 
-        # Check if we complete our flush
-        all_cards = hand + community + next_cards
-        suits_in_hand = [card[1] for card in all_cards]
-        if _ < 15:
-            print(f"suits_in_hand: {suits_in_hand}")
-        for suit in suits:
-            if suits_in_hand.count(suit) >= 5:
-                flush_completions += 1
-                break
+        deck.cards = remaining_deck.copy()  # Reset the deck to its original state for each iteration
+        random.shuffle(deck.cards)
+        remaining_cards_to_draw = 5 - len(modified_community_cards)
+        simulated_community = modified_community_cards + deck.cards[:remaining_cards_to_draw]
 
-    print(flush_completions)
-    print(iterations)
+        simulated_hand = Hand(modified_hand_cards + simulated_community)
+        hand_results = simulated_hand.evaluate_rankings_for_odds_calculation()
 
-    # Calculate probability
-    flush_probability = 100 * flush_completions / iterations
-    return flush_probability
+        print(f"hand_type_counters: {hand_type_counters}")
+        print("Current hand being evaluated:")
+        for card in simulated_hand.cards:
+            print(f"Card: {card.rank} {card.suit}")
+        print(f"hand_results: {hand_results}")
+
+        # Increment the counters for each hand type that is true
+        for hand_type, found in hand_results.items():
+            if found:
+                hand_type_counters[hand_type] += 1
+                print(f"Incremented {hand_type} by 1")
+
+        print("-------------------------")
+
+    # Convert the counts to probabilities
+    for hand_type in hand_odds:
+        hand_odds[hand_type] = hand_type_counters[hand_type] / iterations
+
+    print(f"Hand odds: {hand_odds}")
+    for hand_type, probability in hand_odds.items():
+        print(f"Odds of {hand_type}: {probability:.2%}")
+    return hand_odds

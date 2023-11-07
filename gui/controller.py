@@ -10,6 +10,7 @@ from logic.network_manager import NetworkManager
 from gui.settings_menu import SettingsMenu
 from gui.responsible_gambling_menu import ResponsibleGamblingMenu
 from gui.how_to_play import HowToPlay
+from gui.user_profile import UserProfile
 
 
 class Controller:
@@ -21,7 +22,7 @@ class Controller:
     def run(self):
         # self.open_login_menu()
         # The call to open_main_menu() is for debugging purposes only - to skip the login stage for time efficiency
-        self.open_main_menu(16)
+        self.open_main_menu(14)
         tk.mainloop()
 
     def open_login_menu(self):
@@ -38,6 +39,11 @@ class Controller:
         if self.current_menu:
             self.current_menu.destroy()
         self.current_menu = MainMenu(self, user_id)
+
+    def open_user_profile(self, user_id):
+        if self.current_menu:
+            self.current_menu.destroy()
+        self.current_menu = UserProfile(self, user_id, True)
 
     def open_lobby_browser(self, user_id, games_played_today):
         if self.current_menu:
