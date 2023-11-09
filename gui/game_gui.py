@@ -162,7 +162,7 @@ class GameGUI(tk.Tk):
         for player_info in game_state['players']:
             x, y = self.get_coordinates_for_position(player_info['position'])
             task_id = self.after(0, self.place_player, x, y, player_info['name'], player_info['position'],
-                                 player_info['user_id'], player_info['chips'])
+                                 player_info['user_id'], player_info['chips'], player_info['profile_picture'])
             self.scheduled_tasks.append(task_id)
 
     def process_initial_state(self, initial_state):
@@ -756,13 +756,13 @@ class GameGUI(tk.Tk):
         print(f"(leave game from game_gui): {player_left}")
         self.controller.open_main_menu(self.user_id)
 
-    def place_player(self, x, y, name, position, user_id, chips):
+    def place_player(self, x, y, name, position, user_id, chips, profile_picture):
         # print(f"placing player: {name}")
         try:
             # Create a frame to hold the player components
             player_frame = tk.Frame(self.game_canvas, bg="#302525")
 
-            profile_photo = Image.open("gui/Images/Pfps/default.png")
+            profile_photo = Image.open(f"gui/Images/Pfps/{profile_picture}")
             profile_photo = profile_photo.resize((50, 50))
 
             # Create a mask

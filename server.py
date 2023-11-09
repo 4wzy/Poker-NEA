@@ -132,6 +132,11 @@ class LobbyServer:
                                                                                      request['attribute'])
                     elif request['type'] == 'get_user_statistics':
                         response = self.database_interaction.get_user_statistics(request['user_id'])
+                    elif request['type'] == 'set_user_profile_picture':
+                        response = self.database_interaction.set_user_profile_picture(request['user_id'],
+                                                                                      request['new_profile_picture'])
+                    elif request['type'] == 'get_user_profile_picture':
+                        response = self.database_interaction.get_user_profile_picture(request['user_id'])
 
                     if response is not None:
                         client_socket.sendall((json.dumps(response) + '\n').encode('utf-8'))
@@ -305,9 +310,10 @@ class LobbyServer:
 
     def join_lobby(self, request, client_socket):
         print(f"JOINING LOBBY REQUEST: {request}")
-        user_id = request["user_id"]
-        lobby_id = request["lobby_id"]
+        user_id = request['user_id']
+        lobby_id = request['lobby_id']
         user_name = self.database_interaction.get_username(user_id)
+        profile_picture = self.database_interaction.get_user_profile_picture(user_id)
 
         if lobby_id not in self.lobbies:
             print("could not return data. error: Lobby not found")
@@ -338,7 +344,8 @@ class LobbyServer:
             return {"success": False, "error": "The lobby is already full!"}
 
         if not game.game_started:
-            player = Player(user_name, user_id, chips=game.starting_chips, position=game.available_positions.pop(0))
+            player = Player(user_name, user_id, chips=game.starting_chips, position=game.available_positions.pop(0),
+                            profile_picture=profile_picture)
             game.last_position_index += 1
             game.add_player(player, client_socket)
 

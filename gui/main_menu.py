@@ -14,7 +14,8 @@ class MainMenu(tk.Tk):
         self.rg_score = self.controller.network_manager.send_message({"type": "update_rg_score", "user_id":
             self.user_id})
         print(self.rg_score)
-        self.games_played_today = self.controller.network_manager.send_message({"type": "get_and_check_to_reset_daily_games_played", "user_id": self.user_id})
+        self.games_played_today = self.controller.network_manager.send_message(
+            {"type": "get_and_check_to_reset_daily_games_played", "user_id": self.user_id})
         print(f"Sent get_and_check_daily_games_played request with id {self.user_id}")
 
         self.title("AceAware Poker")
@@ -40,11 +41,13 @@ class MainMenu(tk.Tk):
                                   fg="#F56476", bg="#555555")
         username_label.pack(side="left")
 
-        profile_pic = tk.Canvas(user_banner, width=105, height=50, bg="#555555", bd=0, highlightthickness=0)
-        profile_pic.pack(side="right")
-        profile_pic.create_oval(54, 4, 96, 46, outline="red", fill="#777777")
+        self.profile_pic = tk.Canvas(user_banner, width=105, height=50, bg="#555555", bd=0, highlightthickness=0)
+        self.profile_pic.pack(side="right")
+        self.profile_pic.create_oval(54, 4, 96, 46, outline="red", fill="#777777")
 
-        self.image = Image.open("gui/Images/dog.png")
+        self.profile_picture = self.controller.network_manager.send_message({"type": "get_user_profile_picture",
+                                                                             "user_id": self.user_id})
+        self.image = Image.open(f"gui/Images/Pfps/{self.profile_picture}")
         self.image = self.image.resize((40, 40))
 
         mask = Image.new('L', (40, 40), 0)
@@ -55,9 +58,11 @@ class MainMenu(tk.Tk):
         self.circular_image.paste(self.image, (0, 0), mask)
         self.profile_pic_image = ImageTk.PhotoImage(self.circular_image)
 
-        profile_pic.create_image(75, 25, image=self.profile_pic_image)
-        profile_pic.bind("<Button-1>", lambda event: self.controller.open_user_profile(self.user_id))
+        # Add this line here to store the image ID
+        self.profile_pic_id = self.profile_pic.create_image(75, 25, image=self.profile_pic_image)
 
+        self.profile_pic.bind("<Button-1>", lambda event: self.controller.open_user_profile(self.user_id,
+                                                                                            update_previous_menu=True))
 
         left_buttons_frame = tk.Frame(container, bg="#333333", width=200, padx=20)
         left_buttons_frame.grid(row=1, column=0, rowspan=3, sticky="ns")
@@ -65,16 +70,19 @@ class MainMenu(tk.Tk):
 
         play_button = tk.Button(left_buttons_frame, text="Play", font=tkfont.Font(family="Cambria", size=16),
                                 fg="#FFFFFF", bg="#444444", bd=0, padx=20, pady=10, width=50, borderwidth=1,
-                                command=lambda: self.controller.open_lobby_browser(self.user_id, self.games_played_today))
+                                command=lambda: self.controller.open_lobby_browser(self.user_id,
+                                                                                   self.games_played_today))
         play_button.pack(side="top", fill="x", pady=5)
 
         hall_of_fame_button = tk.Button(left_buttons_frame, text="Hall of Fame",
                                         font=tkfont.Font(family="Cambria", size=16), fg="#FFFFFF", bg="#444444", bd=0,
-                                        padx=20, pady=10, borderwidth=1, command=lambda: self.controller.open_hall_of_fame(self.user_id))
+                                        padx=20, pady=10, borderwidth=1,
+                                        command=lambda: self.controller.open_hall_of_fame(self.user_id))
         hall_of_fame_button.pack(side="top", fill="x", pady=5)
 
         settings_button = tk.Button(left_buttons_frame, text="Settings", font=tkfont.Font(family="Cambria", size=16),
-                                    fg="#FFFFFF", bg="#444444", bd=0, padx=20, pady=10, borderwidth=1, command=lambda: self.controller.open_settings(self.user_id))
+                                    fg="#FFFFFF", bg="#444444", bd=0, padx=20, pady=10, borderwidth=1,
+                                    command=lambda: self.controller.open_settings(self.user_id))
         settings_button.pack(side="top", fill="x", pady=5)
 
         self.logo = Image.open("gui/Images/logo.png")
@@ -92,7 +100,9 @@ class MainMenu(tk.Tk):
 
         responsible_gambling_button = tk.Button(container, text="Responsible Gambling",
                                                 font=tkfont.Font(family="Cambria", size=16), fg="#FFFFFF", bg="#444444",
-                                                bd=0, padx=20, pady=10, borderwidth=1, command=lambda: self.controller.open_responsible_gambling_menu(self.user_id))
+                                                bd=0, padx=20, pady=10, borderwidth=1,
+                                                command=lambda: self.controller.open_responsible_gambling_menu(
+                                                    self.user_id))
         responsible_gambling_button.grid(row=5, column=0, columnspan=4, sticky="ew", pady=5)
 
         text_frame = tk.Frame(container, bg="#555555", padx=10, pady=5)
@@ -108,3 +118,20 @@ class MainMenu(tk.Tk):
                                 bg="#444444", bd=0, padx=20, pady=10, command=self.destroy)
         quit_button.grid(row=7, column=3, sticky="se", pady=10, padx=10)
 
+    def update_profile_picture(self, new_pic_name):
+        profile_pic_path = f"gui/Images/Pfps/{new_pic_name}"
+        new_image = Image.open(profile_pic_path)
+        new_image = new_image.resize((40, 40))
+
+        mask = Image.new('L', (40, 40), 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse((0, 0, 40, 40), fill=255)
+
+        circular_image = Image.new('RGBA', (40, 40), (0, 0, 0, 0))
+        circular_image.paste(new_image, (0, 0), mask)
+        new_profile_pic_image = ImageTk.PhotoImage(circular_image)
+
+        # Assuming 'self.profile_pic' is the Canvas for the profile picture, and the image ID is stored in 'self.profile_pic_id'
+        self.profile_pic.itemconfig(self.profile_pic_id, image=new_profile_pic_image)
+        # Update the image reference to prevent garbage collection
+        self.profile_pic_image = new_profile_pic_image

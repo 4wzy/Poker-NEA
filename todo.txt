@@ -1,9 +1,15 @@
 Use https://williamvenner.github.io/AQA-Computer-Science-NEA-Checklist/
 
 --------------------
-Allow users to edit profiles by checking if the user owns the profile in controller.py (using the server side)
+1. Add username editing in user profiles
 
-Also, actually implement pfps in the database side and allow users to change in the UserProfile GUI
+2. Show custom pfps in poker games!
+
+3. Edit flush and straight odds so that they work
+
+4. Allow users to open profiles from the hall of fame
+
+5. Allow users to open profiles from Poker games
 --------------------
 
 Allow players to export the hall of fame as a text file (to get the writing and reading from files mark)
@@ -18,7 +24,7 @@ The bug with multiple winners being displayed may have to do with when 2 players
 has gone all in.
 
 For example if players 1, 2, and 3 have 50 chips and player 4 has 200 chips.
-If player 4 raises 50 chips and all players go all in and player 3 wins..
+If player 4 raises 50 chips and all players go all in and player 3 wins,
 Player 3 and 4 will be displayed as winners instead of just player 3
 
 ------------------

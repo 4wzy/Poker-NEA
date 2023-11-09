@@ -22,7 +22,7 @@ class Controller:
     def run(self):
         # self.open_login_menu()
         # The call to open_main_menu() is for debugging purposes only - to skip the login stage for time efficiency
-        self.open_main_menu(14)
+        self.open_main_menu(16)
         tk.mainloop()
 
     def open_login_menu(self):
@@ -40,10 +40,15 @@ class Controller:
             self.current_menu.destroy()
         self.current_menu = MainMenu(self, user_id)
 
-    def open_user_profile(self, user_id):
-        if self.current_menu:
-            self.current_menu.destroy()
-        self.current_menu = UserProfile(self, user_id, True)
+    def open_user_profile(self, user_id, update_previous_menu=False, own_profile=True):
+        # Create a new Toplevel window for the user profile
+        user_profile_window = tk.Toplevel(self.current_menu)
+        user_profile_window.title("User Profile")
+        user_profile_window.configure(bg="#333333")
+        if update_previous_menu:
+            UserProfile(user_profile_window, self, user_id, own_profile, self.current_menu)
+        else:
+            UserProfile(user_profile_window, self, user_id, own_profile, None)
 
     def open_lobby_browser(self, user_id, games_played_today):
         if self.current_menu:

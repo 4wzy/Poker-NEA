@@ -45,11 +45,11 @@ class Deck:
 
 
 class Player:
-    def __init__(self, name, user_id, chips, position):
+    def __init__(self, name, user_id, chips, position, profile_picture):
         self.client_socket = None
         self.name = name
         self.user_id = user_id
-        self.profile_picture = None
+        self.profile_picture = profile_picture
         self.chips = chips
         self.current_bet = 0
         self.hand = Hand([])
@@ -396,7 +396,9 @@ class Game:
 
     def get_initial_state(self):
         state = {
-            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'position': p.position} for p in
+            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'position': p.position,
+                         'profile_picture': p.profile_picture} for
+                        p in
                         self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board],
@@ -447,7 +449,7 @@ class Game:
         state = {
             'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet,
                          "blinds": p.blinds, "dealer": p.dealer, "folded": p.folded, "disconnected": p.disconnected,
-                         "busted": p.busted, "position": p.position} for p in self.players],
+                         "busted": p.busted, "position": p.position, "profile_picture": p.profile_picture} for p in self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board],
             'current_player_turn': self.current_player_turn,
