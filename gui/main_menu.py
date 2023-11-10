@@ -34,12 +34,12 @@ class MainMenu(tk.Tk):
         user_banner = tk.Frame(container, bg="#555555")
         user_banner.grid(row=0, column=3, sticky="ne")
 
-        username_label = tk.Label(user_banner, text=f"{self.username[0].upper() + self.username[1:].lower()}",
+        self.username_label = tk.Label(user_banner, text=f"{self.username[0].upper() + self.username[1:].lower()}",
                                   font=tkfont.Font(
                                       family="Cambria",
                                       size=24),
                                   fg="#F56476", bg="#555555")
-        username_label.pack(side="left")
+        self.username_label.pack(side="left")
 
         self.profile_pic = tk.Canvas(user_banner, width=105, height=50, bg="#555555", bd=0, highlightthickness=0)
         self.profile_pic.pack(side="right")
@@ -61,7 +61,7 @@ class MainMenu(tk.Tk):
         # Add this line here to store the image ID
         self.profile_pic_id = self.profile_pic.create_image(75, 25, image=self.profile_pic_image)
 
-        self.profile_pic.bind("<Button-1>", lambda event: self.controller.open_user_profile(self.user_id,
+        self.profile_pic.bind("<Button-1>", lambda event: self.controller.open_user_profile(profile_user_id=self.user_id, own_user_id=self.user_id,
                                                                                             update_previous_menu=True))
 
         left_buttons_frame = tk.Frame(container, bg="#333333", width=200, padx=20)
@@ -118,7 +118,7 @@ class MainMenu(tk.Tk):
                                 bg="#444444", bd=0, padx=20, pady=10, command=self.destroy)
         quit_button.grid(row=7, column=3, sticky="se", pady=10, padx=10)
 
-    def update_profile_picture(self, new_pic_name):
+    def update_profile_picture(self, user_id, new_pic_name):
         profile_pic_path = f"gui/Images/Pfps/{new_pic_name}"
         new_image = Image.open(profile_pic_path)
         new_image = new_image.resize((40, 40))
@@ -135,3 +135,8 @@ class MainMenu(tk.Tk):
         self.profile_pic.itemconfig(self.profile_pic_id, image=new_profile_pic_image)
         # Update the image reference to prevent garbage collection
         self.profile_pic_image = new_profile_pic_image
+
+    def update_username(self, user_id, new_username):
+        self.username = new_username
+        self.username_label.config(text=new_username)
+

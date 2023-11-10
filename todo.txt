@@ -1,15 +1,10 @@
 Use https://williamvenner.github.io/AQA-Computer-Science-NEA-Checklist/
 
 --------------------
-1. Add username editing in user profiles
+1. Edit flush and straight odds so that they work
 
-2. Show custom pfps in poker games!
-
-3. Edit flush and straight odds so that they work
-
-4. Allow users to open profiles from the hall of fame
-
-5. Allow users to open profiles from Poker games
+2. DISCUSS POLYMORPHISM IN USER_PROFILE WITH PREVIOUS_MENU IN DOCUMENTATION! :)
+check gpt for more details..
 --------------------
 
 Allow players to export the hall of fame as a text file (to get the writing and reading from files mark)

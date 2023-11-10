@@ -118,6 +118,8 @@ class LobbyServer:
                             request['user_id'])
                     elif request['type'] == 'get_username':
                         response = self.database_interaction.get_username(request['user_id'])
+                    elif request['type'] == 'set_username':
+                        response = self.database_interaction.set_username(request['user_id'], request['new_username'])
                     elif request['type'] == 'get_top_players_by_attribute':
                         response = self.database_interaction.get_top_players_by_attribute(request['attribute'],
                                                                                           request['limit'])

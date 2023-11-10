@@ -10,6 +10,7 @@ class HallOfFame(tk.Tk):
         self.title("Hall of Fame")
         self.configure(bg="#333333")
         self.geometry('800x600')
+        self.player_banners = {}  # Dictionary to store player banners
 
         top_frame = tk.Frame(self, bg="#333333")
         top_frame.pack(pady=10, fill="x")
@@ -52,7 +53,7 @@ class HallOfFame(tk.Tk):
         canvas_width = event.width
         self.canvas.itemconfig(self.canvas_window, width=canvas_width)
 
-    def add_player_banner(self, player_name, profile_pic_path, attribute_value):
+    def add_player_banner(self, player_name, profile_pic_path, attribute_value, user_id):
         banner = tk.Frame(self.scroll_frame, bg="#555555", pady=5)
         banner.pack(fill="x", pady=5, expand=True)
 
@@ -74,6 +75,12 @@ class HallOfFame(tk.Tk):
         profile_pic_canvas.create_image(25, 25, image=profile_pic_image)
         profile_pic_canvas.image = profile_pic_image
 
+        profile_pic_canvas.bind("<Button-1>", lambda event: self.controller.open_user_profile(profile_user_id=user_id,
+                                                                                         own_user_id=self.user_id,
+                                                                                         update_previous_menu=True))
+
+        profile_pic_id = profile_pic_canvas.create_image(25, 25, image=profile_pic_image, tags="profile_pic")
+
         # Player name (Left)
         name_label = tk.Label(banner, text=player_name, font=tkfont.Font(family="Cambria", size=16), fg="#F56476",
                               bg="#555555")
@@ -83,6 +90,12 @@ class HallOfFame(tk.Tk):
         attr_value_label = tk.Label(banner, text=attribute_value, font=tkfont.Font(family="Cambria", size=14),
                                     fg="#FFFFFF", bg="#555555")
         attr_value_label.pack(side="right", padx=20)
+
+        self.player_banners[user_id] = {
+            "banner": banner,
+            "name_label": name_label,
+            "profile_pic_canvas": profile_pic_canvas
+        }
 
     def update_hall(self, *args):
         selected_attribute = self.sort_var.get()
@@ -116,9 +129,37 @@ class HallOfFame(tk.Tk):
         # Add new player banners
         for player in players:
             user_id, username, profile_pic, attribute_value = player
+            print(f"username: {username}, user_id: {user_id}")
             profile_pic_path = self.get_profile_pic_path(user_id)
-            self.add_player_banner(username, profile_pic_path, f"{selected_attribute}: {attribute_value}")
+            self.add_player_banner(username, profile_pic_path, f"{selected_attribute}: {attribute_value}", user_id)
 
     def get_profile_pic_path(self, user_id):
         # Placeholder method to return the profile picture path based on the user_id
-        return "gui/Images/Pfps/default.png"
+        profile_picture_name = self.controller.network_manager.send_message({"type": "get_user_profile_picture",
+                                                                             "user_id": user_id})
+        return f"gui/Images/Pfps/{profile_picture_name}"
+
+    def update_profile_picture(self, user_id, new_pic_name):
+        if user_id in self.player_banners:
+            profile_pic_canvas = self.player_banners[user_id]["profile_pic_canvas"]
+
+            profile_pic_path = f"gui/Images/Pfps/{new_pic_name}"
+            new_image = Image.open(profile_pic_path)
+            new_image = new_image.resize((40, 40))
+
+            mask = Image.new('L', (40, 40), 0)
+            draw = ImageDraw.Draw(mask)
+            draw.ellipse((0, 0, 40, 40), fill=255)
+
+            circular_image = Image.new('RGBA', (40, 40), (0, 0, 0, 0))
+            circular_image.paste(new_image, (0, 0), mask)
+            new_profile_pic_image = ImageTk.PhotoImage(circular_image)
+
+            profile_pic_canvas.itemconfig("profile_pic", image=new_profile_pic_image)
+            profile_pic_canvas.image = new_profile_pic_image
+
+    def update_username(self, user_id, new_username):
+        if user_id in self.player_banners:
+            name_label = self.player_banners[user_id]["name_label"]
+            name_label.config(text=new_username)
+

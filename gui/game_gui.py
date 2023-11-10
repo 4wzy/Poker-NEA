@@ -397,7 +397,6 @@ class GameGUI(tk.Tk):
 
         self.show_everyones_cards(game_state)
 
-
         print(f"BOARD: {game_state['board']}")
         self.clear_community_cards()
         if len(game_state["board"]) > 0:
@@ -659,8 +658,8 @@ class GameGUI(tk.Tk):
         chat_frame.pack(fill="both", expand=True)
 
         self.chatbox = tk.Text(chat_frame, bg="#555555", fg="#FFFFFF", state="disabled", wrap="word", height=10,
-                              width=20,
-                          font=("Cambria", 10))
+                               width=20,
+                               font=("Cambria", 10))
         self.chatbox.grid(row=0, column=0, sticky="nsew")
 
         scrollbar = tk.Scrollbar(chat_frame, command=self.chatbox.yview, bg="#555555", troughcolor="#444444")
@@ -777,6 +776,8 @@ class GameGUI(tk.Tk):
             profile_label = tk.Label(player_frame, image=profile_photo, bg="#302525")
             profile_label.photo = profile_photo  # keep a reference to avoid garbage collection
             profile_label.pack()
+
+            profile_label.bind("<Button-1>", lambda event: self.controller.open_user_profile(profile_user_id=user_id, own_user_id=self.user_id, update_previous_menu=False))
 
             # Add name label
             name_label = tk.Label(player_frame, text=f"{name}: {chips} chips", bg="#302525", fg="#FFFFFF")

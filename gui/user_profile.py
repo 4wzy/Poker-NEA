@@ -1,22 +1,23 @@
 import tkinter as tk
 from tkinter import font as tkfont
 from PIL import Image, ImageTk, ImageDraw
+from tkinter import messagebox
 
 
 class UserProfile(tk.Frame):
-    def __init__(self, parent, controller, user_id, own_profile, previous_menu, *args, **kwargs):
+    def __init__(self, parent, controller, profile_user_id, own_user_id, previous_menu, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
         self.controller = controller
-        self.user_id = user_id
+        self.profile_user_id = profile_user_id
         self.previous_menu = previous_menu
         self.current_pic_name = self.controller.network_manager.send_message({"type": "get_user_profile_picture",
-                                                                             "user_id": self.user_id})
-        self.own_profile = own_profile  # Boolean flag indicating if the profile belongs to the current user
+                                                                             "user_id": self.profile_user_id})
+        self.own_profile = self.profile_user_id == own_user_id  # Boolean flag indicating if the profile belongs to the current user
         self.configure(bg="#333333")
 
         self.statistics = self.controller.network_manager.send_message({
             "type": "get_user_statistics",
-            "user_id": self.user_id
+            "user_id": self.profile_user_id
         })
 
         self.create_widgets()
@@ -52,7 +53,7 @@ class UserProfile(tk.Frame):
 
         self.username = self.controller.network_manager.send_message({
             "type": "get_username",
-            "user_id": self.user_id
+            "user_id": self.profile_user_id
         })
 
         self.username_label = tk.Label(self, text=self.username, font=tkfont.Font(family="Cambria", size=24),
@@ -113,13 +114,14 @@ class UserProfile(tk.Frame):
         # Send message to network manager to update the profile picture in the database
         self.controller.network_manager.send_message({
             "type": "set_user_profile_picture",
-            "user_id": self.user_id,
+            "user_id": self.profile_user_id,
             "new_profile_picture": pic_name
         })
         # Update UI with new profile picture
         self.update_profile_picture_display(pic_name)
+
         if self.previous_menu:
-            self.previous_menu.update_profile_picture(pic_name)
+            self.previous_menu.update_profile_picture(self.profile_user_id, pic_name)
 
     def update_profile_picture_display(self, pic_name):
         image_path = f"gui/Images/Pfps/{pic_name}"
@@ -146,8 +148,35 @@ class UserProfile(tk.Frame):
         self.current_pic_name = pic_name
 
     def edit_username(self):
-        # This method should handle changing the username
-        pass
+        # Create a new top-level window
+        self.edit_username_window = tk.Toplevel(self)
+        self.edit_username_window.title("Edit Username")
+
+        # Add an entry widget for the new username
+        self.new_username_entry = tk.Entry(self.edit_username_window)
+        self.new_username_entry.pack(padx=10, pady=10)
+
+        # Add a button to submit the new usernamex
+        submit_button = tk.Button(self.edit_username_window, text="Submit", command=self.submit_new_username)
+        submit_button.pack(pady=10)
+
+    def submit_new_username(self):
+        new_username = self.new_username_entry.get()
+
+        response = self.controller.network_manager.send_message({"type": "set_username", "user_id": self.profile_user_id, "new_username": new_username})
+        if not response.get('success'):
+            tk.messagebox.showerror(f"Error changing username", f"{response.get('error')}")
+        else:
+            self.username = new_username
+            self.username_label.config(text=new_username)
+
+            # Update the change in username on the previous menu
+            if self.previous_menu is not None:
+                # Polymorphism - different methods are called based on the class which the previous_menu variable represents
+                self.previous_menu.update_username(new_username, new_username)
+
+            # Close the edit username window
+            self.edit_username_window.destroy()
 
 class SelectProfilePic(tk.Toplevel):
     def __init__(self, parent, callback, current_pic_name):

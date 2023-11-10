@@ -497,6 +497,23 @@ class DatabaseInteraction(DatabaseBase):
             result = cursor.fetchone()
             return result[0] if result else "Invalid"
 
+    def set_username(self, user_id, new_username):
+        with self.db_cursor() as cursor:
+            # Check if the new username already exists
+            cursor.execute("SELECT user_id FROM users WHERE username = %s", (new_username,))
+            if cursor.fetchone():
+                # Username already exists
+                return {"success": False, "error": "Username already exists"}
+
+            # Username is unique, proceed with update
+            query = """
+                    UPDATE users
+                    SET username = %s
+                    WHERE user_id = %s;
+                    """
+            cursor.execute(query, (new_username, user_id))
+            return {"success": True}
+
     def get_all_lobbies(self, status_filter, odds_filter):
         try:
             with self.db_cursor() as cursor:
