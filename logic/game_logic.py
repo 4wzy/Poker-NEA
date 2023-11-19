@@ -76,9 +76,16 @@ class Player:
     def add_card(self, card):
         self.hand.cards.append(card)
 
+    def debug_set_chips(self, amount):
+        self.chips = amount
+
+    def debug_set_cards(self, cards):
+        self.hand.cards = cards
+
 
 class Game:
     def __init__(self, starting_chips=200, player_limit=6):
+        self.debugging_enabled = True
         self.players: List[Player] = []
         self.client_sockets = []
         self.available_positions = ["top_left", "top_middle", "top_right", "bottom_right", "bottom_middle",
@@ -86,7 +93,7 @@ class Game:
         self.last_position_index = -1
         self.pot = Pot()
         self.starting_chips = starting_chips
-        self.board = []
+        self.board = []  # The community cards are represented by the board
         self.deck = Deck()
         self.current_player_turn = -1
         self.game_started = False
@@ -110,6 +117,9 @@ class Game:
         self.players_acted = []
         self.next_available_finishing_position = self.player_limit + 1
         self.winner_message = None
+
+    def debug_set_community_cards(self, cards):
+        self.board = cards
 
     def is_betting_round_over(self):
         active_players = self.get_players_for_showdown()
@@ -547,12 +557,51 @@ class Game:
         self.last_player_to_act = len(self.players) - 1
         self.first_player_acted = False
 
+        # ----- DEBUGGING METHODS -----------
+
+        # The debugging_enabled variable is used to only run the code once at the start of the game so that any
+        # subsequent Poker rounds or usage of the start_round() method work as intended
+        if self.debugging_enabled:
+            debug_community_cards = [Card("Clubs", "4"),
+                                     Card("Diamonds", "9"),
+                                     Card("Diamonds", "8"),
+                                     Card("Diamonds", "7"),
+                                     Card("Diamonds", "6")]
+            self.debug_set_community_cards(debug_community_cards)
+
+            debug_player1_cards = [Card("Hearts", "10"), Card("Diamonds", "King")]
+            debug_player1_chips = 50
+            debug_player2_cards = [Card("Hearts", "8"), Card("Diamonds", "Jack")]
+            debug_player2_chips = 150
+            debug_player3_cards = [Card("Hearts", "10"), Card("Diamonds", "Ace")]
+            debug_player3_chips = 200
+
+            self.players[0].debug_set_cards(debug_player1_cards)
+            self.players[0].debug_set_chips(debug_player1_chips)
+            self.players[1].debug_set_cards(debug_player2_cards)
+            self.players[1].debug_set_chips(debug_player2_chips)
+            self.players[2].debug_set_cards(debug_player3_cards)
+            self.players[2].debug_set_chips(debug_player3_chips)
+
+            self.current_round = "river"
+            self.debugging_enabled = False
+
+        # ---- END OF DEBUGGING METHODS ----
+
+        self.handle_shifting_positions_at_start()
+        self.handle_posting_bets()
+
+        self.pot.add_chips(self.small_blind + self.big_blind)
+        self.start_new_round(self.current_round)
+
+    def handle_shifting_positions_at_start(self):
         self.dealer_position = self.get_next_active_player(self.dealer_position, False)
         self.small_blind_position = self.get_next_active_player(self.dealer_position, False)
         self.big_blind_position = self.get_next_active_player(self.small_blind_position, False)
         self.current_player_turn = self.get_next_active_player(self.big_blind_position, False)
         print(f"Current player turn: {self.current_player_turn}")
 
+    def handle_posting_bets(self):
         if self.players[self.small_blind_position].chips > self.small_blind:
             self.players[self.small_blind_position].chips -= self.small_blind
             self.players[self.small_blind_position].current_bet = self.small_blind
@@ -573,8 +622,6 @@ class Game:
         self.players[self.big_blind_position].blinds.append("BB")
         self.players[self.dealer_position].dealer = True
 
-        self.pot.add_chips(self.small_blind + self.big_blind)
-        self.start_new_round(self.current_round)
 
     def flop(self):
         # A card is discarded by the dealer before dealing the flop, turn, and river
@@ -753,6 +800,7 @@ class Hand:
         suit_counts = Counter(suits)
         return any(count >= 5 for count in suit_counts.values()), suit_counts
 
+    # This method is adapted to work with both of the evaluation methods below
     def check_straight(self, ranks):
         straight = False
         unique_ranks = sorted(set(ranks))
@@ -848,7 +896,7 @@ class Hand:
         is_four_of_a_kind = 4 in rank_counts.values()
         is_three_of_a_kind = 3 in rank_counts.values()
 
-        # Check for pairs (including in hands with three/four of a kind)
+        # Check for pairs (including hands with a three/four of a kind)
         pair_counts = sum(1 for count in rank_counts.values() if count == 2)
         is_pair = pair_counts > 0 or is_three_of_a_kind or is_four_of_a_kind
         is_two_pair = pair_counts > 1 or (pair_counts == 1 and is_three_of_a_kind)
