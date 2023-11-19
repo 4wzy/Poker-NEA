@@ -109,10 +109,10 @@ class Game:
         self.game_completed = False
         self.players_acted = []
         self.next_available_finishing_position = self.player_limit + 1
+        self.winner_message = None
 
     def is_betting_round_over(self):
         active_players = self.get_players_for_showdown()
-        all_in_players = [player for player in active_players if player.all_in]
         non_all_in_players = [player for player in active_players if not player.all_in]
 
         # If all but one player are all-in, and the last non-all-in player has acted, the round is over
@@ -360,7 +360,7 @@ class Game:
             winning_players = self.determine_winner_from_eligible_players(best_hand_per_player, eligible_players)
             num_winners = len(winning_players)
 
-            # Determine winner(s) and handle pot distribution
+            # Determine winners and distribute the pot
             if num_winners == 1:
                 winner_message = f"{winning_players[0].name} wins {pot_amount} chips with a " \
                                  f"{self.hand_rankings[best_hand_per_player[winning_players[0]][0]]}!"
@@ -379,7 +379,7 @@ class Game:
             else:
                 winner_message = "It's a tie between " + ", ".join(
                     [player.name for player in winning_players]) + f" for {pot_amount} chips!"
-                pot_share = pot_amount // num_winners  # Integer division to get floor value
+                pot_share = pot_amount // num_winners
                 extra_chips = pot_amount % num_winners
                 for player in winning_players:
                     player.won_round = True
@@ -391,8 +391,9 @@ class Game:
 
             winner_messages.append(winner_message)
 
+        self.winner_message = "\n".join(winner_messages)
         self.pot.chips = 0
-        return "\n".join(winner_messages)
+        return self.winner_message
 
     def get_initial_state(self):
         state = {
@@ -428,7 +429,8 @@ class Game:
                         p in self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board],
-            'current_player_turn': self.current_player_turn
+            'current_player_turn': self.current_player_turn,
+            'winner_message': self.winner_message
         }
         print(f"(game_logic.py): returning {state}")
         return state

@@ -383,17 +383,9 @@ class GameGUI(tk.Tk):
         self.indicate_folded_and_busted_and_disconnected_players(game_state)
         self.indicate_winning_players(game_state)
 
-        winning_players = [player["name"] for player in game_state["players"] if player["won_round"]]
+        winner_message = game_state.get('winner_message')
 
-        # The following code simply handles the win message being displayed grammatically correctly to players
-        if len(winning_players) == 1:
-            winning_players_str = winning_players[0]
-        elif len(winning_players) == 2:
-            winning_players_str = " and ".join(winning_players)
-        else:
-            winning_players_str = ", ".join(winning_players[:-1]) + " and " + winning_players[-1]
-
-        self.update_game_messages_label(f"{winning_players_str} won the previous round")
+        self.update_game_messages_label(winner_message)
 
         self.show_everyones_cards(game_state)
 
