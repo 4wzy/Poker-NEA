@@ -1,8 +1,6 @@
 Use https://williamvenner.github.io/AQA-Computer-Science-NEA-Checklist/
 
 --------------------
-1. Edit flush and straight odds so that they work
-
 2. DISCUSS POLYMORPHISM IN USER_PROFILE WITH PREVIOUS_MENU IN DOCUMENTATION! :)
 check gpt for more details..
 --------------------

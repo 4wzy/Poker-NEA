@@ -1,4 +1,3 @@
-import random
 from logic.game_logic import Card, Deck, Hand
 
 
@@ -51,7 +50,7 @@ def monte_carlo_hand_odds(hand_cards, community_cards, iterations=2000):
         print("-------------------------")
 
         deck.cards = remaining_deck.copy()  # Reset the deck to its original state for each iteration
-        random.shuffle(deck.cards)
+        deck.shuffle()
         remaining_cards_to_draw = 5 - len(modified_community_cards)
         simulated_community = modified_community_cards + deck.cards[:remaining_cards_to_draw]
 

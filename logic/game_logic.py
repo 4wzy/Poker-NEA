@@ -744,6 +744,7 @@ class Hand:
         """Check if the list inputted can form a sequence."""
         return sorted(lst) == list(range(min(lst), max(lst) + 1))
 
+    # This method evaluates the strength of a 5 card Poker hand and returns the highest card ranking
     def evaluate_strength(self):
         # Convert cards to rank numbers and sort
         ranks = sorted([self.RANKS[card.rank] for card in self.cards], reverse=True)
@@ -798,29 +799,59 @@ class Hand:
         # High Card
         return "High Card", ranks
 
-    # This answers questions such as "What are the odds of having at least a pair?"
+    # This method returns a dictionary of all the possible card rankings made with a 7 card deck
     def evaluate_rankings_for_odds_calculation(self):
-        ranks = sorted([self.RANKS[card.rank] for card in self.cards], reverse=True)
+        ranks = sorted([self.RANKS[card.rank] for card in self.cards])
         suits = [card.suit for card in self.cards]
 
-        # Check for flush and straight
-        flush = len(set(suits)) == 1
-        straight = self.is_sequence(ranks) or (ranks[-4:] == [5, 4, 3, 2] and ranks[0] == 14)  # A,2,3,4,5 straight
+        # Check for flush
+        suit_counts = Counter(suits)
+        flush = any(count >= 5 for count in suit_counts.values())
+
+        # Check for straight
+        straight = False
+        unique_ranks = sorted(set(ranks))
+        for i in range(len(unique_ranks) - 4):
+            if unique_ranks[i + 4] - unique_ranks[i] == 4:
+                straight = True
+                break
+        # Special case for Ace-low straight
+        if {14, 2, 3, 4, 5}.issubset(set(ranks)):
+            straight = True
 
         # Count the occurrences of each rank
         rank_counts = Counter(ranks)
 
         # Check for multiples
-        multiples = {count for count in rank_counts.values() if count > 1}
-        is_four_of_a_kind = 4 in multiples
-        is_three_of_a_kind = 3 in multiples
-        is_pair = 2 in multiples
-        is_two_pair = list(rank_counts.values()).count(2) >= 2
-        is_full_house = is_three_of_a_kind and is_pair
+        is_four_of_a_kind = 4 in rank_counts.values()
+        is_three_of_a_kind = 3 in rank_counts.values()
+
+        # Check for pairs (including in hands with three/four of a kind)
+        pair_counts = sum(1 for count in rank_counts.values() if count == 2)
+        is_pair = pair_counts > 0 or is_three_of_a_kind or is_four_of_a_kind
+        is_two_pair = pair_counts > 1 or (pair_counts == 1 and is_three_of_a_kind)
+
+        # Check for full house (three of a kind and at least one pair)
+        is_full_house = is_three_of_a_kind and pair_counts > 0
+
+        # For straight flush and royal flush, need to check if the flush cards form a straight
+        straight_flush = royal_flush = False
+        if flush:
+            for suit, count in suit_counts.items():
+                if count >= 5:
+                    flush_ranks = sorted([self.RANKS[card.rank] for card in self.cards if card.suit == suit])
+                    for i in range(len(flush_ranks) - 4):
+                        if flush_ranks[i + 4] - flush_ranks[i] == 4:
+                            straight_flush = True
+                            if flush_ranks[i] == 10:  # Check for Royal Flush
+                                royal_flush = True
+                            break
+                    if {14, 2, 3, 4, 5}.issubset(set(flush_ranks)):
+                        straight_flush = True
 
         hand_results = {
-            "Royal Flush": flush and ranks[:5] == [14, 13, 12, 11, 10],
-            "Straight Flush": flush and straight,
+            "Royal Flush": royal_flush,
+            "Straight Flush": straight_flush,
             "Four of a Kind": is_four_of_a_kind,
             "Full House": is_full_house,
             "Flush": flush,
@@ -832,31 +863,3 @@ class Hand:
 
         return hand_results
 
-    # This answers questions such as "what are the odds of the best hand being a pair?"
-    # def evaluate_odds_for_each_hand(self):
-    #     # Convert cards to rank numbers and sort
-    #     ranks = sorted([self.RANKS[card.rank] for card in self.cards], reverse=True)
-    #     suits = [card.suit for card in self.cards]
-    #
-    #     # Check for flush and straight
-    #     flush = len(set(suits)) == 1
-    #     straight = self.is_sequence(ranks) or (ranks[:5] == [14, 5, 4, 3, 2])  # Including A,2,3,4,5 straight
-    #
-    #     # Check for four of a kind, three of a kind, pairs
-    #     rank_counts = {rank: ranks.count(rank) for rank in ranks}
-    #     max_count = max(rank_counts.values())
-    #
-    #     hand_results = {
-    #         "Royal Flush": flush and ranks[:5] == [14, 13, 12, 11, 10],
-    #         "Straight Flush": flush and straight,
-    #         "Four of a Kind": max_count == 4,
-    #         "Full House": max_count == 3 and len(set(rank_counts.values())) == 2,
-    #         "Flush": flush,
-    #         "Straight": straight,
-    #         "Three of a Kind": max_count == 3,
-    #         "Two Pair": list(rank_counts.values()).count(2) == 2,
-    #         "Pair": 2 in rank_counts.values(),
-    #         "High Card": max_count == 1  # If no other hand is formed, it's a high card
-    #     }
-    #
-    #     return hand_results
