@@ -453,7 +453,8 @@ class Game:
         state = {
             'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'current_bet': p.current_bet,
                          "blinds": p.blinds, "dealer": p.dealer, "folded": p.folded, "disconnected": p.disconnected,
-                         "busted": p.busted, "position": p.position, "profile_picture": p.profile_picture} for p in self.players],
+                         "busted": p.busted, "position": p.position, "profile_picture": p.profile_picture} for p in
+                        self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board],
             'current_player_turn': self.current_player_turn,
@@ -743,20 +744,47 @@ class Hand:
     RANKS = {'2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
              'Jack': 11, 'Queen': 12, 'King': 13, 'Ace': 14}
 
-    @staticmethod
-    def is_sequence(lst):
-        """Check if the list inputted can form a sequence."""
-        return sorted(lst) == list(range(min(lst), max(lst) + 1))
+    def count_ranks_and_suits(self):
+        ranks = sorted([self.RANKS[card.rank] for card in self.cards])
+        suits = [card.suit for card in self.cards]
+        return ranks, suits
+
+    def check_flush(self, suits):
+        suit_counts = Counter(suits)
+        return any(count >= 5 for count in suit_counts.values()), suit_counts
+
+    def check_straight(self, ranks):
+        straight = False
+        unique_ranks = sorted(set(ranks))
+        for i in range(len(unique_ranks) - 4):
+            if unique_ranks[i + 4] - unique_ranks[i] == 4:
+                straight = True
+                break
+        if {14, 2, 3, 4, 5}.issubset(set(ranks)):
+            straight = True
+        return straight
+
+    def check_straight_flush(self, suit_counts):
+        straight_flush = royal_flush = False
+        for suit, count in suit_counts.items():
+            if count >= 5:
+                flush_ranks = sorted([self.RANKS[card.rank] for card in self.cards if card.suit == suit])
+                if self.check_straight(flush_ranks):
+                    straight_flush = True
+                    if flush_ranks[-1] == 14 and flush_ranks[0] == 10:  # Ace-high straight flush (Royal Flush)
+                        royal_flush = True
+        return straight_flush, royal_flush
 
     # This method evaluates the strength of a 5 card Poker hand and returns the highest card ranking
+    # Some helper methods can not be used in this method due to the way it returns ranks as well due to this method
+    # being used in the context of determining a winner as part of a showdown
     def evaluate_strength(self):
         # Convert cards to rank numbers and sort
-        ranks = sorted([self.RANKS[card.rank] for card in self.cards], reverse=True)
-        suits = [card.suit for card in self.cards]
+        ranks, suits = self.count_ranks_and_suits()
 
         # Check for flush and straight
-        flush = len(set(suits)) == 1
-        straight = self.is_sequence(ranks) or (ranks == [14, 5, 4, 3, 2])  # Including A,2,3,4,5 straight
+        flush = self.check_flush(suits)
+        straight = self.check_straight(ranks)
 
         # Check for four of a kind, three of a kind, pairs
         rank_counts = {rank: ranks.count(rank) for rank in ranks}
@@ -805,23 +833,13 @@ class Hand:
 
     # This method returns a dictionary of all the possible card rankings made with a 7 card deck
     def evaluate_rankings_for_odds_calculation(self):
-        ranks = sorted([self.RANKS[card.rank] for card in self.cards])
-        suits = [card.suit for card in self.cards]
+        ranks, suits = self.count_ranks_and_suits()
 
         # Check for flush
-        suit_counts = Counter(suits)
-        flush = any(count >= 5 for count in suit_counts.values())
+        is_flush, suit_counts = self.check_flush(suits)
 
         # Check for straight
-        straight = False
-        unique_ranks = sorted(set(ranks))
-        for i in range(len(unique_ranks) - 4):
-            if unique_ranks[i + 4] - unique_ranks[i] == 4:
-                straight = True
-                break
-        # Special case for Ace-low straight
-        if {14, 2, 3, 4, 5}.issubset(set(ranks)):
-            straight = True
+        is_straight = self.check_straight(ranks)
 
         # Count the occurrences of each rank
         rank_counts = Counter(ranks)
@@ -839,31 +857,18 @@ class Hand:
         is_full_house = is_three_of_a_kind and pair_counts > 0
 
         # For straight flush and royal flush, need to check if the flush cards form a straight
-        straight_flush = royal_flush = False
-        if flush:
-            for suit, count in suit_counts.items():
-                if count >= 5:
-                    flush_ranks = sorted([self.RANKS[card.rank] for card in self.cards if card.suit == suit])
-                    for i in range(len(flush_ranks) - 4):
-                        if flush_ranks[i + 4] - flush_ranks[i] == 4:
-                            straight_flush = True
-                            if flush_ranks[i] == 10:  # Check for Royal Flush
-                                royal_flush = True
-                            break
-                    if {14, 2, 3, 4, 5}.issubset(set(flush_ranks)):
-                        straight_flush = True
+        is_straight_flush, is_royal_flush = self.check_straight_flush(suit_counts)
 
         hand_results = {
-            "Royal Flush": royal_flush,
-            "Straight Flush": straight_flush,
+            "Royal Flush": is_royal_flush,
+            "Straight Flush": is_straight_flush,
             "Four of a Kind": is_four_of_a_kind,
             "Full House": is_full_house,
-            "Flush": flush,
-            "Straight": straight,
+            "Flush": is_flush,
+            "Straight": is_straight,
             "Three of a Kind": is_three_of_a_kind,
             "Two Pair": is_two_pair,
             "Pair": is_pair
         }
 
         return hand_results
-
