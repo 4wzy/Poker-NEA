@@ -333,6 +333,8 @@ class GameGUI(tk.Tk):
         self.indicate_active_players(game_state)
         self.indicate_folded_and_busted_and_disconnected_players(game_state)
         winning_player = [player for player in game_state["players"] if player["won_game"]][0]
+        print(f"all winning players: {[player for player in game_state['players'] if player['won_game']]}")
+        print(f"winning player: {winning_player}")
         self.indicate_game_winner(winning_player)
 
         self.update_game_messages_label(f"{winning_player['name']} wins the Poker game!")
@@ -559,8 +561,8 @@ class GameGUI(tk.Tk):
         self.change_players_frame(busted_players, "#090245")
 
     def indicate_game_winner(self, winning_player):
-        self.change_players_frame(winning_player, "#03ebfc")
-        print("indicated game winner visually")
+        # Change players frame takes in a list of players of frames to change, hence the code below
+        self.change_players_frame([winning_player], "#03ebfc")
 
     def indicate_winning_players(self, game_state):
         # First make every player's profile have a standard grey background

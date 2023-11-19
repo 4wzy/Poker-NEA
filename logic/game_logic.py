@@ -136,7 +136,7 @@ class Game:
     def start_new_round(self, round_type):
         if round_type == "preflop":
             # First player to act: player after the big blind
-            # Last player to act: Big blid player
+            # Last player to act: Big blind player
             self.first_player_to_act = self.get_next_active_player(self.big_blind_position, False)
             self.last_player_to_act = self.big_blind_position
         elif round_type == "flop":
@@ -284,10 +284,10 @@ class Game:
         # Filter out the best hands only for eligible players
         eligible_best_hands = {player: hand for player, hand in best_hands.items() if player in eligible_players}
 
-        # Determine the maximum rank among eligible players
+        # Determine the maximum rank for these players
         max_rank = max(eligible_best_hands.values(), key=lambda x: x[0])[0]
 
-        # Filter players with the max rank
+        # Filter players using the max rank
         max_rank_players = {player: cards for player, (rank, cards) in eligible_best_hands.items() if rank == max_rank}
 
         # Sort players based on their card values
@@ -341,6 +341,7 @@ class Game:
             remaining_players.remove(all_in_player)
 
         main_pot = self.pot.chips - sum(pot[0] for pot in pots)
+
         # Add the main pot only if there are players left who haven't gone all-in
         if remaining_players and main_pot > 0:
             pots.append((main_pot, remaining_players))
