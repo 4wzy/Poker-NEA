@@ -335,7 +335,8 @@ class Game:
 
         for all_in_player in all_in_players:
             pot_amount = (all_in_player.current_bet - last_all_in_amount) * len(remaining_players)
-            pots.append((pot_amount, list(remaining_players)))
+            if pot_amount > 0:
+                pots.append((pot_amount, list(remaining_players)))
 
             last_all_in_amount = all_in_player.current_bet
             remaining_players.remove(all_in_player)
