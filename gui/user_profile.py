@@ -10,6 +10,7 @@ from matplotlib.figure import Figure
 class UserProfile(tk.Frame):
     def __init__(self, parent, controller, profile_user_id, own_user_id, previous_menu, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
+        self.num_games = 10
         self.controller = controller
         self.profile_user_id = profile_user_id
         self.previous_menu = previous_menu
@@ -27,6 +28,9 @@ class UserProfile(tk.Frame):
         self.pack(fill="both", expand=True)
 
     def create_widgets(self):
+        top_frame = tk.Frame(self, bg="#333333")
+        top_frame.grid(row=0, column=0, columnspan=4, sticky="ew")
+
         # Profile picture
         profile_pic_size = (150, 150)
         self.image = Image.open(f"gui/Images/Pfps/{self.current_pic_name}")
@@ -44,89 +48,104 @@ class UserProfile(tk.Frame):
         # Convert to a format Tkinter can use
         self.profile_pic_image = ImageTk.PhotoImage(circular_image)
 
-        # Store the canvas reference
-        self.profile_pic_canvas = tk.Canvas(self, width=profile_pic_size[0], height=profile_pic_size[1], bg="#333333",
-                                            bd=0,
-                                            highlightthickness=0)
-        self.profile_pic_canvas.grid(row=0, column=0, padx=10, pady=10)
-
-        # Add the image to the Canvas and store the image ID
-        self.profile_pic_id = self.profile_pic_canvas.create_image(profile_pic_size[0] // 2, profile_pic_size[1] // 2,
-                                                                   image=self.profile_pic_image)
-
         self.username = self.controller.network_manager.send_message({
             "type": "get_username",
             "user_id": self.profile_user_id
         })
 
-        self.username_label = tk.Label(self, text=self.username, font=tkfont.Font(family="Cambria", size=24),
+        self.profile_pic_canvas = tk.Canvas(top_frame, width=profile_pic_size[0], height=profile_pic_size[1],
+                                            bg="#333333", bd=0, highlightthickness=0)
+        self.profile_pic_canvas.pack(side="left", padx=10, pady=10)
+        self.profile_pic_id = self.profile_pic_canvas.create_image(profile_pic_size[0] // 2, profile_pic_size[1] // 2,
+                                                                   image=self.profile_pic_image)
+
+        self.username_label = tk.Label(top_frame, text=self.username, font=tkfont.Font(family="Cambria", size=24),
                                        fg="#F56476", bg="#333333")
-        self.username_label.grid(row=0, column=1, padx=10, pady=10, sticky="W")
+        self.username_label.pack(side="left", padx=10, pady=10)
 
         if self.own_profile:
-            edit_pic_button = tk.Button(self, text="Edit Picture", command=self.edit_profile_picture)
-            edit_pic_button.grid(row=0, column=2, padx=10, pady=10)
+            edit_pic_button = tk.Button(top_frame, text="Edit Picture", command=self.edit_profile_picture)
+            edit_pic_button.pack(side="left", padx=10, pady=10)
 
-            edit_name_button = tk.Button(self, text="Edit Name", command=self.edit_username)
-            edit_name_button.grid(row=0, column=3, padx=10, pady=10)
+            edit_name_button = tk.Button(top_frame, text="Edit Name", command=self.edit_username)
+            edit_name_button.pack(side="left", padx=10, pady=10)
 
         # Statistics display
-        stats_frame = tk.Frame(self, bg="#555555", padx=10, pady=10)
-        stats_frame.grid(row=1, column=0, columnspan=4, sticky="EW")
+        stats_details_frame = tk.Frame(self, bg="#555555", padx=10, pady=10)
+        stats_details_frame.grid(row=1, column=0, columnspan=4, sticky="ew")
 
-        games_played_label = tk.Label(stats_frame, text=f"Games Played: {self.statistics['games_played']}",
+        games_played_label = tk.Label(stats_details_frame, text=f"Games Played: {self.statistics['games_played']}",
                                       bg="#555555", fg="#FFFFFF")
         games_played_label.pack(side="top", fill="x")
 
-        games_won_label = tk.Label(stats_frame, text=f"Games Won: {self.statistics['games_won']}",
+        games_won_label = tk.Label(stats_details_frame, text=f"Games Won: {self.statistics['games_won']}",
                                    bg="#555555", fg="#FFFFFF")
         games_won_label.pack(side="top", fill="x")
 
-        total_play_time_label = tk.Label(stats_frame, text=f"Total Play Time: {self.statistics['total_play_time']}",
+        total_play_time_label = tk.Label(stats_details_frame, text=f"Total Play Time: {self.statistics['total_play_time']}",
                                          bg="#555555", fg="#FFFFFF")
         total_play_time_label.pack(side="top", fill="x")
 
-        # Rgscore and other details
-        details_frame = tk.Frame(self, bg="#555555", padx=10, pady=10)
-        details_frame.grid(row=2, column=0, columnspan=4, sticky="EW")
-
-        rgscore_label = tk.Label(details_frame, text=f"RG Score: {self.statistics['rgscore']}",
+        rgscore_label = tk.Label(stats_details_frame, text=f"RG Score: {self.statistics['rgscore']}",
                                  bg="#555555", fg="#FFFFFF")
         rgscore_label.pack(side="top", fill="x")
 
-        streak_label = tk.Label(details_frame, text=f"Streak: {self.statistics['streak']}",
+        streak_label = tk.Label(stats_details_frame, text=f"Streak: {self.statistics['streak']}",
                                 bg="#555555", fg="#FFFFFF")
         streak_label.pack(side="top", fill="x")
 
-        aggressiveness_score_label = tk.Label(details_frame,
+        aggressiveness_score_label = tk.Label(stats_details_frame,
                                               text=f"Average Aggressiveness Score: {self.statistics['average_aggressiveness_score']}",
                                               bg="#555555", fg="#FFFFFF")
         aggressiveness_score_label.pack(side="top", fill="x")
 
-        conservativeness_score_label = tk.Label(details_frame,
+        conservativeness_score_label = tk.Label(stats_details_frame,
                                                 text=f"Average Conservativeness Score: {self.statistics['average_conservativeness_score']}",
                                                 bg="#555555", fg="#FFFFFF")
         conservativeness_score_label.pack(side="top", fill="x")
 
-        # GUI features related to graph
-        info_label = tk.Label(self, text="Select options to view graph", font=tkfont.Font(family="Cambria", size=14),
-                              fg="#FFFFFF", bg="#333333")
-        info_label.grid(row=4, column=0, padx=10, pady=10)
+        # Separate frames for the table and the graph (to make the GUI more compact)
+        self.left_frame = tk.Frame(self, bg="#333333")
+        self.left_frame.grid(row=4, column=0, sticky="nswe")
 
-        self.create_recent_games_table()
+        self.right_frame = tk.Frame(self, bg="#333333")
+        self.right_frame.grid(row=4, column=1, sticky="nswe")
+
+        self.create_recent_games_table(self.left_frame)
+
+        # GUI features related to graph
+        options_frame = tk.Frame(self, bg="#333333")
+        options_frame.grid(row=2, column=0, columnspan=4, sticky="ew")
+
+        info_label = tk.Label(options_frame, text="Select options to view graph", font=tkfont.Font(family="Cambria", size=14),
+                              fg="#FFFFFF", bg="#333333")
+        info_label.pack(side="top", fill="x")
 
         self.num_games_var = tk.StringVar()
         self.num_games_dropdown = ttk.Combobox(self, textvariable=self.num_games_var, state="readonly")
         self.num_games_dropdown['values'] = (5, 10, 20, 50, 100)
         self.num_games_dropdown.set(10)
-        self.num_games_dropdown.grid(row=5, column=0, padx=10, pady=10)
+        self.num_games_dropdown.grid(row=3, column=0, padx=10, pady=10)
 
         self.attribute_var = tk.StringVar()
         self.attribute_dropdown = ttk.Combobox(self, textvariable=self.attribute_var, state="readonly")
         self.attribute_dropdown['values'] = ("pos", "winnings", "aggressiveness_score", "conservativeness_score")
         self.attribute_dropdown.set("conservativeness_score")  # default value
-        self.attribute_dropdown.grid(row=5, column=1, padx=10, pady=10)
+        self.attribute_dropdown.grid(row=3, column=1, padx=10, pady=10)
         self.attribute_dropdown.bind("<<ComboboxSelected>>", self.on_attribute_selected)
+
+        default_attribute = "aggressiveness_score"
+        default_scores = self.controller.network_manager.send_message({
+            "type": "get_attribute_from_user_games_played",
+            "user_id": self.profile_user_id,
+            "attribute": default_attribute,
+            "num_games": self.num_games
+        })
+        self.display_graph(default_scores, default_attribute, self.right_frame)
+
+        self.grid_rowconfigure(4, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
 
     def on_attribute_selected(self, event):
         num_games = int(self.num_games_var.get())
@@ -137,27 +156,27 @@ class UserProfile(tk.Frame):
             "attribute": attribute,
             "num_games": num_games
         })
-        self.display_graph(scores, attribute)
+        self.display_graph(scores, attribute, self.right_frame)
 
     def on_num_games_selected(self, event):
-        num_games = int(self.num_games_var.get())
+        self.num_games = int(self.num_games_var.get())
         attribute = "conservativeness_score"
         scores = self.controller.network_manager.send_message({
             "type": "get_attribute_from_user_games_played",
             "user_id": self.profile_user_id,
             "attribute": attribute,
-            "num_games": num_games
+            "num_games": self.num_games
         })
-        self.display_graph(scores, attribute)
+        self.display_graph(scores, attribute, self.right_frame)
 
-    def display_graph(self, scores, attribute):
+    def display_graph(self, scores, attribute, frame):
         # If there are no scores or all scores are zero, display error message
         # I did this because there is no point in rendering an empty graph
         if not scores or all(score == 0 for score in scores):
             messagebox.showinfo("No Data", "No games played yet or no data available for games played.")
             return
 
-        figure = Figure(figsize=(6, 4), dpi=100)
+        figure = Figure(figsize=(5, 5), dpi=100)
         plot = figure.add_subplot(111)
 
         # Set the range for the x-axis based on the number of games
@@ -181,37 +200,54 @@ class UserProfile(tk.Frame):
         plot.set_xticklabels([str(i) for i in x_range])
 
         # Display the graph on the canvas
-        canvas = FigureCanvasTkAgg(figure, self)
+        canvas = FigureCanvasTkAgg(figure, frame)
         canvas_widget = canvas.get_tk_widget()
-        canvas_widget.grid(row=6, column=0, columnspan=4)
+        canvas_widget.grid(row=0, column=0, sticky="ew")
         canvas.draw()
 
     def edit_profile_picture(self):
         self.profile_pic_selection_window = SelectProfilePic(self, self.on_profile_pic_selected, self.current_pic_name)
 
-    def create_recent_games_table(self):
-        columns = ("start_time", "end_time", "pos", "buy_in", "participants")
-        self.recent_games_table = ttk.Treeview(self, columns=columns, show="headings")
+    def create_recent_games_table(self, frame):
+        columns = ("start_time", "end_time", "position", "buy_in", "participants")
+        self.recent_games_table = ttk.Treeview(frame, columns=columns, show="headings")
         for col in columns:
             self.recent_games_table.heading(col, text=col.replace("_", " ").title())
-            self.recent_games_table.column(col, anchor="center")
+            self.recent_games_table.column(col, anchor="center", width=100)  # Initial width, will be updated
 
-        self.recent_games_table.grid(row=3, column=0, columnspan=4, sticky="ew")
+        self.recent_games_table.grid(row=0, column=0, sticky="ew")
+
+        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=self.recent_games_table.yview)
+        self.recent_games_table.configure(yscrollcommand=scrollbar.set)
+        scrollbar.grid(row=0, column=1, sticky='ns')
 
         # Get the details of recent games
         recent_games = self.controller.network_manager.send_message({
             "type": "get_recent_games_details",
             "user_id": self.profile_user_id,
-            "num_games": 10
+            "num_games": self.num_games
         })
 
-        for game in recent_games:
-            participants = ', '.join(game['participants'])
-            self.recent_games_table.insert("", "end", values=(
-            game["start_time"], game["end_time"], game["position"], game["buy_in"], participants))
+        # The code below is for resizing the columns so that they fit based on the longest value in each column
+        # I am using a dictionary to keep track of the maximum text width of each column
+        column_widths = {col: tkfont.Font().measure(col.title()) for col in columns}
 
-        for col in columns:
-            self.recent_games_table.column(col, width=tkfont.Font().measure(col.title()))
+        for game in recent_games:
+            participant_names = ', '.join(game['participants'])
+            game_details = (game["start_time"], game["end_time"], game["position"], game["buy_in"], participant_names)
+            # Insert the game details as a new row in the table
+            self.recent_games_table.insert("", "end", values=game_details)
+
+            # Measure the width of each entry in the row and update column_width if it's larger than previous ones
+            for index, value in enumerate(game_details):
+                entry_width = tkfont.Font().measure(str(value))
+                column_name = columns[index]
+                if entry_width > column_widths[column_name]:
+                    column_widths[column_name] = entry_width
+
+        # Set the width of each column from the table
+        for column in columns:
+            self.recent_games_table.column(column, width=column_widths[column])
 
     def on_profile_pic_selected(self, pic_name):
         # Send message to network manager to update the profile picture in the database
