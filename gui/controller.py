@@ -22,7 +22,7 @@ class Controller:
     def run(self):
         # self.open_login_menu()
         # The call to open_main_menu() is for debugging purposes only - to skip the login stage for time efficiency
-        self.open_main_menu(16)
+        self.open_main_menu(25)
         tk.mainloop()
 
     def open_login_menu(self):
@@ -75,18 +75,18 @@ class Controller:
             self.current_menu.destroy()
         self.current_menu = ResponsibleGamblingMenu(self, user_id)
 
-    def join_lobby(self, user_id, lobby_id):
+    def join_lobby(self, user_id, lobby_id, show_odds):
         response_data = self.network_manager.join_lobby(user_id, lobby_id)
         print(f"(controller): RESPONSE FROM JOINING LOBBY: {response_data}")
         if response_data and response_data.get("success", True):
             if self.current_menu:
                 self.current_menu.destroy()
             if response_data.get('type') == "game_starting":
-                self.current_menu = GameGUI(self, user_id, lobby_id, response_data, True, False)
+                self.current_menu = GameGUI(self, user_id, lobby_id, response_data, True, False, show_odds)
             elif response_data.get('type') == "reconnecting":
-                self.current_menu = GameGUI(self, user_id, lobby_id, response_data, False, True)
+                self.current_menu = GameGUI(self, user_id, lobby_id, response_data, False, True, show_odds)
             else:
-                self.current_menu = GameGUI(self, user_id, lobby_id, response_data, False, False)
+                self.current_menu = GameGUI(self, user_id, lobby_id, response_data, False, False, show_odds)
         return response_data
 
     def process_received_message(self, message_type, message_content):

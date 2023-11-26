@@ -107,7 +107,7 @@ class LobbyServer:
                         response = self.database_interaction.get_daily_game_limit(request['user_id'])
                     elif request['type'] == 'update_daily_game_limit':
                         response = self.database_interaction.update_daily_game_limit(request['user_id'],
-                                                                                  request['new_limit'])
+                                                                                     request['new_limit'])
                     elif request['type'] == 'get_and_check_to_reset_daily_games_played':
                         response = self.database_interaction.get_and_check_to_reset_daily_games_played(
                             request['user_id'])
@@ -139,6 +139,14 @@ class LobbyServer:
                                                                                       request['new_profile_picture'])
                     elif request['type'] == 'get_user_profile_picture':
                         response = self.database_interaction.get_user_profile_picture(request['user_id'])
+                    elif request['type'] == 'get_attribute_from_user_games_played':
+                        response = self.database_interaction.get_attribute_from_user_games_played(request['user_id'],
+                                                                          request['attribute'], request['num_games'])
+                    elif request['type'] == 'get_recent_games_details':
+                        response = self.database_interaction.get_recent_games_details(request['user_id'],
+                                                                                      request['num_games'])
+                    elif request['type'] == 'get_game_participants':
+                        response = self.database_interaction.get_game_participants(request['game_id'])
 
                     if response is not None:
                         client_socket.sendall((json.dumps(response) + '\n').encode('utf-8'))
@@ -177,7 +185,7 @@ class LobbyServer:
                 if player.amount_of_times_acted != 0:
                     # Avoid division by zero error in case the player left before acting
                     player.aggressiveness_score = round((player.amount_of_times_raised / player.amount_of_times_acted) *
-                                                     100, 2)
+                                                        100, 2)
                     player.conservativeness_score = round(((player.amount_of_times_folded +
                                                             player.amount_of_times_checked)
                                                            / player.amount_of_times_acted) * 100, 2)
@@ -193,7 +201,7 @@ class LobbyServer:
                     self.database_interaction.add_to_attribute_for_user(player.user_id, "games_won", 1)
                 else:
                     self.database_interaction.insert_game_results(game_id, player.user_id, player.finishing_position,
-                                                                  0, player.aggressiveness_score,
+                                                                  -game.starting_chips, player.aggressiveness_score,
                                                                   player.conservativeness_score)
 
                 self.database_interaction.update_average_scores(player.user_id, player.aggressiveness_score,
@@ -218,7 +226,7 @@ class LobbyServer:
     def get_data_for_odds(self, user_id, lobby_id):
         game = self.lobbies[lobby_id]
         player_cards = [[card.suit, card.rank] for card in [player for player in game.players if
-                                                                   player.user_id == user_id][0].hand.cards]
+                                                            player.user_id == user_id][0].hand.cards]
         print(f"player_cards: {player_cards}")
         community_cards = [[card.suit, card.rank] for card in game.board]
         print(f"community_cards: {community_cards}")

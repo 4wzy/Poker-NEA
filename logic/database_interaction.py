@@ -185,6 +185,65 @@ class DatabaseInteraction(DatabaseBase):
             result = cursor.fetchone()
             return result[0] if result else "Invalid"
 
+    def get_attribute_from_user_games_played(self, user_id, attribute, num_games):
+        valid_attributes = ["pos", "winnings", "aggressiveness_score", "conservativeness_score"]
+        if attribute not in valid_attributes:
+            # This code prevents against SQL Injections!
+            raise ValueError("Invalid attribute provided")
+
+        with self.db_cursor() as cursor:
+            query = f"""
+                    SELECT game_results.{attribute}
+                    FROM game_results
+                    INNER JOIN games ON game_results.game_id = games.game_id
+                    WHERE game_results.user_id = %s
+                    ORDER BY games.end_time DESC
+                    LIMIT %s;
+                    """
+            cursor.execute(query, (user_id, num_games))
+            results = cursor.fetchall()
+            return [result[0] for result in results] if results else []
+
+    def get_recent_games_details(self, user_id, num_games):
+        with self.db_cursor() as cursor:
+            query = """
+            SELECT games.game_id, games.start_time, games.end_time, game_results.pos, lobbies.buy_in
+            FROM games
+            INNER JOIN game_results ON games.game_id = game_results.game_id
+            INNER JOIN lobbies ON games.lobby_id = lobbies.lobby_id
+            WHERE game_results.user_id = %s
+            ORDER BY games.end_time DESC
+            LIMIT %s;
+            """
+            cursor.execute(query, (user_id, num_games))
+            games_info = cursor.fetchall()
+
+            game_details_list = []
+            for game_info in games_info:
+                game_id, start_time, end_time, position, buy_in = game_info
+                participants = self.get_game_participants(game_id)
+                game_details = {
+                    "game_id": game_id,
+                    "start_time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "position": position,
+                    "buy_in": buy_in,
+                    "participants": participants
+                }
+                game_details_list.append(game_details)
+            return game_details_list
+
+    def get_game_participants(self, game_id):
+        with self.db_cursor() as cursor:
+            query = """
+            SELECT users.username
+            FROM game_results
+            INNER JOIN users ON game_results.user_id = users.user_id
+            WHERE game_results.game_id = %s;
+            """
+            cursor.execute(query, (game_id,))
+            return [row[0] for row in cursor.fetchall()]
+
     def get_user_statistics(self, user_id):
         valid_attributes = ["games_played", "games_won", "rgscore", "average_aggressiveness_score",
                             "average_conservativeness_score", "total_play_time", "streak"]
@@ -382,7 +441,7 @@ class DatabaseInteraction(DatabaseBase):
                     WHERE user_id = %s;
                     """
             cursor.execute(select_query, (user_id,))
-            last_login_date, games_played_today = cursor.fetchone() or (None, None)
+            last_login_date, games_played_today = cursor.fetchone() or (None, 0)
 
             # Reset daily games played if the last login was not today
             if last_login_date is not None and last_login_date < date.today():
@@ -456,7 +515,7 @@ class DatabaseInteraction(DatabaseBase):
         with self.db_cursor() as cursor:
             cursor.execute("SELECT buy_in FROM lobbies WHERE lobby_id = %s", (lobby_id,))
             result = cursor.fetchone()
-            return result[0] if result else None  # Return None if the requested lobby isn't found
+            return result[0] if result else None  # Return None if the lobby isn't found
 
     def get_chip_balance_for_user(self, user_id):
         with self.db_cursor() as cursor:
@@ -464,7 +523,7 @@ class DatabaseInteraction(DatabaseBase):
             result = cursor.fetchone()
             if result == 0:
                 return 0  # Avoiding an error I was experiencing where Python returns None below
-            return result[0] if result else None  # Return None if the requested user isn't found
+            return result[0] if result else None  # Return None if the user isn't found
 
     def update_chip_balance_for_user(self, user_id, new_balance):
         with self.db_cursor() as cursor:
@@ -492,7 +551,6 @@ class DatabaseInteraction(DatabaseBase):
 
     def get_username(self, user_id):
         with self.db_cursor() as cursor:
-            # Retrieve hashed_password and salt from the database for the given username
             cursor.execute("SELECT username FROM users WHERE user_id = %s", (user_id,))
             result = cursor.fetchone()
             return result[0] if result else "Invalid"
@@ -584,9 +642,7 @@ class DatabaseInteraction(DatabaseBase):
     def create_lobby(self, lobby_data):
         response = {"success": True, "error": None, "lobby_id": None}
         with self.db_cursor() as cursor:
-            # Check if a lobby with the same name and the status "waiting" or "in_progress" already exists
-            # use the following later on instead:
-            # SELECT COUNT(*) FROM lobbies WHERE name = %s AND (status = 'waiting' OR status = 'in_progress')
+            # Check if a lobby with the same name and the status "waiting" already exists
             check_sql = """
             SELECT COUNT(*) FROM lobbies WHERE name = %s AND (status = 'waiting')
             """

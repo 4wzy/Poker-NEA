@@ -1,7 +1,10 @@
 import tkinter as tk
+from tkinter import ttk
 from tkinter import font as tkfont
 from PIL import Image, ImageTk, ImageDraw
 from tkinter import messagebox
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 
 
 class UserProfile(tk.Frame):
@@ -11,7 +14,7 @@ class UserProfile(tk.Frame):
         self.profile_user_id = profile_user_id
         self.previous_menu = previous_menu
         self.current_pic_name = self.controller.network_manager.send_message({"type": "get_user_profile_picture",
-                                                                             "user_id": self.profile_user_id})
+                                                                              "user_id": self.profile_user_id})
         self.own_profile = self.profile_user_id == own_user_id  # Boolean flag indicating if the profile belongs to the current user
         self.configure(bg="#333333")
 
@@ -105,12 +108,112 @@ class UserProfile(tk.Frame):
                                                 bg="#555555", fg="#FFFFFF")
         conservativeness_score_label.pack(side="top", fill="x")
 
+        # GUI features related to graph
+        info_label = tk.Label(self, text="Select options to view graph", font=tkfont.Font(family="Cambria", size=14),
+                              fg="#FFFFFF", bg="#333333")
+        info_label.grid(row=4, column=0, padx=10, pady=10)
+
+        self.create_recent_games_table()
+
+        self.num_games_var = tk.StringVar()
+        self.num_games_dropdown = ttk.Combobox(self, textvariable=self.num_games_var, state="readonly")
+        self.num_games_dropdown['values'] = (5, 10, 20, 50, 100)
+        self.num_games_dropdown.set(10)
+        self.num_games_dropdown.grid(row=5, column=0, padx=10, pady=10)
+
+        self.attribute_var = tk.StringVar()
+        self.attribute_dropdown = ttk.Combobox(self, textvariable=self.attribute_var, state="readonly")
+        self.attribute_dropdown['values'] = ("pos", "winnings", "aggressiveness_score", "conservativeness_score")
+        self.attribute_dropdown.set("conservativeness_score")  # default value
+        self.attribute_dropdown.grid(row=5, column=1, padx=10, pady=10)
+        self.attribute_dropdown.bind("<<ComboboxSelected>>", self.on_attribute_selected)
+
+    def on_attribute_selected(self, event):
+        num_games = int(self.num_games_var.get())
+        attribute = self.attribute_var.get()
+        scores = self.controller.network_manager.send_message({
+            "type": "get_attribute_from_user_games_played",
+            "user_id": self.profile_user_id,
+            "attribute": attribute,
+            "num_games": num_games
+        })
+        self.display_graph(scores, attribute)
+
+    def on_num_games_selected(self, event):
+        num_games = int(self.num_games_var.get())
+        attribute = "conservativeness_score"
+        scores = self.controller.network_manager.send_message({
+            "type": "get_attribute_from_user_games_played",
+            "user_id": self.profile_user_id,
+            "attribute": attribute,
+            "num_games": num_games
+        })
+        self.display_graph(scores, attribute)
+
+    def display_graph(self, scores, attribute):
+        # If there are no scores or all scores are zero, display error message
+        # I did this because there is no point in rendering an empty graph
+        if not scores or all(score == 0 for score in scores):
+            messagebox.showinfo("No Data", "No games played yet or no data available for games played.")
+            return
+
+        figure = Figure(figsize=(6, 4), dpi=100)
+        plot = figure.add_subplot(111)
+
+        # Set the range for the x-axis based on the number of games
+        x_range = list(range(1, len(scores) + 1))  # Start range at 1 for game count
+
+        title = attribute.replace("_", " ").title()
+        if attribute == "pos":
+            title = "Position"
+            plot.set_yticks(range(1, 7))
+            plot.set_ylim(0.5, 6.5)
+        elif attribute in ["aggressiveness_score", "conservativeness_score"]:
+            plot.set_ylim(0, 100)
+
+        # Plot the data
+        plot.plot(x_range, scores, marker='o')
+        plot.set_title(f'Average {title} Over Last Games')
+        plot.set_ylabel(title)
+        plot.set_xlabel('Games')
+
+        plot.set_xticks(x_range)
+        plot.set_xticklabels([str(i) for i in x_range])
+
+        # Display the graph on the canvas
+        canvas = FigureCanvasTkAgg(figure, self)
+        canvas_widget = canvas.get_tk_widget()
+        canvas_widget.grid(row=6, column=0, columnspan=4)
+        canvas.draw()
+
     def edit_profile_picture(self):
         self.profile_pic_selection_window = SelectProfilePic(self, self.on_profile_pic_selected, self.current_pic_name)
 
-    def on_profile_pic_selected(self, pic_name):
-        # Update the profile picture display in the UI as before...
+    def create_recent_games_table(self):
+        columns = ("start_time", "end_time", "pos", "buy_in", "participants")
+        self.recent_games_table = ttk.Treeview(self, columns=columns, show="headings")
+        for col in columns:
+            self.recent_games_table.heading(col, text=col.replace("_", " ").title())
+            self.recent_games_table.column(col, anchor="center")
 
+        self.recent_games_table.grid(row=3, column=0, columnspan=4, sticky="ew")
+
+        # Get the details of recent games
+        recent_games = self.controller.network_manager.send_message({
+            "type": "get_recent_games_details",
+            "user_id": self.profile_user_id,
+            "num_games": 10
+        })
+
+        for game in recent_games:
+            participants = ', '.join(game['participants'])
+            self.recent_games_table.insert("", "end", values=(
+            game["start_time"], game["end_time"], game["position"], game["buy_in"], participants))
+
+        for col in columns:
+            self.recent_games_table.column(col, width=tkfont.Font().measure(col.title()))
+
+    def on_profile_pic_selected(self, pic_name):
         # Send message to network manager to update the profile picture in the database
         self.controller.network_manager.send_message({
             "type": "set_user_profile_picture",
@@ -129,16 +232,13 @@ class UserProfile(tk.Frame):
         profile_pic_size = (150, 150)
         self.image = self.image.resize(profile_pic_size)
 
-        # Create a mask for the circular profile picture
+        # Set up the circular profile picture
         mask = Image.new('L', profile_pic_size, 0)
         draw = ImageDraw.Draw(mask)
         draw.ellipse((0, 0) + profile_pic_size, fill=255)
 
-        # Create circular image
         circular_image = Image.new('RGBA', profile_pic_size, (0, 0, 0, 0))
         circular_image.paste(self.image, (0, 0), mask)
-
-        # Convert to a format Tkinter can use
         self.profile_pic_image = ImageTk.PhotoImage(circular_image)
 
         # Update the canvas image
@@ -156,14 +256,15 @@ class UserProfile(tk.Frame):
         self.new_username_entry = tk.Entry(self.edit_username_window)
         self.new_username_entry.pack(padx=10, pady=10)
 
-        # Add a button to submit the new usernamex
+        # Add a button to submit the new username
         submit_button = tk.Button(self.edit_username_window, text="Submit", command=self.submit_new_username)
         submit_button.pack(pady=10)
 
     def submit_new_username(self):
         new_username = self.new_username_entry.get()
 
-        response = self.controller.network_manager.send_message({"type": "set_username", "user_id": self.profile_user_id, "new_username": new_username})
+        response = self.controller.network_manager.send_message(
+            {"type": "set_username", "user_id": self.profile_user_id, "new_username": new_username})
         if not response.get('success'):
             tk.messagebox.showerror(f"Error changing username", f"{response.get('error')}")
         else:
@@ -177,6 +278,7 @@ class UserProfile(tk.Frame):
 
             # Close the edit username window
             self.edit_username_window.destroy()
+
 
 class SelectProfilePic(tk.Toplevel):
     def __init__(self, parent, callback, current_pic_name):
@@ -225,7 +327,8 @@ class SelectProfilePic(tk.Toplevel):
         img.thumbnail((80, 80))  # Creates a thumbnail of the image
         photo = ImageTk.PhotoImage(img)
 
-        button = tk.Button(parent, image=photo, command=lambda p=pic_name: self.set_profile_picture(p), bg="#333333", bd=0)
+        button = tk.Button(parent, image=photo, command=lambda p=pic_name: self.set_profile_picture(p), bg="#333333",
+                           bd=0)
         button.image = photo  # Keep a reference so it does not get garbage collected
         button.pack(side='left', padx=10, pady=5)
 

@@ -43,10 +43,9 @@ def monte_carlo_hand_odds(hand_cards, community_cards, iterations=2000):
 
     remaining_deck = deck.cards.copy()
 
-
     hand_type_counters = {hand_type: 0 for hand_type in hand_odds}
     # Simulate the remaining community card draws
-    for _ in range(iterations):
+    for simulation in range(iterations):
         print("-------------------------")
 
         deck.cards = remaining_deck.copy()  # Reset the deck to its original state for each iteration

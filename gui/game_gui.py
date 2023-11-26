@@ -9,8 +9,9 @@ from logic.odds_logic import monte_carlo_hand_odds
 
 
 class GameGUI(tk.Tk):
-    def __init__(self, controller, user_id, lobby_id, initial_state, player_starts_game, reconnecting):
+    def __init__(self, controller, user_id, lobby_id, initial_state, player_starts_game, reconnecting, show_odds):
         super().__init__()
+        self.show_odds = show_odds
         self.is_chatbox_shown = False
         self.last_highlighted_player_id = None
         self.geometry("1280x720")
@@ -63,6 +64,8 @@ class GameGUI(tk.Tk):
         odds_button = tk.Button(toggle_frame, text="Odds", command=self.show_odds, bg="#555555", fg="#FFFFFF",
                                 font=("Cambria", 12), relief="flat", padx=10, pady=5)
         odds_button.pack(side="left", padx=5)
+        if not show_odds:
+            odds_button.config(state="disabled")
 
         # Chat/Odds Display
         self.display_frame = tk.Frame(self.sidebar, bg="#444444")

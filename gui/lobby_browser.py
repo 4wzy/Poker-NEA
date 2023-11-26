@@ -203,7 +203,7 @@ class LobbyBrowser(tk.Tk):
                 "buy_in"]}
             self.controller.network_manager.send_message(buy_in_message)
 
-        response_data = self.controller.join_lobby(self.user_id, lobby_info['lobby_id'])
+        response_data = self.controller.join_lobby(self.user_id, lobby_info['lobby_id'], lobby_info['show_odds'])
         if not response_data['success']:
             messagebox.showerror("Error", response_data['error'])
             return
@@ -357,7 +357,7 @@ class CreateLobbyWindow(tk.Toplevel):
             buy_in_message = {"type": "add_to_chip_balance_for_user", "user_id": self.user_id, "amount": -buy_in}
             self.controller.network_manager.send_message(buy_in_message)
 
-            self.controller.join_lobby(self.user_id, lobby_id)
+            self.controller.join_lobby(self.user_id, lobby_id, show_odds)
 
         except Exception as e:
             print(f"Error while creating lobby: {e}")

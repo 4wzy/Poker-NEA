@@ -13,10 +13,8 @@ class MainMenu(tk.Tk):
         self.username = self.controller.network_manager.send_message({"type": "get_username", "user_id": self.user_id})
         self.rg_score = self.controller.network_manager.send_message({"type": "update_rg_score", "user_id":
             self.user_id})
-        print(self.rg_score)
         self.games_played_today = self.controller.network_manager.send_message(
             {"type": "get_and_check_to_reset_daily_games_played", "user_id": self.user_id})
-        print(f"Sent get_and_check_daily_games_played request with id {self.user_id}")
 
         self.title("AceAware Poker")
 
@@ -131,9 +129,8 @@ class MainMenu(tk.Tk):
         circular_image.paste(new_image, (0, 0), mask)
         new_profile_pic_image = ImageTk.PhotoImage(circular_image)
 
-        # Assuming 'self.profile_pic' is the Canvas for the profile picture, and the image ID is stored in 'self.profile_pic_id'
         self.profile_pic.itemconfig(self.profile_pic_id, image=new_profile_pic_image)
-        # Update the image reference to prevent garbage collection
+        # Prevent garbage collection
         self.profile_pic_image = new_profile_pic_image
 
     def update_username(self, user_id, new_username):

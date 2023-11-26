@@ -6,6 +6,10 @@ import re
 
 
 class UserAuth(DatabaseBase):
+    def __init__(self):
+        super().__init__()
+        self.password_hash_iterations = 2048
+
     def login_user(self, username: str, password: str):
         with self.db_cursor() as cursor:
             # Retrieve hashed_password and salt from the database for the given username
@@ -13,13 +17,13 @@ class UserAuth(DatabaseBase):
             row = cursor.fetchone()
 
             if row is None:
-                print("Invalid username")
-                return {"success": False, "message": "Invalid username"}
+                return {"success": False, "message": "Invalid username or password"}
+                # This message is used to not let a potential hacker know if they are dealing with a valid username
 
             stored_hashed_password, salt = row
-            # Hash the provided password with the retrieved salt
+            # Hash the provided password with the salt
             hashed_password = password + salt
-            for i in range(10):
+            for i in range(self.password_hash_iterations):
                 hashed_password = hashlib.sha256(hashed_password.encode()).hexdigest()
 
             # Compare the computed hash with the stored hash
@@ -30,7 +34,7 @@ class UserAuth(DatabaseBase):
                 return {"success": True, "user_id": user_id, "message": "User authenticated successfully!"}
             else:
                 print("Invalid password")
-                return {"success": False, "message": "Invalid password"}
+                return {"success": False, "message": "Invalid username or password"}
 
     def register_user(self, username: str, password: str, email: str):
         if not self.validate_password(password):
@@ -50,10 +54,24 @@ class UserAuth(DatabaseBase):
                 )
 
                 user_id = cursor.lastrowid  # Get the user_id of the user that just registered
+
+                # Insert default values into corrsponding tables
+
                 cursor.execute(
                     "INSERT INTO user_chips (user_id, chips_balance) VALUES (%s, DEFAULT)",
                     (user_id,)
                 )
+
+                cursor.execute(
+                    "INSERT INTO user_statistics (user_id) VALUES (%s)",
+                    (user_id,)
+                )
+
+                cursor.execute(
+                    "INSERT INTO user_game_limits (user_id, daily_game_limit, last_logged_in, games_played_today) VALUES (%s, 10, NOW(), 0)",
+                    (user_id,)
+                )
+
                 return {"success": True, "message": "User registered successfully!"}
             except mysql.connector.IntegrityError:
                 return {"success": False, "message": "Username or Email already exists"}
@@ -84,6 +102,6 @@ class UserAuth(DatabaseBase):
         salt = secrets.token_hex(16)
         salted_password = password + salt
 
-        for i in range(10):
+        for i in range(self.password_hash_iterations):
             salted_password = hashlib.sha256(salted_password.encode()).hexdigest()
         return salted_password, salt
