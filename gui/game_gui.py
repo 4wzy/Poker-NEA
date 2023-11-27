@@ -1,4 +1,6 @@
+import glob
 import json
+import os
 import time
 import tkinter as tk
 from tkinter import simpledialog, messagebox
@@ -752,13 +754,29 @@ class GameGUI(tk.Tk):
         print(f"(leave game from game_gui): {player_left}")
         self.controller.open_main_menu(self.user_id)
 
-    def place_player(self, x, y, name, position, user_id, chips, profile_picture):
-        # print(f"placing player: {name}")
+    def fetch_and_store_profile_picture(self, user_id, profile_picture_filename):
+        response = self.controller.network_manager.send_message({
+            "type": "get_profile_picture",
+            "user_id": user_id
+        })
+        image_data = response['image_data']
+        with open(f"gui/Images/Pfps/{profile_picture_filename}", "wb") as file:
+            file.write(image_data)
+
+    def place_player(self, x, y, name, position, user_id, chips, profile_picture_filename):
         try:
             # Create a frame to hold the player components
             player_frame = tk.Frame(self.game_canvas, bg="#302525")
 
-            profile_photo = Image.open(f"gui/Images/Pfps/{profile_picture}")
+            local_pfp_path = f"gui/Images/Pfps/{profile_picture_filename}"
+            if not os.path.exists(local_pfp_path):
+                # Delete old profile pictures
+                for old_file in glob.glob(f"gui/Images/Pfps/{user_id}_*.png"):
+                    os.remove(old_file)
+
+                self.fetch_and_store_profile_picture(user_id, profile_picture_filename)
+
+            profile_photo = Image.open(local_pfp_path)
             profile_photo = profile_photo.resize((50, 50))
 
             # Create a mask

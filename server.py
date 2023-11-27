@@ -1,4 +1,7 @@
+import base64
 import datetime
+import glob
+import os
 import socket
 import threading
 import json
@@ -134,9 +137,8 @@ class LobbyServer:
                                                                                      request['attribute'])
                     elif request['type'] == 'get_user_statistics':
                         response = self.database_interaction.get_user_statistics(request['user_id'])
-                    elif request['type'] == 'set_user_profile_picture':
-                        response = self.database_interaction.set_user_profile_picture(request['user_id'],
-                                                                                      request['new_profile_picture'])
+                    if request['type'] in ['set_user_profile_picture', 'upload_profile_picture']:
+                        response = self.handle_profile_picture_change(request, client_socket)
                     elif request['type'] == 'get_user_profile_picture':
                         response = self.database_interaction.get_user_profile_picture(request['user_id'])
                     elif request['type'] == 'get_attribute_from_user_games_played':
@@ -147,6 +149,8 @@ class LobbyServer:
                                                                                       request['num_games'])
                     elif request['type'] == 'get_game_participants':
                         response = self.database_interaction.get_game_participants(request['game_id'])
+                    elif request['type'] == 'get_profile_picture':
+                        response = self.serve_profile_picture(request)
 
                     if response is not None:
                         client_socket.sendall((json.dumps(response) + '\n').encode('utf-8'))
@@ -527,6 +531,54 @@ class LobbyServer:
         for player in self.get_connected_players(game):
             client_sockets.append(player.client_socket)
         return client_sockets
+
+    def handle_profile_picture_change(self, request, client_socket):
+        print("handling pfp change")
+        user_id = request['user_id']
+
+        if request['type'] == 'upload_profile_picture':
+            # Handle custom profile picture upload
+            encoded_image_data = request['image_data']
+            image_data = base64.b64decode(encoded_image_data)
+            print("decoded image data")
+
+            current_timestamp = int(time.time())
+            filename = f"{user_id}_{current_timestamp}.png"
+            print(f"using filename {filename}")
+
+            directory = "server/pfps"
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+                print(f"Created directory: {directory}")
+
+            file_path = os.path.join(directory, filename)
+            print(f"using filepath: {file_path}")
+
+            # Delete old profile pictures
+            for old_file in glob.glob(f"{directory}/{user_id}_*.png"):
+                os.remove(old_file)
+                print(f"removing {old_file}")
+
+            # Save new profile picture
+            with open(file_path, "wb") as file:
+                file.write(image_data)
+                print(f"wrote image data to {file_path}")
+
+        else:
+            # Handle setting a default profile picture
+            filename = request['new_profile_picture']
+            print("returning filename")
+
+        # Update the database with the filename
+        return self.database_interaction.set_user_profile_picture(user_id, filename)
+
+    def serve_profile_picture(self, request):
+        user_id = request['user_id']
+        filename = self.database_interaction.get_user_profile_picture(user_id)
+        file_path = os.path.join("server/pfps", filename)
+        with open(file_path, "rb") as file:
+            image_data = file.read()
+        return {"image_data": image_data, "filename": filename}
 
 
 if __name__ == "__main__":

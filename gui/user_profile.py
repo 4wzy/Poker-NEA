@@ -1,8 +1,9 @@
+import base64
 import tkinter as tk
 from tkinter import ttk
 from tkinter import font as tkfont
 from PIL import Image, ImageTk, ImageDraw
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
@@ -207,7 +208,8 @@ class UserProfile(tk.Frame):
         canvas.draw()
 
     def edit_profile_picture(self):
-        self.profile_pic_selection_window = SelectProfilePic(self, self.on_profile_pic_selected, self.current_pic_name)
+        self.profile_pic_selection_window = SelectProfilePic(self, self.on_profile_pic_selected,
+                                                             self.current_pic_name, self.controller, self.profile_user_id)
 
     def create_recent_games_table(self, frame):
         columns = ("start_time", "end_time", "position", "buy_in", "participants")
@@ -318,17 +320,19 @@ class UserProfile(tk.Frame):
 
 
 class SelectProfilePic(tk.Toplevel):
-    def __init__(self, parent, callback, current_pic_name):
+    def __init__(self, parent, callback, current_pic_name, controller, profile_user_id):
         super().__init__(parent)
         self.callback = callback
         self.title('Select Profile Picture')
-        self.geometry('400x400')  # Adjust as needed
+        self.geometry('400x450')
         self.configure(bg="#333333")
         self.profile_pics = [
             "cat.png", "default.png", "elephant.png", "giraffe.png",
             "hedgehog.png", "llama.png", "octopus.png", "tiger.png"
         ]
         self.current_pic_name = current_pic_name
+        self.controller = controller
+        self.profile_user_id = profile_user_id
         self.create_widgets()
 
     def create_widgets(self):
@@ -352,12 +356,39 @@ class SelectProfilePic(tk.Toplevel):
         label.pack(side='top')
 
         img = Image.open(f"gui/Images/Pfps/{self.current_pic_name}")
-        img.thumbnail((100, 100))  # Creates a thumbnail of the image
+        img.thumbnail((100, 100))
         current_photo = ImageTk.PhotoImage(img)
 
         current_pic_label = tk.Label(current_pic_frame, image=current_photo, bg="#555555")
         current_pic_label.image = current_photo  # Keep a reference
         current_pic_label.pack(side='top', pady=10)
+
+        upload_btn = tk.Button(self, text="Upload New Picture", command=self.upload_new_picture, bg="#555555",
+                               fg="#FFFFFF")
+        upload_btn.pack(side='bottom', pady=10)
+
+    def upload_new_picture(self):
+        file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")])
+        if file_path:
+            # Resize and send to server
+            self.resize_and_upload(file_path)
+
+    def resize_and_upload(self, file_path):
+        img = Image.open(file_path)
+        img = img.resize((150, 150))
+
+        temp_path = "temp_resized_image.png"
+        img.save(temp_path)
+
+        with open(temp_path, "rb") as file:
+            image_data = file.read()
+            encoded_image_data = base64.b64encode(image_data).decode('utf-8')  # Encode as Base64 and then to string
+
+        self.controller.network_manager.send_message({
+            "type": "upload_profile_picture",
+            "user_id": self.profile_user_id,
+            "image_data": encoded_image_data  # Send encoded data
+        })
 
     def add_pic_button(self, parent, pic_name):
         img = Image.open(f"gui/Images/Pfps/{pic_name}")

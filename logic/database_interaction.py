@@ -129,15 +129,19 @@ class DatabaseInteraction(DatabaseBase):
             for command in commands:
                 cursor.execute(command)
 
-    def set_user_profile_picture(self, user_id, new_profile_picture):
-        with self.db_cursor() as cursor:
-            query = """
-                    UPDATE users
-                    SET profile_picture = %s
-                    WHERE user_id = %s;
-                    """
-            cursor.execute(query, (new_profile_picture, user_id))
-            return {"success": True}
+    def set_user_profile_picture(self, user_id, profile_picture_filename):
+        print("setting user profile picture in db_interaction")
+        try:
+            with self.db_cursor() as cursor:
+                query = """UPDATE users
+                SET profile_picture = %s
+                WHERE user_id = %s;
+                """
+                cursor.execute(query, (profile_picture_filename, user_id))
+                return {"success": True}
+        except Exception as e:
+            print(f"Exception in set_user_profile_picture: {e}")
+            return {"success": False, "error": str(e)}
 
     def get_user_profile_picture(self, user_id):
         try:
@@ -149,10 +153,9 @@ class DatabaseInteraction(DatabaseBase):
                         """
                 cursor.execute(query, (user_id,))
                 result = cursor.fetchone()
-                print(f"result: {result}")
-                return result[0] if result else "default.png"  # using a default value if no result
+                return result[0] if result else "default.png"
         except Exception as e:
-            print(f"Exception: {e}")
+            print(f"Exception in get_user_profile_picture: {e}")
             return "default.png"
 
     def add_to_attribute_for_user(self, user_id, attribute, amount):
