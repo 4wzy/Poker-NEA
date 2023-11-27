@@ -537,16 +537,16 @@ class LobbyServer:
         user_id = request['user_id']
 
         if request['type'] == 'upload_profile_picture':
-            # Handle custom profile picture upload
+            # Use the filename provided by the client
+            filename = request['filename']
+            print(f"using filename {filename}")
+
+            # Decode the image data
             encoded_image_data = request['image_data']
             image_data = base64.b64decode(encoded_image_data)
             print("decoded image data")
 
-            current_timestamp = int(time.time())
-            filename = f"{user_id}_{current_timestamp}.png"
-            print(f"using filename {filename}")
-
-            directory = "server/pfps"
+            directory = "pfps"
             if not os.path.exists(directory):
                 os.makedirs(directory)
                 print(f"Created directory: {directory}")
@@ -556,8 +556,9 @@ class LobbyServer:
 
             # Delete old profile pictures
             for old_file in glob.glob(f"{directory}/{user_id}_*.png"):
-                os.remove(old_file)
-                print(f"removing {old_file}")
+                if old_file != file_path:  # Avoid deleting the current file being saved
+                    os.remove(old_file)
+                    print(f"removing {old_file}")
 
             # Save new profile picture
             with open(file_path, "wb") as file:
@@ -567,7 +568,7 @@ class LobbyServer:
         else:
             # Handle setting a default profile picture
             filename = request['new_profile_picture']
-            print("returning filename")
+            print(f"setting default filename {filename}")
 
         # Update the database with the filename
         return self.database_interaction.set_user_profile_picture(user_id, filename)
@@ -575,7 +576,7 @@ class LobbyServer:
     def serve_profile_picture(self, request):
         user_id = request['user_id']
         filename = self.database_interaction.get_user_profile_picture(user_id)
-        file_path = os.path.join("server/pfps", filename)
+        file_path = os.path.join("pfps", filename)
         with open(file_path, "rb") as file:
             image_data = file.read()
         return {"image_data": image_data, "filename": filename}

@@ -1,4 +1,6 @@
 import base64
+import os
+import time
 import tkinter as tk
 from tkinter import ttk
 from tkinter import font as tkfont
@@ -374,20 +376,28 @@ class SelectProfilePic(tk.Toplevel):
             self.resize_and_upload(file_path)
 
     def resize_and_upload(self, file_path):
+        # Resize the image
         img = Image.open(file_path)
         img = img.resize((150, 150))
 
-        temp_path = "temp_resized_image.png"
-        img.save(temp_path)
+        # Generate a filename using a timestamp
+        current_timestamp = int(time.time())
+        filename = f"{self.profile_user_id}_{current_timestamp}.png"
 
-        with open(temp_path, "rb") as file:
+        # Save the resized image to the local directory
+        local_path = os.path.join('gui/Images/Pfps', filename)
+        img.save(local_path)
+
+        with open(local_path, "rb") as file:
             image_data = file.read()
-            encoded_image_data = base64.b64encode(image_data).decode('utf-8')  # Encode as Base64 and then to string
+            encoded_image_data = base64.b64encode(image_data).decode('utf-8')  # Encode as Base64
 
+        # Send the base64 encoded image data and filename to the server
         self.controller.network_manager.send_message({
             "type": "upload_profile_picture",
             "user_id": self.profile_user_id,
-            "image_data": encoded_image_data  # Send encoded data
+            "image_data": encoded_image_data,
+            "filename": filename  # Include the filename in the message
         })
 
     def add_pic_button(self, parent, pic_name):
