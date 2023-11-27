@@ -70,82 +70,83 @@ class UserProfile(tk.Frame):
             edit_name_button = tk.Button(top_frame, text="Edit Name", command=self.edit_username)
             edit_name_button.pack(side="left", padx=10, pady=10)
 
-        # Statistics display
-        stats_details_frame = tk.Frame(self, bg="#555555", padx=10, pady=10)
-        stats_details_frame.grid(row=1, column=0, columnspan=4, sticky="ew")
+        if self.statistics:
+                # Statistics display
+                stats_details_frame = tk.Frame(self, bg="#555555", padx=10, pady=10)
+                stats_details_frame.grid(row=1, column=0, columnspan=4, sticky="ew")
 
-        games_played_label = tk.Label(stats_details_frame, text=f"Games Played: {self.statistics['games_played']}",
-                                      bg="#555555", fg="#FFFFFF")
-        games_played_label.pack(side="top", fill="x")
-
-        games_won_label = tk.Label(stats_details_frame, text=f"Games Won: {self.statistics['games_won']}",
-                                   bg="#555555", fg="#FFFFFF")
-        games_won_label.pack(side="top", fill="x")
-
-        total_play_time_label = tk.Label(stats_details_frame, text=f"Total Play Time: {self.statistics['total_play_time']}",
-                                         bg="#555555", fg="#FFFFFF")
-        total_play_time_label.pack(side="top", fill="x")
-
-        rgscore_label = tk.Label(stats_details_frame, text=f"RG Score: {self.statistics['rgscore']}",
-                                 bg="#555555", fg="#FFFFFF")
-        rgscore_label.pack(side="top", fill="x")
-
-        streak_label = tk.Label(stats_details_frame, text=f"Streak: {self.statistics['streak']}",
-                                bg="#555555", fg="#FFFFFF")
-        streak_label.pack(side="top", fill="x")
-
-        aggressiveness_score_label = tk.Label(stats_details_frame,
-                                              text=f"Average Aggressiveness Score: {self.statistics['average_aggressiveness_score']}",
+                games_played_label = tk.Label(stats_details_frame, text=f"Games Played: {self.statistics['games_played']}",
                                               bg="#555555", fg="#FFFFFF")
-        aggressiveness_score_label.pack(side="top", fill="x")
+                games_played_label.pack(side="top", fill="x")
 
-        conservativeness_score_label = tk.Label(stats_details_frame,
-                                                text=f"Average Conservativeness Score: {self.statistics['average_conservativeness_score']}",
-                                                bg="#555555", fg="#FFFFFF")
-        conservativeness_score_label.pack(side="top", fill="x")
+                games_won_label = tk.Label(stats_details_frame, text=f"Games Won: {self.statistics['games_won']}",
+                                           bg="#555555", fg="#FFFFFF")
+                games_won_label.pack(side="top", fill="x")
 
-        # Separate frames for the table and the graph (to make the GUI more compact)
-        self.left_frame = tk.Frame(self, bg="#333333")
-        self.left_frame.grid(row=4, column=0, sticky="nswe")
+                total_play_time_label = tk.Label(stats_details_frame, text=f"Total Play Time: {self.statistics['total_play_time']}",
+                                                 bg="#555555", fg="#FFFFFF")
+                total_play_time_label.pack(side="top", fill="x")
 
-        self.right_frame = tk.Frame(self, bg="#333333")
-        self.right_frame.grid(row=4, column=1, sticky="nswe")
+                rgscore_label = tk.Label(stats_details_frame, text=f"RG Score: {self.statistics['rgscore']}",
+                                         bg="#555555", fg="#FFFFFF")
+                rgscore_label.pack(side="top", fill="x")
 
-        self.create_recent_games_table(self.left_frame)
+                streak_label = tk.Label(stats_details_frame, text=f"Streak: {self.statistics['streak']}",
+                                        bg="#555555", fg="#FFFFFF")
+                streak_label.pack(side="top", fill="x")
 
-        # GUI features related to graph
-        options_frame = tk.Frame(self, bg="#333333")
-        options_frame.grid(row=2, column=0, columnspan=4, sticky="ew")
+                aggressiveness_score_label = tk.Label(stats_details_frame,
+                                                      text=f"Average Aggressiveness Score: {self.statistics['average_aggressiveness_score']}",
+                                                      bg="#555555", fg="#FFFFFF")
+                aggressiveness_score_label.pack(side="top", fill="x")
 
-        info_label = tk.Label(options_frame, text="Select options to view graph", font=tkfont.Font(family="Cambria", size=14),
-                              fg="#FFFFFF", bg="#333333")
-        info_label.pack(side="top", fill="x")
+                conservativeness_score_label = tk.Label(stats_details_frame,
+                                                        text=f"Average Conservativeness Score: {self.statistics['average_conservativeness_score']}",
+                                                        bg="#555555", fg="#FFFFFF")
+                conservativeness_score_label.pack(side="top", fill="x")
 
-        self.num_games_var = tk.StringVar()
-        self.num_games_dropdown = ttk.Combobox(self, textvariable=self.num_games_var, state="readonly")
-        self.num_games_dropdown['values'] = (5, 10, 20, 50, 100)
-        self.num_games_dropdown.set(10)
-        self.num_games_dropdown.grid(row=3, column=0, padx=10, pady=10)
+                # Separate frames for the table and the graph (to make the GUI more compact)
+                self.left_frame = tk.Frame(self, bg="#333333")
+                self.left_frame.grid(row=4, column=0, sticky="nswe")
 
-        self.attribute_var = tk.StringVar()
-        self.attribute_dropdown = ttk.Combobox(self, textvariable=self.attribute_var, state="readonly")
-        self.attribute_dropdown['values'] = ("pos", "winnings", "aggressiveness_score", "conservativeness_score")
-        self.attribute_dropdown.set("conservativeness_score")  # default value
-        self.attribute_dropdown.grid(row=3, column=1, padx=10, pady=10)
-        self.attribute_dropdown.bind("<<ComboboxSelected>>", self.on_attribute_selected)
+                self.right_frame = tk.Frame(self, bg="#333333")
+                self.right_frame.grid(row=4, column=1, sticky="nswe")
 
-        default_attribute = "aggressiveness_score"
-        default_scores = self.controller.network_manager.send_message({
-            "type": "get_attribute_from_user_games_played",
-            "user_id": self.profile_user_id,
-            "attribute": default_attribute,
-            "num_games": self.num_games
-        })
-        self.display_graph(default_scores, default_attribute, self.right_frame)
+                self.create_recent_games_table(self.left_frame)
 
-        self.grid_rowconfigure(4, weight=1)
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
+                # GUI features related to graph
+                options_frame = tk.Frame(self, bg="#333333")
+                options_frame.grid(row=2, column=0, columnspan=4, sticky="ew")
+
+                info_label = tk.Label(options_frame, text="Select options to view graph", font=tkfont.Font(family="Cambria", size=14),
+                                      fg="#FFFFFF", bg="#333333")
+                info_label.pack(side="top", fill="x")
+
+                self.num_games_var = tk.StringVar()
+                self.num_games_dropdown = ttk.Combobox(self, textvariable=self.num_games_var, state="readonly")
+                self.num_games_dropdown['values'] = (5, 10, 20, 50, 100)
+                self.num_games_dropdown.set(10)
+                self.num_games_dropdown.grid(row=3, column=0, padx=10, pady=10)
+
+                self.attribute_var = tk.StringVar()
+                self.attribute_dropdown = ttk.Combobox(self, textvariable=self.attribute_var, state="readonly")
+                self.attribute_dropdown['values'] = ("pos", "winnings", "aggressiveness_score", "conservativeness_score")
+                self.attribute_dropdown.set("conservativeness_score")  # default value
+                self.attribute_dropdown.grid(row=3, column=1, padx=10, pady=10)
+                self.attribute_dropdown.bind("<<ComboboxSelected>>", self.on_attribute_selected)
+
+                default_attribute = "aggressiveness_score"
+                default_scores = self.controller.network_manager.send_message({
+                    "type": "get_attribute_from_user_games_played",
+                    "user_id": self.profile_user_id,
+                    "attribute": default_attribute,
+                    "num_games": self.num_games
+                })
+                self.display_graph(default_scores, default_attribute, self.right_frame)
+
+                self.grid_rowconfigure(4, weight=1)
+                self.grid_columnconfigure(0, weight=1)
+                self.grid_columnconfigure(1, weight=1)
 
     def on_attribute_selected(self, event):
         num_games = int(self.num_games_var.get())
@@ -172,7 +173,7 @@ class UserProfile(tk.Frame):
     def display_graph(self, scores, attribute, frame):
         # If there are no scores or all scores are zero, display error message
         # I did this because there is no point in rendering an empty graph
-        if not scores or all(score == 0 for score in scores):
+        if not scores:
             messagebox.showinfo("No Data", "No games played yet or no data available for games played.")
             return
 

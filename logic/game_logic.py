@@ -85,7 +85,7 @@ class Player:
 
 class Game:
     def __init__(self, starting_chips=200, player_limit=6):
-        self.debugging_enabled = True
+        self.debugging_enabled = False
         self.players: List[Player] = []
         self.client_sockets = []
         self.available_positions = ["top_left", "top_middle", "top_right", "bottom_right", "bottom_middle",
@@ -388,6 +388,7 @@ class Game:
                       f"{winning_player.current_bet}, total_chips_of_connected_players: {total_chips_of_connected_players}")
                 if winning_player.chips == total_chips_of_connected_players:
                     winning_player.won_game = True
+                    winning_player.finishing_position = 1
             else:
                 winner_message = "It's a tie between " + ", ".join(
                     [player.name for player in winning_players]) + f" for {pot_amount} chips!"
@@ -535,7 +536,8 @@ class Game:
                 self.deal_cards(2, player)
             if not player.busted and player.chips == 0 and player.all_in:
                 player.busted = True
-                player.finishing_position = self.next_available_finishing_position - 1
+                self.next_available_finishing_position -= 1
+                player.finishing_position = self.next_available_finishing_position
             else:
                 player.all_in = False
 
@@ -816,10 +818,10 @@ class Hand:
         straight_flush = royal_flush = False
         for suit, count in suit_counts.items():
             if count >= 5:
-                flush_ranks = sorted([self.RANKS[card.rank] for card in self.cards if card.suit == suit])
+                flush_ranks = sorted([self.RANKS[card.rank] for card in self.cards if card.suit == suit], reverse=True)
                 if self.check_straight(flush_ranks):
                     straight_flush = True
-                    if flush_ranks[-1] == 14 and flush_ranks[0] == 10:  # Ace-high straight flush (Royal Flush)
+                    if flush_ranks[:5] == [14, 13, 12, 11, 10]:  # Checking for Ace high straight flush (Royal Flush)
                         royal_flush = True
         return straight_flush, royal_flush
 
@@ -831,18 +833,20 @@ class Hand:
         ranks, suits = self.count_ranks_and_suits()
 
         # Check for flush and straight
-        flush = self.check_flush(suits)
+        flush, suit_counts = self.check_flush(suits)
         straight = self.check_straight(ranks)
 
         # Check for four of a kind, three of a kind, pairs
         rank_counts = {rank: ranks.count(rank) for rank in ranks}
         max_count = max(rank_counts.values())
 
+        straight_flush, royal_flush = self.check_straight_flush(suit_counts)
+
         # Royal Flush
-        if flush and ranks[:5] == [14, 13, 12, 11, 10]:
+        if royal_flush:
             return "Royal Flush", ranks
         # Straight Flush
-        if flush and straight:
+        if straight_flush:
             return "Straight Flush", ranks if ranks != [14, 5, 4, 3, 2] else [5, 4, 3, 2, 1]
         # Four of a Kind
         if max_count == 4:
@@ -904,7 +908,7 @@ class Hand:
         # Check for full house (three of a kind and at least one pair)
         is_full_house = is_three_of_a_kind and pair_counts > 0
 
-        # For straight flush and royal flush, need to check if the flush cards form a straight
+        # For straight flush and royal flush, we need to check if the flush cards form a straight
         is_straight_flush, is_royal_flush = self.check_straight_flush(suit_counts)
 
         hand_results = {

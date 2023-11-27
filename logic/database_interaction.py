@@ -222,15 +222,16 @@ class DatabaseInteraction(DatabaseBase):
             for game_info in games_info:
                 game_id, start_time, end_time, position, buy_in = game_info
                 participants = self.get_game_participants(game_id)
-                game_details = {
-                    "game_id": game_id,
-                    "start_time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
-                    "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
-                    "position": position,
-                    "buy_in": buy_in,
-                    "participants": participants
-                }
-                game_details_list.append(game_details)
+                if end_time:
+                    game_details = {
+                        "game_id": game_id,
+                        "start_time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                        "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
+                        "position": position,
+                        "buy_in": buy_in,
+                        "participants": participants
+                    }
+                    game_details_list.append(game_details)
             return game_details_list
 
     def get_game_participants(self, game_id):
@@ -263,8 +264,8 @@ class DatabaseInteraction(DatabaseBase):
             if result:
                 return dict(zip(valid_attributes, result))
             else:
-                # Return None if the user is not found
-                return None
+                # Return False if the user is not found
+                return False
 
     def update_average_scores(self, user_id, game_aggressiveness_score, game_conservativeness_score):
         with self.db_cursor() as cursor:
