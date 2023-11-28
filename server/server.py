@@ -577,9 +577,14 @@ class LobbyServer:
         user_id = request['user_id']
         filename = self.database_interaction.get_user_profile_picture(user_id)
         file_path = os.path.join("pfps", filename)
-        with open(file_path, "rb") as file:
-            image_data = file.read()
-        return {"image_data": image_data, "filename": filename}
+        try:
+            with open(file_path, "rb") as file:
+                image_data = file.read()
+
+            encoded_image_data = base64.b64encode(image_data).decode('utf-8')
+            return {"success": True, "image_data": encoded_image_data, "filename": filename}
+        except Exception:
+            return {"success": False}
 
 
 if __name__ == "__main__":

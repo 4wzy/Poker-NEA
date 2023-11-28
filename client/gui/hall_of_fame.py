@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import font as tkfont
 from PIL import Image, ImageDraw, ImageTk
+from client.gui.user_profile import ProfilePictureManager
 
 class HallOfFame(tk.Tk):
     def __init__(self, controller, user_id):
@@ -11,6 +12,7 @@ class HallOfFame(tk.Tk):
         self.configure(bg="#333333")
         self.geometry('800x600')
         self.player_banners = {}  # Dictionary to store player banners
+        self.profile_picture_manager = ProfilePictureManager(self.controller)
 
         top_frame = tk.Frame(self, bg="#333333")
         top_frame.pack(pady=10, fill="x")
@@ -130,8 +132,10 @@ class HallOfFame(tk.Tk):
         for player in players:
             user_id, username, profile_pic, attribute_value = player
             print(f"username: {username}, user_id: {user_id}")
-            profile_pic_path = self.get_profile_pic_path(user_id)
-            self.add_player_banner(username, profile_pic_path, f"{selected_attribute}: {attribute_value}", user_id)
+            # profile_pic_path = self.get_profile_pic_path(user_id)
+            profile_pic_path = self.profile_picture_manager.check_and_fetch_profile_picture(user_id)
+            if profile_pic_path:
+                self.add_player_banner(username, profile_pic_path, f"{selected_attribute}: {attribute_value}", user_id)
 
     def get_profile_pic_path(self, user_id):
         # Placeholder method to return the profile picture path based on the user_id

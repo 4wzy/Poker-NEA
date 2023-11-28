@@ -1,4 +1,4 @@
-from gui.controller import Controller
+from client.gui.controller import Controller
 
 if __name__ == "__main__":
     controller = Controller()

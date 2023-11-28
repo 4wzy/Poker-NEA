@@ -1,4 +1,5 @@
 import base64
+import glob
 import os
 import time
 import tkinter as tk
@@ -74,82 +75,84 @@ class UserProfile(tk.Frame):
             edit_name_button.pack(side="left", padx=10, pady=10)
 
         if self.statistics:
-                # Statistics display
-                stats_details_frame = tk.Frame(self, bg="#555555", padx=10, pady=10)
-                stats_details_frame.grid(row=1, column=0, columnspan=4, sticky="ew")
+            # Statistics display
+            stats_details_frame = tk.Frame(self, bg="#555555", padx=10, pady=10)
+            stats_details_frame.grid(row=1, column=0, columnspan=4, sticky="ew")
 
-                games_played_label = tk.Label(stats_details_frame, text=f"Games Played: {self.statistics['games_played']}",
-                                              bg="#555555", fg="#FFFFFF")
-                games_played_label.pack(side="top", fill="x")
+            games_played_label = tk.Label(stats_details_frame, text=f"Games Played: {self.statistics['games_played']}",
+                                          bg="#555555", fg="#FFFFFF")
+            games_played_label.pack(side="top", fill="x")
 
-                games_won_label = tk.Label(stats_details_frame, text=f"Games Won: {self.statistics['games_won']}",
-                                           bg="#555555", fg="#FFFFFF")
-                games_won_label.pack(side="top", fill="x")
+            games_won_label = tk.Label(stats_details_frame, text=f"Games Won: {self.statistics['games_won']}",
+                                       bg="#555555", fg="#FFFFFF")
+            games_won_label.pack(side="top", fill="x")
 
-                total_play_time_label = tk.Label(stats_details_frame, text=f"Total Play Time: {self.statistics['total_play_time']}",
-                                                 bg="#555555", fg="#FFFFFF")
-                total_play_time_label.pack(side="top", fill="x")
+            total_play_time_label = tk.Label(stats_details_frame,
+                                             text=f"Total Play Time: {self.statistics['total_play_time']}",
+                                             bg="#555555", fg="#FFFFFF")
+            total_play_time_label.pack(side="top", fill="x")
 
-                rgscore_label = tk.Label(stats_details_frame, text=f"RG Score: {self.statistics['rgscore']}",
-                                         bg="#555555", fg="#FFFFFF")
-                rgscore_label.pack(side="top", fill="x")
+            rgscore_label = tk.Label(stats_details_frame, text=f"RG Score: {self.statistics['rgscore']}",
+                                     bg="#555555", fg="#FFFFFF")
+            rgscore_label.pack(side="top", fill="x")
 
-                streak_label = tk.Label(stats_details_frame, text=f"Streak: {self.statistics['streak']}",
-                                        bg="#555555", fg="#FFFFFF")
-                streak_label.pack(side="top", fill="x")
+            streak_label = tk.Label(stats_details_frame, text=f"Streak: {self.statistics['streak']}",
+                                    bg="#555555", fg="#FFFFFF")
+            streak_label.pack(side="top", fill="x")
 
-                aggressiveness_score_label = tk.Label(stats_details_frame,
-                                                      text=f"Average Aggressiveness Score: {self.statistics['average_aggressiveness_score']}",
-                                                      bg="#555555", fg="#FFFFFF")
-                aggressiveness_score_label.pack(side="top", fill="x")
+            aggressiveness_score_label = tk.Label(stats_details_frame,
+                                                  text=f"Average Aggressiveness Score: {self.statistics['average_aggressiveness_score']}",
+                                                  bg="#555555", fg="#FFFFFF")
+            aggressiveness_score_label.pack(side="top", fill="x")
 
-                conservativeness_score_label = tk.Label(stats_details_frame,
-                                                        text=f"Average Conservativeness Score: {self.statistics['average_conservativeness_score']}",
-                                                        bg="#555555", fg="#FFFFFF")
-                conservativeness_score_label.pack(side="top", fill="x")
+            conservativeness_score_label = tk.Label(stats_details_frame,
+                                                    text=f"Average Conservativeness Score: {self.statistics['average_conservativeness_score']}",
+                                                    bg="#555555", fg="#FFFFFF")
+            conservativeness_score_label.pack(side="top", fill="x")
 
-                # Separate frames for the table and the graph (to make the GUI more compact)
-                self.left_frame = tk.Frame(self, bg="#333333")
-                self.left_frame.grid(row=4, column=0, sticky="nswe")
+            # Separate frames for the table and the graph (to make the GUI more compact)
+            self.left_frame = tk.Frame(self, bg="#333333")
+            self.left_frame.grid(row=4, column=0, sticky="nswe")
 
-                self.right_frame = tk.Frame(self, bg="#333333")
-                self.right_frame.grid(row=4, column=1, sticky="nswe")
+            self.right_frame = tk.Frame(self, bg="#333333")
+            self.right_frame.grid(row=4, column=1, sticky="nswe")
 
-                self.create_recent_games_table(self.left_frame)
+            self.create_recent_games_table(self.left_frame)
 
-                # GUI features related to graph
-                options_frame = tk.Frame(self, bg="#333333")
-                options_frame.grid(row=2, column=0, columnspan=4, sticky="ew")
+            # GUI features related to graph
+            options_frame = tk.Frame(self, bg="#333333")
+            options_frame.grid(row=2, column=0, columnspan=4, sticky="ew")
 
-                info_label = tk.Label(options_frame, text="Select options to view graph", font=tkfont.Font(family="Cambria", size=14),
-                                      fg="#FFFFFF", bg="#333333")
-                info_label.pack(side="top", fill="x")
+            info_label = tk.Label(options_frame, text="Select options to view graph",
+                                  font=tkfont.Font(family="Cambria", size=14),
+                                  fg="#FFFFFF", bg="#333333")
+            info_label.pack(side="top", fill="x")
 
-                self.num_games_var = tk.StringVar()
-                self.num_games_dropdown = ttk.Combobox(self, textvariable=self.num_games_var, state="readonly")
-                self.num_games_dropdown['values'] = (5, 10, 20, 50, 100)
-                self.num_games_dropdown.set(10)
-                self.num_games_dropdown.grid(row=3, column=0, padx=10, pady=10)
+            self.num_games_var = tk.StringVar()
+            self.num_games_dropdown = ttk.Combobox(self, textvariable=self.num_games_var, state="readonly")
+            self.num_games_dropdown['values'] = (5, 10, 20, 50, 100)
+            self.num_games_dropdown.set(10)
+            self.num_games_dropdown.grid(row=3, column=0, padx=10, pady=10)
 
-                self.attribute_var = tk.StringVar()
-                self.attribute_dropdown = ttk.Combobox(self, textvariable=self.attribute_var, state="readonly")
-                self.attribute_dropdown['values'] = ("pos", "winnings", "aggressiveness_score", "conservativeness_score")
-                self.attribute_dropdown.set("conservativeness_score")  # default value
-                self.attribute_dropdown.grid(row=3, column=1, padx=10, pady=10)
-                self.attribute_dropdown.bind("<<ComboboxSelected>>", self.on_attribute_selected)
+            self.attribute_var = tk.StringVar()
+            self.attribute_dropdown = ttk.Combobox(self, textvariable=self.attribute_var, state="readonly")
+            self.attribute_dropdown['values'] = ("pos", "winnings", "aggressiveness_score", "conservativeness_score")
+            self.attribute_dropdown.set("conservativeness_score")  # default value
+            self.attribute_dropdown.grid(row=3, column=1, padx=10, pady=10)
+            self.attribute_dropdown.bind("<<ComboboxSelected>>", self.on_attribute_selected)
 
-                default_attribute = "aggressiveness_score"
-                default_scores = self.controller.network_manager.send_message({
-                    "type": "get_attribute_from_user_games_played",
-                    "user_id": self.profile_user_id,
-                    "attribute": default_attribute,
-                    "num_games": self.num_games
-                })
-                self.display_graph(default_scores, default_attribute, self.right_frame)
+            default_attribute = "aggressiveness_score"
+            default_scores = self.controller.network_manager.send_message({
+                "type": "get_attribute_from_user_games_played",
+                "user_id": self.profile_user_id,
+                "attribute": default_attribute,
+                "num_games": self.num_games
+            })
+            self.display_graph(default_scores, default_attribute, self.right_frame)
 
-                self.grid_rowconfigure(4, weight=1)
-                self.grid_columnconfigure(0, weight=1)
-                self.grid_columnconfigure(1, weight=1)
+            self.grid_rowconfigure(4, weight=1)
+            self.grid_columnconfigure(0, weight=1)
+            self.grid_columnconfigure(1, weight=1)
 
     def on_attribute_selected(self, event):
         num_games = int(self.num_games_var.get())
@@ -211,7 +214,8 @@ class UserProfile(tk.Frame):
 
     def edit_profile_picture(self):
         self.profile_pic_selection_window = SelectProfilePic(self, self.on_profile_pic_selected,
-                                                             self.current_pic_name, self.controller, self.profile_user_id)
+                                                             self.current_pic_name, self.controller,
+                                                             self.profile_user_id)
 
     def create_recent_games_table(self, frame):
         columns = ("start_time", "end_time", "position", "buy_in", "participants")
@@ -400,6 +404,8 @@ class SelectProfilePic(tk.Toplevel):
             "filename": filename  # Include the filename in the message
         })
 
+        self.set_profile_picture(filename)
+
     def add_pic_button(self, parent, pic_name):
         img = Image.open(f"gui/Images/Pfps/{pic_name}")
         img.thumbnail((80, 80))  # Creates a thumbnail of the image
@@ -413,3 +419,48 @@ class SelectProfilePic(tk.Toplevel):
     def set_profile_picture(self, pic_name):
         self.callback(pic_name)
         self.destroy()
+
+
+class ProfilePictureManager:
+    def __init__(self, controller):
+        self.controller = controller
+        self.profile_pictures_path = "gui/Images/Pfps"
+
+    def check_and_fetch_profile_picture(self, user_id):
+        filename_response = self.controller.network_manager.send_message({
+            "type": "get_user_profile_picture",
+            "user_id": user_id
+        })
+        print(f"filename_response: {filename_response}")
+        if filename_response:
+            filename = filename_response if filename_response else "default.png"
+            local_file_path = os.path.join(self.profile_pictures_path, filename)
+            print(f"local_file_path: {local_file_path}")
+
+            if not os.path.exists(local_file_path):
+                # Delete old profile pictures
+                for old_file in glob.glob(f"{self.profile_pictures_path}/{user_id}_*.png"):
+                    os.remove(old_file)
+                    print(f"removed {old_file}")
+
+                image_data_response = self.controller.network_manager.send_message({
+                    "type": "get_profile_picture",
+                    "user_id": user_id
+                })
+                if image_data_response:
+                    # Save the profile picture locally
+                    print(f"Image data response received")
+                    if image_data_response.get("success"):
+                        self.save_profile_picture(local_file_path, image_data_response['image_data'])
+                    else:
+                        return False
+
+            return local_file_path
+
+        return False
+
+    def save_profile_picture(self, file_path, image_data_base64):
+        image_data = base64.b64decode(image_data_base64)
+        with open(file_path, 'wb') as file:
+            file.write(image_data)
+        print(f"Saved profile picture to {file_path}")

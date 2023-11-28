@@ -1,4 +1,3 @@
-import time
 from itertools import combinations
 from random import randint
 from typing import List

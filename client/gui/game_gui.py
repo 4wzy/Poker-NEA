@@ -1,3 +1,4 @@
+import base64
 import glob
 import json
 import os
@@ -11,9 +12,9 @@ from logic.odds_logic import monte_carlo_hand_odds
 
 
 class GameGUI(tk.Tk):
-    def __init__(self, controller, user_id, lobby_id, initial_state, player_starts_game, reconnecting, show_odds):
+    def __init__(self, controller, user_id, lobby_id, initial_state, player_starts_game, reconnecting, allow_odds):
         super().__init__()
-        self.show_odds = show_odds
+        self.allow_odds = allow_odds
         self.is_chatbox_shown = False
         self.last_highlighted_player_id = None
         self.geometry("1280x720")
@@ -66,7 +67,7 @@ class GameGUI(tk.Tk):
         odds_button = tk.Button(toggle_frame, text="Odds", command=self.show_odds, bg="#555555", fg="#FFFFFF",
                                 font=("Cambria", 12), relief="flat", padx=10, pady=5)
         odds_button.pack(side="left", padx=5)
-        if not show_odds:
+        if not allow_odds:
             odds_button.config(state="disabled")
 
         # Chat/Odds Display
@@ -759,7 +760,8 @@ class GameGUI(tk.Tk):
             "type": "get_profile_picture",
             "user_id": user_id
         })
-        image_data = response['image_data']
+        encoded_image_data = response['image_data']
+        image_data = base64.b64decode(encoded_image_data)
         with open(f"gui/Images/Pfps/{profile_picture_filename}", "wb") as file:
             file.write(image_data)
 
