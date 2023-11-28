@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import font as tkfont
 from PIL import Image, ImageDraw, ImageTk
+from client.gui.user_profile import ProfilePictureManager
+
 
 
 class MainMenu(tk.Tk):
@@ -10,6 +12,7 @@ class MainMenu(tk.Tk):
         self.user_id = user_id
         print(f"USING MAIN MENU WITH USER_ID: {self.user_id}")
         self.controller.network_manager.reset_connection()
+        self.profile_picture_manager = ProfilePictureManager(self.controller)
         self.username = self.controller.network_manager.send_message({"type": "get_username", "user_id": self.user_id})
         self.rg_score = self.controller.network_manager.send_message({"type": "update_rg_score", "user_id":
             self.user_id})
@@ -43,9 +46,11 @@ class MainMenu(tk.Tk):
         self.profile_pic.pack(side="right")
         self.profile_pic.create_oval(54, 4, 96, 46, outline="red", fill="#777777")
 
-        self.profile_picture = self.controller.network_manager.send_message({"type": "get_user_profile_picture",
-                                                                             "user_id": self.user_id})
-        self.image = Image.open(f"gui/Images/Pfps/{self.profile_picture}")
+        profile_pic_path = self.profile_picture_manager.check_and_fetch_profile_picture(user_id)
+        if not profile_pic_path:
+            profile_pic_path = "gui/Images/Pfps/default.png"
+
+        self.image = Image.open(profile_pic_path)
         self.image = self.image.resize((40, 40))
 
         mask = Image.new('L', (40, 40), 0)

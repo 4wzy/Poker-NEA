@@ -9,7 +9,7 @@ from tkinter import simpledialog, messagebox
 from PIL import Image, ImageDraw, ImageTk
 from logic.database_interaction import DatabaseInteraction
 from logic.odds_logic import monte_carlo_hand_odds
-
+from client.gui.user_profile import ProfilePictureManager
 
 class GameGUI(tk.Tk):
     def __init__(self, controller, user_id, lobby_id, initial_state, player_starts_game, reconnecting, allow_odds):
@@ -20,6 +20,7 @@ class GameGUI(tk.Tk):
         self.geometry("1280x720")
         self.configure(bg="#333333")
         self.controller = controller
+        self.profile_picture_manager = ProfilePictureManager(self.controller)
         self.database_interaction = DatabaseInteraction()
         self.user_id = user_id
         self.username = self.database_interaction.get_username(self.user_id)
@@ -770,13 +771,9 @@ class GameGUI(tk.Tk):
             # Create a frame to hold the player components
             player_frame = tk.Frame(self.game_canvas, bg="#302525")
 
-            local_pfp_path = f"gui/Images/Pfps/{profile_picture_filename}"
-            if not os.path.exists(local_pfp_path):
-                # Delete old profile pictures
-                for old_file in glob.glob(f"gui/Images/Pfps/{user_id}_*.png"):
-                    os.remove(old_file)
-
-                self.fetch_and_store_profile_picture(user_id, profile_picture_filename)
+            local_pfp_path = self.profile_picture_manager.check_and_fetch_profile_picture(user_id)
+            if not local_pfp_path:
+                local_pfp_path = f"gui/Images/Pfps/default.png"
 
             profile_photo = Image.open(local_pfp_path)
             profile_photo = profile_photo.resize((50, 50))

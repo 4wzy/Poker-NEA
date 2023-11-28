@@ -132,7 +132,6 @@ class HallOfFame(tk.Tk):
         for player in players:
             user_id, username, profile_pic, attribute_value = player
             print(f"username: {username}, user_id: {user_id}")
-            # profile_pic_path = self.get_profile_pic_path(user_id)
             profile_pic_path = self.profile_picture_manager.check_and_fetch_profile_picture(user_id)
             if profile_pic_path:
                 self.add_player_banner(username, profile_pic_path, f"{selected_attribute}: {attribute_value}", user_id)
