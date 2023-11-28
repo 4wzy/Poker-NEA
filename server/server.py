@@ -539,12 +539,10 @@ class LobbyServer:
         if request['type'] == 'upload_profile_picture':
             # Use the filename provided by the client
             filename = request['filename']
-            print(f"using filename {filename}")
 
             # Decode the image data
             encoded_image_data = request['image_data']
             image_data = base64.b64decode(encoded_image_data)
-            print("decoded image data")
 
             directory = "pfps"
             if not os.path.exists(directory):

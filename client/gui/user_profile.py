@@ -18,8 +18,8 @@ class UserProfile(tk.Frame):
         self.controller = controller
         self.profile_user_id = profile_user_id
         self.previous_menu = previous_menu
-        self.current_pic_name = self.controller.network_manager.send_message({"type": "get_user_profile_picture",
-                                                                              "user_id": self.profile_user_id})
+        self.profile_picture_manager = ProfilePictureManager(self.controller)
+        self.current_pic_path = self.profile_picture_manager.check_and_fetch_profile_picture(self.profile_user_id)
         self.own_profile = self.profile_user_id == own_user_id  # Boolean flag indicating if the profile belongs to the current user
         self.configure(bg="#333333")
 
@@ -37,7 +37,7 @@ class UserProfile(tk.Frame):
 
         # Profile picture
         profile_pic_size = (150, 150)
-        self.image = Image.open(f"gui/Images/Pfps/{self.current_pic_name}")
+        self.image = Image.open(self.current_pic_path)
         self.image = self.image.resize(profile_pic_size)
 
         # Create a mask for the circular profile picture
@@ -177,10 +177,15 @@ class UserProfile(tk.Frame):
         self.display_graph(scores, attribute, self.right_frame)
 
     def display_graph(self, scores, attribute, frame):
-        # If there are no scores or all scores are zero, display error message
-        # I did this because there is no point in rendering an empty graph
+        for widget in frame.winfo_children():
+            widget.destroy()
+
+        # If there are no scores, display an error message instead of the graph
         if not scores:
-            messagebox.showinfo("No Data", "No games played yet or no data available for games played.")
+            no_data_label = tk.Label(frame,
+                                     text="No games played yet or no data available for graph based on games played.",
+                                     fg="#FFFFFF", bg="#333333")
+            no_data_label.pack(side="top", fill="both", expand=True)
             return
 
         figure = Figure(figsize=(5, 5), dpi=100)
