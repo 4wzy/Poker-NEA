@@ -1,5 +1,4 @@
 import tkinter as tk
-from logic.auth import UserAuth
 from tkinter import messagebox
 
 
@@ -7,7 +6,6 @@ class RegisterMenu(tk.Tk):
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
-        self.user_auth = UserAuth()
         self.title("Login Menu")
         self.geometry("800x600")
         self.configure(bg="#181F1C")
@@ -68,7 +66,8 @@ class RegisterMenu(tk.Tk):
         self.grid_columnconfigure(1, weight=1)
 
     def register_user(self, username: str, password: str, email: str):
-        result = self.user_auth.register_user(username, password, email)
+        result = self.controller.network_manager.send_message({"type": "register_user", "username": username, "password": password, "email": email})
+
 
         self.help_label.config(text=result["message"])
         if not result["success"]:

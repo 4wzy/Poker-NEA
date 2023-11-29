@@ -1,4 +1,4 @@
-from logic.database_base import DatabaseBase
+from helpers.database_base import DatabaseBase
 import hashlib
 import secrets
 import mysql.connector

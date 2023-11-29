@@ -1,15 +1,12 @@
 import base64
-import glob
 import json
-import os
 import time
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 
 from PIL import Image, ImageDraw, ImageTk
-from logic.database_interaction import DatabaseInteraction
-from logic.odds_logic import monte_carlo_hand_odds
-from client.gui.user_profile import ProfilePictureManager
+from helpers.odds_logic import monte_carlo_hand_odds
+from gui.user_profile import ProfilePictureManager
 
 class GameGUI(tk.Tk):
     def __init__(self, controller, user_id, lobby_id, initial_state, player_starts_game, reconnecting, allow_odds):
@@ -21,9 +18,8 @@ class GameGUI(tk.Tk):
         self.configure(bg="#333333")
         self.controller = controller
         self.profile_picture_manager = ProfilePictureManager(self.controller)
-        self.database_interaction = DatabaseInteraction()
         self.user_id = user_id
-        self.username = self.database_interaction.get_username(self.user_id)
+        self.username = self.controller.network_manager.send_message({"type": "get_username", "user_id": self.user_id})
         self.lobby_id = lobby_id
         self.chat_messages = []
         self.canvas_items = []

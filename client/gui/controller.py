@@ -1,15 +1,15 @@
 import tkinter as tk
-from client.gui.login_menu import LoginMenu
-from client.gui.register_menu import RegisterMenu
-from client.gui.lobby_browser import LobbyBrowser
-from client.gui.main_menu import MainMenu
-from client.gui.game_gui import GameGUI
-from client.gui.hall_of_fame import HallOfFame
-from logic.network_manager import NetworkManager
-from client.gui.settings_menu import SettingsMenu
-from client.gui.responsible_gambling_menu import ResponsibleGamblingMenu
-from client.gui.how_to_play import HowToPlay
-from client.gui.user_profile import UserProfile
+from gui.login_menu import LoginMenu
+from gui.register_menu import RegisterMenu
+from gui.lobby_browser import LobbyBrowser
+from gui.main_menu import MainMenu
+from gui.game_gui import GameGUI
+from gui.hall_of_fame import HallOfFame
+from helpers.network_manager import NetworkManager
+from gui.settings_menu import SettingsMenu
+from gui.responsible_gambling_menu import ResponsibleGamblingMenu
+from gui.how_to_play import HowToPlay
+from gui.user_profile import UserProfile
 
 
 class Controller:
@@ -21,7 +21,7 @@ class Controller:
     def run(self):
         # self.open_login_menu()
         # The call to open_main_menu() is for debugging purposes only - to skip the login stage for time efficiency
-        self.open_main_menu(27)
+        self.open_main_menu(29)
         tk.mainloop()
 
     def open_login_menu(self):

@@ -1,4 +1,3 @@
-from logic.auth import UserAuth
 import tkinter as tk
 from tkinter import messagebox
 
@@ -6,7 +5,6 @@ class LoginMenu(tk.Tk):
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
-        self.user_auth = UserAuth()
         self.title("Login Menu")
         self.geometry("800x600")
         self.configure(bg="#181F1C")
@@ -59,7 +57,7 @@ class LoginMenu(tk.Tk):
         self.grid_columnconfigure(1, weight=1)
 
     def login_user(self, username: str, password: str):
-        result = self.user_auth.login_user(username, password)
+        result = self.controller.network_manager.send_message({"type": "login_user", "username": username, "password": password})
 
         self.help_label.config(text=result["message"])
 

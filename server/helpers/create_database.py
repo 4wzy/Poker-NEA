@@ -1,4 +1,4 @@
-from logic.database_interaction import DatabaseInteraction
+from server.helpers.database_interaction import DatabaseInteraction
 
 
 def main():

@@ -1,14 +1,13 @@
 import base64
-import datetime
 import glob
 import os
 import socket
 import threading
 import json
-from logic.database_interaction import DatabaseInteraction
-from logic.game_logic import Game, Player
+from helpers.database_interaction import DatabaseInteraction
+from shared.game_logic import Game, Player
+from helpers.auth import UserAuth
 from typing import Dict
-import time
 
 
 class LobbyServer:
@@ -18,6 +17,7 @@ class LobbyServer:
         self.server_socket.listen(0)
 
         self.database_interaction = DatabaseInteraction()
+        self.user_auth = UserAuth()
         self.lobbies: Dict[str, Game] = {}  # I have explicitly used type hinting for easier development
 
     def start(self):
@@ -151,6 +151,10 @@ class LobbyServer:
                         response = self.database_interaction.get_game_participants(request['game_id'])
                     elif request['type'] == 'get_profile_picture':
                         response = self.serve_profile_picture(request)
+                    elif request['type'] == 'register_user':
+                        response = self.user_auth.register_user(request['username'], request['password'], request['email'])
+                    elif request['type'] == 'login_user':
+                        response = self.user_auth.login_user(request['username'], request['password'])
 
                     if response is not None:
                         client_socket.sendall((json.dumps(response) + '\n').encode('utf-8'))

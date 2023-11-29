@@ -1,4 +1,4 @@
-from logic.game_logic import Card, Deck, Hand
+from shared.game_logic import Card, Deck, Hand
 
 
 # I have chosen to get these odds using a Monte Carlo situation due to its good balance between accuracy and

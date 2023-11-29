@@ -1,9 +1,9 @@
 import math
 
-from logic.database_base import DatabaseBase
+from helpers.database_base import DatabaseBase
 from datetime import datetime, date
 import mysql.connector
-from contextlib import contextmanager
+
 
 class DatabaseInteraction(DatabaseBase):
     def create_database_and_tables(self):

@@ -219,7 +219,7 @@ class UserProfile(tk.Frame):
 
     def edit_profile_picture(self):
         self.profile_pic_selection_window = SelectProfilePic(self, self.on_profile_pic_selected,
-                                                             self.current_pic_name, self.controller,
+                                                             self.current_pic_path, self.controller,
                                                              self.profile_user_id)
 
     def create_recent_games_table(self, frame):
@@ -331,7 +331,7 @@ class UserProfile(tk.Frame):
 
 
 class SelectProfilePic(tk.Toplevel):
-    def __init__(self, parent, callback, current_pic_name, controller, profile_user_id):
+    def __init__(self, parent, callback, current_pic_path, controller, profile_user_id):
         super().__init__(parent)
         self.callback = callback
         self.title('Select Profile Picture')
@@ -341,7 +341,7 @@ class SelectProfilePic(tk.Toplevel):
             "cat.png", "default.png", "elephant.png", "giraffe.png",
             "hedgehog.png", "llama.png", "octopus.png", "tiger.png"
         ]
-        self.current_pic_name = current_pic_name
+        self.current_pic_path = current_pic_path
         self.controller = controller
         self.profile_user_id = profile_user_id
         self.create_widgets()
@@ -366,7 +366,7 @@ class SelectProfilePic(tk.Toplevel):
         label = tk.Label(current_pic_frame, text="Current Picture", fg="#FFFFFF", bg="#555555")
         label.pack(side='top')
 
-        img = Image.open(f"gui/Images/Pfps/{self.current_pic_name}")
+        img = Image.open(self.current_pic_path)
         img.thumbnail((100, 100))
         current_photo = ImageTk.PhotoImage(img)
 

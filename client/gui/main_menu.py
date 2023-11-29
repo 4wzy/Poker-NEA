@@ -117,9 +117,14 @@ class MainMenu(tk.Tk):
                                     fg="#FFFFFF", bg="#555555")
         placeholder_text.pack()
 
+        sign_out_button = tk.Button(container, text="Sign out", font=tkfont.Font(family="Cambria", size=16), fg="#FFFFFF",
+                                bg="#444444", bd=0, padx=20, pady=10, command=self.controller.open_login_menu)
+        sign_out_button.grid(row=7, column=0, sticky="sw", pady=10, padx=10)
+
         quit_button = tk.Button(container, text="Quit", font=tkfont.Font(family="Cambria", size=16), fg="#FFFFFF",
                                 bg="#444444", bd=0, padx=20, pady=10, command=self.destroy)
         quit_button.grid(row=7, column=3, sticky="se", pady=10, padx=10)
+
 
     def update_profile_picture(self, user_id, new_pic_name):
         profile_pic_path = f"gui/Images/Pfps/{new_pic_name}"
