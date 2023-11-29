@@ -88,7 +88,7 @@ class UserProfile(tk.Frame):
             games_won_label.pack(side="top", fill="x")
 
             total_play_time_label = tk.Label(stats_details_frame,
-                                             text=f"Total Play Time: {self.statistics['total_play_time']}",
+                                             text=f"Total Play Time: {self.statistics['total_play_time']} seconds",
                                              bg="#555555", fg="#FFFFFF")
             total_play_time_label.pack(side="top", fill="x")
 
@@ -204,7 +204,7 @@ class UserProfile(tk.Frame):
 
         # Plot the data
         plot.plot(x_range, scores, marker='o')
-        plot.set_title(f'Average {title} Over Last Games')
+        plot.set_title(f'{title} Over Last {len(scores)} Games')
         plot.set_ylabel(title)
         plot.set_xlabel('Games')
 

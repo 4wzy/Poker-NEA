@@ -21,7 +21,7 @@ class Controller:
     def run(self):
         # self.open_login_menu()
         # The call to open_main_menu() is for debugging purposes only - to skip the login stage for time efficiency
-        self.open_main_menu(29)
+        self.open_main_menu(23)
         tk.mainloop()
 
     def open_login_menu(self):
