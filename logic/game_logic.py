@@ -213,6 +213,8 @@ class Game:
             checked_once = True
 
     def get_previous_active_player(self, current_position, use_current_player):
+        original_player = current_position
+
         if len(self.get_players_for_showdown()) == 0:
             # If the server is force terminated, stop it from being in an infinite loop
             print("ERROR ERROR ERROR: NO PLAYERS AVAILABLE FOR GET_NEXT_ACTIVE_PLAYER")
@@ -224,11 +226,18 @@ class Game:
                 print(f"(get_previous_active_player) FINAL: {current_position}")
                 return current_position
 
+        checked_once = False
         while True:
+            if checked_once:
+                if current_position == original_player:
+                    print("Returning 999")
+                    return 999
+
             current_position = (current_position - 1) % len(self.players)
             print(f"(get_previous_active_player): {current_position}")
             if self.is_player_active(current_position):
                 return current_position
+            checked_once = True
 
     def is_player_active(self, current_position):
         return not (self.players[current_position].folded or
@@ -740,7 +749,8 @@ class Game:
         # Check if everyone has folded apart from one player
         if self.only_one_player_active():
             # The remaining active player wins the pot
-            remaining_player = self.get_active_players()[0]
+            remaining_player = self.get_players_for_showdown()[0]
+            # remaining_player = self.get_active_players()[0]
             remaining_player.chips += self.pot.chips
             self.pot.chips = 0
             message = f"{remaining_player.name} wins the pot as everyone else folded!"
