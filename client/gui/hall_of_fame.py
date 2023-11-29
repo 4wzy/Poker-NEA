@@ -34,6 +34,12 @@ class HallOfFame(tk.Tk):
         dropdown = tk.OptionMenu(top_frame, self.sort_var, *sorting_options, command=self.update_hall)
         dropdown.pack(side="right", padx=10)
 
+        self.top_players_var = tk.StringVar(self)
+        self.top_players_var.set("10")
+        top_players_options = ["5", "10", "20", "50", "100"]
+        top_players_dropdown = tk.OptionMenu(top_frame, self.top_players_var, *top_players_options, command=self.update_hall)
+        top_players_dropdown.pack(side="right", padx=10)
+
         self.canvas = tk.Canvas(self, bg="#333333")
         scrollbar = tk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
         self.scroll_frame = tk.Frame(self.canvas, bg="#333333")
@@ -101,10 +107,13 @@ class HallOfFame(tk.Tk):
 
     def update_hall(self, *args):
         selected_attribute = self.sort_var.get()
+        if selected_attribute == "Select Attribute":
+            return
+        limit = int(self.top_players_var.get())
 
         # Get players based on the selected attribute
         if selected_attribute == "Chips":
-            players = self.controller.network_manager.send_message({"type": "get_top_players_by_chips", "limit": 50})
+            players = self.controller.network_manager.send_message({"type": "get_top_players_by_chips", "limit": limit})
             if players is None:
                 return
         else:
@@ -117,7 +126,7 @@ class HallOfFame(tk.Tk):
             players = self.controller.network_manager.send_message({
                 "type": "get_top_players_by_attribute",
                 "attribute": attribute_mapping[selected_attribute],
-                "limit": 50
+                "limit": limit
             })
 
             if players is None:
