@@ -218,6 +218,7 @@ class UserProfile(tk.Frame):
         canvas.draw()
 
     def edit_profile_picture(self):
+        self.current_pic_path = self.profile_picture_manager.check_and_fetch_profile_picture(self.profile_user_id)
         self.profile_pic_selection_window = SelectProfilePic(self, self.on_profile_pic_selected,
                                                              self.current_pic_path, self.controller,
                                                              self.profile_user_id)

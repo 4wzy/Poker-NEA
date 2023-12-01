@@ -5,21 +5,6 @@ Use https://williamvenner.github.io/AQA-Computer-Science-NEA-Checklist/
 check gpt for more details..
 --------------------
 
-Allow players to export the hall of fame as a text file (to get the writing and reading from files mark)
-
-Somehow implement inheritance, possibly polymorphism?
-
-Implement hash tables and use hashing to store passwords.
-Find a way to use stacks if you can.
-
-FIGURED OUT BUG POSSIBLY??
-The bug with multiple winners being displayed may have to do with when 2 players both still have money after 1 of them
-has gone all in.
-
-For example if players 1, 2, and 3 have 50 chips and player 4 has 200 chips.
-If player 4 raises 50 chips and all players go all in and player 3 wins,
-Player 3 and 4 will be displayed as winners instead of just player 3
-
 ------------------
 
 This exception handling from the sockets
