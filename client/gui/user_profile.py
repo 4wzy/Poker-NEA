@@ -228,7 +228,7 @@ class UserProfile(tk.Frame):
         self.recent_games_table = ttk.Treeview(frame, columns=columns, show="headings")
         for col in columns:
             self.recent_games_table.heading(col, text=col.replace("_", " ").title())
-            self.recent_games_table.column(col, anchor="center", width=100)  # Initial width, will be updated
+            self.recent_games_table.column(col, anchor="center", width=100)
 
         self.recent_games_table.grid(row=0, column=0, sticky="ew")
 
