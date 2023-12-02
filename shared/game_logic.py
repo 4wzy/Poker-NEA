@@ -198,7 +198,8 @@ class Game:
                 return current_position
 
         # The loop below should check if all the players are looped through, and should return the original player
-        # in order to avoid an infinite loop below
+        # in order to avoid an infinite loop below (there needs to be an exit condition when there are no available
+        # players)
         checked_once = False
         while True:
             if checked_once:
@@ -493,8 +494,8 @@ class Game:
     def get_player_left_state(self):
         # The state of a game after a player has left
         state = {
-            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'position': p.position} for p in
-                        self.players],
+            'players': [{'name': p.name, 'user_id': p.user_id, 'chips': p.chips, 'position': p.position, 'profile_picture': p.profile_picture}
+                        for p in self.players],
             'pot': self.pot.chips,
             'board': [str(card) for card in self.board],
             'current_player_turn': self.current_player_turn,

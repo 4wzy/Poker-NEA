@@ -201,8 +201,6 @@ class GameGUI(tk.Tk):
         # Now place the new players
         self.place_players(player_left_state)
         print("game_gui.py: PLAYERS PLACED AGAIN")
-        # Update the rest of the game state
-        # self.update_game_state(player_left_state)
 
     def get_coordinates_for_position(self, position):
         positions = {

@@ -94,7 +94,7 @@ class UserAuth(DatabaseBase):
         return True
 
     def validate_username(self, username: str) -> bool:
-        if len(username) < 3:
+        if len(username) < 3 or len(username) > 20:
             return False
         return True
 

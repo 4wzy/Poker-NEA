@@ -19,12 +19,13 @@ class DatabaseInteraction(DatabaseBase):
 
             """
             CREATE TABLE users (
-                user_id INT AUTO_INCREMENT PRIMARY KEY,
-                username VARCHAR(255) UNIQUE NOT NULL,
-                hashed_password VARCHAR(255) NOT NULL,
-                salt VARCHAR(255) NOT NULL,
-                email VARCHAR(255) UNIQUE NOT NULL,
-                profile_picture VARCHAR(255) DEFAULT 'default.png'
+            user_id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(20) UNIQUE NOT NULL,
+            hashed_password VARCHAR(255) NOT NULL,
+            salt VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            profile_picture VARCHAR(255) DEFAULT 'default.png',
+            chips_balance INT DEFAULT 500
             );
             """,
 
@@ -112,14 +113,6 @@ class DatabaseInteraction(DatabaseBase):
             aggressiveness_score FLOAT DEFAULT 0,
             conservativeness_score FLOAT DEFAULT 0,
             FOREIGN KEY (game_id) REFERENCES games(game_id) ON DELETE CASCADE,
-            FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-            );
-            """,
-
-            """
-            CREATE TABLE user_chips (
-            user_id INT UNIQUE PRIMARY KEY,
-            chips_balance INT DEFAULT 500, -- or any other default value you choose
             FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
             );
             """
@@ -505,10 +498,9 @@ class DatabaseInteraction(DatabaseBase):
     def get_top_players_by_chips(self, limit=50):
         with self.db_cursor() as cursor:
             query = """
-            SELECT users.user_id, users.username, users.profile_picture, user_chips.chips_balance
-            FROM user_chips
-            JOIN users ON user_chips.user_id = users.user_id
-            ORDER BY user_chips.chips_balance DESC
+            SELECT user_id, username, profile_picture, chips_balance
+            FROM users
+            ORDER BY chips_balance DESC
             LIMIT %s;
             """
             cursor.execute(query, (limit,))
@@ -523,35 +515,32 @@ class DatabaseInteraction(DatabaseBase):
 
     def get_chip_balance_for_user(self, user_id):
         with self.db_cursor() as cursor:
-            cursor.execute("SELECT chips_balance FROM user_chips WHERE user_id = %s", (user_id,))
+            cursor.execute("SELECT chips_balance FROM users WHERE user_id = %s", (user_id,))
             result = cursor.fetchone()
             if result == 0:
-                return 0  # Avoiding an error I was experiencing where Python returns None below
-            return result[0] if result else None  # Return None if the user isn't found
+                return 0  # Avoids a very specific error I was dealing with
+            return result[0] if result else False  # Return False if the user isn't found
 
     def update_chip_balance_for_user(self, user_id, new_balance):
         with self.db_cursor() as cursor:
-            cursor.execute("UPDATE user_chips SET chips_balance = %s WHERE user_id = %s", (new_balance, user_id))
+            cursor.execute("UPDATE users SET chips_balance = %s WHERE user_id = %s", (new_balance, user_id))
         return {"success": True, "balance": new_balance}
 
     def add_to_chip_balance_for_user(self, user_id, amount_to_add):
-        # Get the current chip balance for the user
         current_balance = self.get_chip_balance_for_user(user_id)
 
-        # If the user isn't found in the user_chips table, raise an error
-        if current_balance is None:
-            raise ValueError(f"No chip balance found for user with ID {user_id}")
+        if current_balance is False:
+            return {"success": False, "message": "User not found"}
 
         # Calculate the new balance
         new_balance = current_balance + amount_to_add
+
         # A user should never have a negative amount of chips. Set to 0 if this is the case.
         if new_balance < 0:
             new_balance = 0
 
         # Update the new balance in the database
-        with self.db_cursor() as cursor:
-            cursor.execute("UPDATE user_chips SET chips_balance = %s WHERE user_id = %s", (new_balance, user_id))
-        return {"success": True}
+        return self.update_chip_balance_for_user(user_id, new_balance)
 
     def get_username(self, user_id):
         with self.db_cursor() as cursor:

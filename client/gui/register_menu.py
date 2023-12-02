@@ -77,7 +77,7 @@ class RegisterMenu(tk.Tk):
                                               f"One or more special characters ")
             elif "Username" in result["message"]:
                 messagebox.showerror("Error", f"{result['message']}.\nYour username must be at least 3 characters "
-                                              f"long.")
+                                              f"long and less than 20 characters long.")
             else:
                 messagebox.showerror("Error", f"{result['message']}")
 

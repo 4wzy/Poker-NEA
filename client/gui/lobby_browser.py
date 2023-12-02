@@ -15,6 +15,11 @@ class LobbyBrowser(tk.Tk):
         self.username = self.controller.network_manager.send_message({"type": "get_username", "user_id": self.user_id})
         self.user_chips = self.controller.network_manager.send_message({"type": "request_user_chips", "user_id":
             self.user_id})
+
+        if not self.user_chips:
+            messagebox.showinfo("Error", "Invalid user error")
+            return
+
         print(f"USER CHIPS: {self.user_chips}")
         self.daily_game_limit = self.controller.network_manager.send_message({"type": "get_daily_game_limit", "user_id": self.user_id})
 
@@ -312,6 +317,10 @@ class CreateLobbyWindow(tk.Toplevel):
 
         if self.user_chips is None:
             messagebox.showerror("Error", "Error getting user_chips back from server")
+            return
+
+        if player_limit < 3 or player_limit > 6:
+            messagebox.showerror("Error", "Please set a valid limit for the number of players in your lobby")
             return
 
         try:
