@@ -314,6 +314,13 @@ class UserProfile(tk.Frame):
     def submit_new_username(self):
         new_username = self.new_username_entry.get()
 
+        if len(new_username) < 3 or len(new_username) > 20:
+            tk.messagebox.showerror(f"Error changing username", "Length requirements not met. Username must be more "
+                                                                "than 3 characters long and less than 20 characters "
+                                                                "long.")
+            self.edit_username_window.destroy()
+            return
+
         response = self.controller.network_manager.send_message(
             {"type": "set_username", "user_id": self.profile_user_id, "new_username": new_username})
         if not response.get('success'):
