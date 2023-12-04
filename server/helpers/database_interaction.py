@@ -118,14 +118,14 @@ class DatabaseInteraction(DatabaseBase):
             """
         ]
 
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             for command in commands:
                 cursor.execute(command)
 
     def set_user_profile_picture(self, user_id, profile_picture_filename):
         print("setting user profile picture in db_interaction")
         try:
-            with self.db_cursor() as cursor:
+            with self._db_cursor() as cursor:
                 query = """UPDATE users
                 SET profile_picture = %s
                 WHERE user_id = %s;
@@ -138,7 +138,7 @@ class DatabaseInteraction(DatabaseBase):
 
     def get_user_profile_picture(self, user_id):
         try:
-            with self.db_cursor() as cursor:
+            with self._db_cursor() as cursor:
                 query = """
                         SELECT profile_picture
                         FROM users
@@ -157,7 +157,7 @@ class DatabaseInteraction(DatabaseBase):
         if attribute not in valid_attributes:
             raise ValueError("Invalid attribute provided")
 
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             query = f"""
             UPDATE user_statistics
             SET {attribute} = {attribute} + %s
@@ -171,7 +171,7 @@ class DatabaseInteraction(DatabaseBase):
         if attribute not in valid_attributes:
             raise ValueError("Invalid attribute provided")
 
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             query = f"""
                     SELECT {attribute}
                     FROM user_statistics
@@ -187,7 +187,7 @@ class DatabaseInteraction(DatabaseBase):
             # This code prevents against SQL Injections!
             raise ValueError("Invalid attribute provided")
 
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             query = f"""
                     SELECT game_results.{attribute}
                     FROM game_results
@@ -201,7 +201,7 @@ class DatabaseInteraction(DatabaseBase):
             return [result[0] for result in results] if results else []
 
     def get_recent_games_details(self, user_id, num_games):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             query = """
             SELECT games.game_id, games.start_time, games.end_time, game_results.pos, lobbies.buy_in
             FROM games
@@ -231,7 +231,7 @@ class DatabaseInteraction(DatabaseBase):
             return game_details_list
 
     def get_game_participants(self, game_id):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             query = """
             SELECT users.username
             FROM game_results
@@ -247,7 +247,7 @@ class DatabaseInteraction(DatabaseBase):
 
         attributes_to_select = ", ".join(valid_attributes)
 
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             query = f"""
                     SELECT {attributes_to_select}
                     FROM user_statistics
@@ -264,7 +264,7 @@ class DatabaseInteraction(DatabaseBase):
                 return False
 
     def update_average_scores(self, user_id, game_aggressiveness_score, game_conservativeness_score):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             # Fetch current statistics
             cursor.execute("""
                 SELECT games_played, average_aggressiveness_score, average_conservativeness_score
@@ -291,7 +291,7 @@ class DatabaseInteraction(DatabaseBase):
                 """, (new_avg_aggressiveness, new_avg_conservativeness, user_id,))
 
     def insert_game(self, lobby_id):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             query = """
             INSERT INTO games (lobby_id, start_time)
             VALUES (%s, CURRENT_TIMESTAMP);
@@ -302,7 +302,7 @@ class DatabaseInteraction(DatabaseBase):
             return game_id
 
     def end_game(self, game_id):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             query = """
             UPDATE games
             SET end_time = CURRENT_TIMESTAMP
@@ -311,7 +311,7 @@ class DatabaseInteraction(DatabaseBase):
             cursor.execute(query, (game_id,))
 
     def insert_game_results(self, game_id, user_id, pos, winnings, aggressiveness_score, conservativeness_score):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             query = """
             INSERT INTO game_results (game_id, user_id, pos, winnings, aggressiveness_score, conservativeness_score)
             VALUES (%s, %s, %s, %s, %s, %s);
@@ -319,7 +319,7 @@ class DatabaseInteraction(DatabaseBase):
             cursor.execute(query, (game_id, user_id, pos, winnings, aggressiveness_score, conservativeness_score))
 
     def get_game_duration(self, game_id):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             # Get the duration of the game in seconds
             query_duration = """
             SELECT TIMESTAMPDIFF(SECOND, start_time, end_time) AS game_duration
@@ -331,7 +331,7 @@ class DatabaseInteraction(DatabaseBase):
             return result[0] if result else 0
 
     def update_user_play_time(self, user_id, additional_time_seconds):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             # Update the total play time for a user
             query_update_play_time = """
             UPDATE user_statistics
@@ -341,7 +341,7 @@ class DatabaseInteraction(DatabaseBase):
             cursor.execute(query_update_play_time, (additional_time_seconds, user_id))
 
     def update_game_limit_after_completion(self, user_id):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             # Increment the amount of games played today by 1
             query = """
             UPDATE user_game_limits
@@ -351,7 +351,7 @@ class DatabaseInteraction(DatabaseBase):
             cursor.execute(query, (user_id,))
 
     def update_rg_score(self, user_id):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             # Fetch the current RGScore and streak
             cursor.execute("""
                     SELECT rgscore, streak
@@ -430,7 +430,7 @@ class DatabaseInteraction(DatabaseBase):
         pass
 
     def get_and_check_to_reset_daily_games_played(self, user_id):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             # Check if the user has logged in today
             select_query = """
                     SELECT DATE(last_logged_in), games_played_today
@@ -461,7 +461,7 @@ class DatabaseInteraction(DatabaseBase):
             return games_played_today
 
     def update_daily_game_limit(self, user_id, new_limit):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             query = """
             UPDATE user_game_limits
             SET daily_game_limit = %s
@@ -472,7 +472,7 @@ class DatabaseInteraction(DatabaseBase):
             return new_limit
 
     def get_daily_game_limit(self, user_id):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             query = "SELECT daily_game_limit FROM user_game_limits WHERE user_id = %s;"
             cursor.execute(query, (user_id,))
             result = cursor.fetchone()
@@ -483,7 +483,7 @@ class DatabaseInteraction(DatabaseBase):
         if attribute not in ["rgscore", "average_aggressiveness_score", "average_conservativeness_score", "games_won"]:
             raise ValueError("Invalid attribute provided")
 
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             query = f"""
             SELECT users.user_id, users.username, users.profile_picture, user_statistics.{attribute}
             FROM user_statistics
@@ -496,7 +496,7 @@ class DatabaseInteraction(DatabaseBase):
             return results
 
     def get_top_players_by_chips(self, limit=50):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             query = """
             SELECT user_id, username, profile_picture, chips_balance
             FROM users
@@ -508,13 +508,13 @@ class DatabaseInteraction(DatabaseBase):
             return results
 
     def get_buy_in_for_lobby(self, lobby_id):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             cursor.execute("SELECT buy_in FROM lobbies WHERE lobby_id = %s", (lobby_id,))
             result = cursor.fetchone()
             return result[0] if result else None  # Return None if the lobby isn't found
 
     def get_chip_balance_for_user(self, user_id):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             cursor.execute("SELECT chips_balance FROM users WHERE user_id = %s", (user_id,))
             result = cursor.fetchone()
             if result == 0:
@@ -522,7 +522,7 @@ class DatabaseInteraction(DatabaseBase):
             return result[0] if result else False  # Return False if the user isn't found
 
     def update_chip_balance_for_user(self, user_id, new_balance):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             cursor.execute("UPDATE users SET chips_balance = %s WHERE user_id = %s", (new_balance, user_id))
         return {"success": True, "balance": new_balance}
 
@@ -543,13 +543,13 @@ class DatabaseInteraction(DatabaseBase):
         return self.update_chip_balance_for_user(user_id, new_balance)
 
     def get_username(self, user_id):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             cursor.execute("SELECT username FROM users WHERE user_id = %s", (user_id,))
             result = cursor.fetchone()
             return result[0] if result else "Invalid"
 
     def set_username(self, user_id, new_username):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             # Check if the new username already exists
             cursor.execute("SELECT user_id FROM users WHERE username = %s", (new_username,))
             if cursor.fetchone():
@@ -567,7 +567,7 @@ class DatabaseInteraction(DatabaseBase):
 
     def get_all_lobbies(self, status_filter, odds_filter):
         try:
-            with self.db_cursor() as cursor:
+            with self._db_cursor() as cursor:
 
                 cursor.execute("""
                     SELECT l.lobby_id, l.name, l.status, COUNT(pl.user_id), l.created_at, l.show_odds, 
@@ -634,7 +634,7 @@ class DatabaseInteraction(DatabaseBase):
 
     def create_lobby(self, lobby_data):
         response = {"success": True, "error": None, "lobby_id": None}
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             # Check if a lobby with the same name and the status "waiting" already exists
             check_sql = """
             SELECT COUNT(*) FROM lobbies WHERE name = %s AND (status = 'waiting')
@@ -669,7 +669,7 @@ class DatabaseInteraction(DatabaseBase):
 
     def set_lobby_status(self, lobby_id, lobby_status):
         response = {"success": True, "error": None}
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             try:
                 sql = """
                 UPDATE lobbies 
@@ -689,7 +689,7 @@ class DatabaseInteraction(DatabaseBase):
         response = {"success": True, "error": None}
 
         try:
-            with self.db_cursor() as cursor:
+            with self._db_cursor() as cursor:
                 # Update the lobby to include the new player
                 sql = """
                 INSERT INTO player_lobbies (user_id, lobby_id) 
@@ -720,7 +720,7 @@ class DatabaseInteraction(DatabaseBase):
                 connection.close()
 
     def get_game_id_from_lobby_id(self, lobby_id):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             query = "SELECT game_id FROM games WHERE lobby_id = %s;"
             cursor.execute(query, (lobby_id,))
             result = cursor.fetchone()

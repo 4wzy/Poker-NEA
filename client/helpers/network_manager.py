@@ -6,10 +6,10 @@ import time
 class NetworkManager:
     def __init__(self):
         self.client_socket = None
-        self.connect_to_server()
+        self.__connect_to_server()
         self.buffer = ""
 
-    def connect_to_server(self):
+    def __connect_to_server(self):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.client_socket.connect(("127.0.0.1", 12345))
@@ -21,7 +21,7 @@ class NetworkManager:
         try:
             print(f"1. {message}")
             self.client_socket.sendall((json.dumps(message) + '\n').encode('utf-8'))
-            response = self.receive_message()
+            response = self.__receive_message()
             print(f"2. {response}")
             # THIS MAY CAUSE ISSUES. IF THERE ARE SERVER ISSUES, CHANGE TO "if response:"
             if response is not None:
@@ -44,7 +44,7 @@ class NetworkManager:
             print(f"Other exception: {e}")
             print(f"Data causing the error: {self.buffer}")
 
-    def receive_message(self):
+    def __receive_message(self):
         while True:
             try:
                 data = self.client_socket.recv(16384).decode('utf-8')
@@ -81,11 +81,11 @@ class NetworkManager:
         print(f"(network_manager): {response_data}")
         return response_data
 
-    def close_connection(self):
+    def __close_connection(self):
         self.client_socket.close()
 
     def reset_connection(self):
         print("Resetting connection...")
-        self.close_connection()
+        self.__close_connection()
         time.sleep(0.5)  # Wait to ensure the socket is properly closed
-        self.connect_to_server()
+        self.__connect_to_server()

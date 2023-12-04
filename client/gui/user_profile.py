@@ -14,13 +14,14 @@ from matplotlib.figure import Figure
 class UserProfile(tk.Frame):
     def __init__(self, parent, controller, profile_user_id, own_user_id, previous_menu, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
-        self.num_games = 10
+        self.__num_games = 10
         self.controller = controller
         self.profile_user_id = profile_user_id
         self.previous_menu = previous_menu
         self.profile_picture_manager = ProfilePictureManager(self.controller)
-        self.current_pic_path = self.profile_picture_manager.check_and_fetch_profile_picture(self.profile_user_id)
-        self.own_profile = self.profile_user_id == own_user_id  # Boolean flag indicating if the profile belongs to the current user
+        self.__current_pic_path = self.profile_picture_manager.check_and_fetch_profile_picture(self.profile_user_id)
+        self.__own_profile = self.profile_user_id == own_user_id  # Boolean flag indicating if the profile belongs to
+        # the current user
         self.configure(bg="#333333")
 
         self.statistics = self.controller.network_manager.send_message({
@@ -28,16 +29,16 @@ class UserProfile(tk.Frame):
             "user_id": self.profile_user_id
         })
 
-        self.create_widgets()
+        self.__create_widgets()
         self.pack(fill="both", expand=True)
 
-    def create_widgets(self):
+    def __create_widgets(self):
         top_frame = tk.Frame(self, bg="#333333")
         top_frame.grid(row=0, column=0, columnspan=4, sticky="ew")
 
         # Profile picture
         profile_pic_size = (150, 150)
-        self.image = Image.open(self.current_pic_path)
+        self.image = Image.open(self.__current_pic_path)
         self.image = self.image.resize(profile_pic_size)
 
         # Create a mask for the circular profile picture
@@ -67,7 +68,7 @@ class UserProfile(tk.Frame):
                                        fg="#F56476", bg="#333333")
         self.username_label.pack(side="left", padx=10, pady=10)
 
-        if self.own_profile:
+        if self.__own_profile:
             edit_pic_button = tk.Button(top_frame, text="Edit Picture", command=self.edit_profile_picture)
             edit_pic_button.pack(side="left", padx=10, pady=10)
 
@@ -146,7 +147,7 @@ class UserProfile(tk.Frame):
                 "type": "get_attribute_from_user_games_played",
                 "user_id": self.profile_user_id,
                 "attribute": default_attribute,
-                "num_games": self.num_games
+                "num_games": self.__num_games
             })
             self.display_graph(default_scores, default_attribute, self.right_frame)
 
@@ -166,13 +167,13 @@ class UserProfile(tk.Frame):
         self.display_graph(scores, attribute, self.right_frame)
 
     def on_num_games_selected(self, event):
-        self.num_games = int(self.num_games_var.get())
+        self.__num_games = int(self.num_games_var.get())
         attribute = "conservativeness_score"
         scores = self.controller.network_manager.send_message({
             "type": "get_attribute_from_user_games_played",
             "user_id": self.profile_user_id,
             "attribute": attribute,
-            "num_games": self.num_games
+            "num_games": self.__num_games
         })
         self.display_graph(scores, attribute, self.right_frame)
 
@@ -218,9 +219,9 @@ class UserProfile(tk.Frame):
         canvas.draw()
 
     def edit_profile_picture(self):
-        self.current_pic_path = self.profile_picture_manager.check_and_fetch_profile_picture(self.profile_user_id)
+        self.__current_pic_path = self.profile_picture_manager.check_and_fetch_profile_picture(self.profile_user_id)
         self.profile_pic_selection_window = SelectProfilePic(self, self.on_profile_pic_selected,
-                                                             self.current_pic_path, self.controller,
+                                                             self.__current_pic_path, self.controller,
                                                              self.profile_user_id)
 
     def create_recent_games_table(self, frame):
@@ -240,7 +241,7 @@ class UserProfile(tk.Frame):
         recent_games = self.controller.network_manager.send_message({
             "type": "get_recent_games_details",
             "user_id": self.profile_user_id,
-            "num_games": self.num_games
+            "num_games": self.__num_games
         })
 
         # The code below is for resizing the columns so that they fit based on the longest value in each column
@@ -439,6 +440,8 @@ class ProfilePictureManager:
         self.controller = controller
         self.profile_pictures_path = "gui/Images/Pfps"
 
+    # This method checks if the profile picture in question is already stored on the client side
+    # and requests it from the server to save locally if it isn't, then returns the file path to the picture
     def check_and_fetch_profile_picture(self, user_id):
         filename_response = self.controller.network_manager.send_message({
             "type": "get_user_profile_picture",

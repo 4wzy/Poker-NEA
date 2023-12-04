@@ -12,7 +12,7 @@ class DatabaseBase:
         }
 
     @contextmanager
-    def db_cursor(self):
+    def _db_cursor(self):
         connection = mysql.connector.connect(**self.config)
         cursor = connection.cursor()
         try:

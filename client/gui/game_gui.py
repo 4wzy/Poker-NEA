@@ -840,13 +840,3 @@ class GameGUI(tk.Tk):
             self.canvas_items.append(item_id)
         except Exception as e:
             print(f"PLACING PLAYER EXCEPTION: {e}")
-
-    def fold_action(self):
-        pass
-
-    def call_check_action(self):
-        print("Player checked locally")
-
-# if __name__ == "__main__":
-#     app = GameGUI(None, 2, None)
-#     app.mainloop()

@@ -24,27 +24,27 @@ class LobbyServer:
         print("Server started...")
         while True:
             client_socket, addr = self.server_socket.accept()
-            client_handler = threading.Thread(target=self.handle_client, args=(client_socket,))
+            client_handler = threading.Thread(target=self.__handle_client, args=(client_socket,))
             client_handler.start()
 
-    def handle_client(self, client_socket):
+    def __handle_client(self, client_socket):
         buffer = ""
         while True:
             try:
                 data = client_socket.recv(16384)
                 if not data:
                     print("No data from client socket, searching for disconnected player")
-                    user_id, lobby_id = self.find_disconnected_player(client_socket)
+                    user_id, lobby_id = self.__find_disconnected_player(client_socket)
                     print(f"User_id: {user_id}, Lobby_id: {lobby_id})")
                     if user_id and lobby_id:
-                        if not self.find_player_from_user_id(user_id, self.lobbies[lobby_id]).disconnected:
-                            self.leave_lobby(user_id, lobby_id, client_socket)
+                        if not self.__find_player_from_user_id(user_id, self.lobbies[lobby_id]).disconnected:
+                            self.__leave_lobby(user_id, lobby_id, client_socket)
                     break
             except ConnectionResetError:
                 print("Connection was reset by client.")
-                user_id, lobby_id = self.find_disconnected_player(client_socket)
+                user_id, lobby_id = self.__find_disconnected_player(client_socket)
                 if user_id and lobby_id:
-                    self.leave_lobby(user_id, lobby_id, client_socket)
+                    self.__leave_lobby(user_id, lobby_id, client_socket)
                 break
 
             # Decoding the received bytes to a string before appending to the buffer
@@ -62,39 +62,39 @@ class LobbyServer:
                     response = None
                     if request['type'] == 'get_all_lobbies':
                         print("getting lobbies")
-                        response = self.get_all_lobbies(request)
+                        response = self.__get_all_lobbies(request)
                     elif request['type'] == 'create_lobby':
                         print("creating lobby")
-                        response = self.create_lobby(request)
+                        response = self.__create_lobby(request)
                     elif request['type'] == 'join_lobby':
                         print("joining lobby")
                         response = self.join_lobby(request, client_socket)
                     elif request['type'] == 'leave_lobby':
                         print(f"PLAYER LEAVING LOBBY: {client_socket}")
-                        response = self.leave_lobby(request['user_id'], request['lobby_id'], client_socket)
+                        response = self.__leave_lobby(request['user_id'], request['lobby_id'], client_socket)
                     elif request["type"] == "start_game":
-                        self.handle_start_game(request["lobby_id"])
+                        self.__handle_start_game(request["lobby_id"])
                         continue
                     elif request["type"] == "bet":
-                        response = self.process_player_action(request, client_socket)
+                        response = self.__process_player_action(request, client_socket)
                     elif request["type"] == "send_chat":
                         try:
                             lobby_id = request['lobby_id']
                             chat_message = request['message']
-                            self.broadcast_send_message(lobby_id, chat_message, client_socket)
+                            self.__broadcast_send_message(lobby_id, chat_message, client_socket)
                             response = {"success": True}
                         except Exception as e:
                             response = {"success": False, "error": e}
                     elif request["type"] == "start_next_round":
-                        self.start_next_round(request)
+                        self.__start_next_round(request)
                     elif request["type"] == "broadcast_showdown":
-                        self.broadcast_showdown_game_state(request["lobby_id"])
+                        self.__broadcast_showdown_game_state(request["lobby_id"])
                     elif request["type"] == "broadcast_new_game_state":
-                        self.broadcast_game_state(request["lobby_id"], None, True)
+                        self.__broadcast_game_state(request["lobby_id"], None, True)
                     elif request["type"] == 'broadcast_completed_game_state':
-                        self.broadcast_completed_game_state(request['lobby_id'])
+                        self.__broadcast_completed_game_state(request['lobby_id'])
                     elif request["type"] == 'get_data_for_odds':
-                        response = self.get_data_for_odds(request['user_id'], request['lobby_id'])
+                        response = self.__get_data_for_odds(request['user_id'], request['lobby_id'])
                     elif request["type"] == 'request_user_chips':
                         response = self.database_interaction.get_chip_balance_for_user(request['user_id'])
                     elif request["type"] == 'add_to_chip_balance_for_user':
@@ -138,7 +138,7 @@ class LobbyServer:
                     elif request['type'] == 'get_user_statistics':
                         response = self.database_interaction.get_user_statistics(request['user_id'])
                     if request['type'] in ['set_user_profile_picture', 'upload_profile_picture']:
-                        response = self.handle_profile_picture_change(request, client_socket)
+                        response = self.__handle_profile_picture_change(request, client_socket)
                     elif request['type'] == 'get_user_profile_picture':
                         response = self.database_interaction.get_user_profile_picture(request['user_id'])
                     elif request['type'] == 'get_attribute_from_user_games_played':
@@ -150,7 +150,7 @@ class LobbyServer:
                     elif request['type'] == 'get_game_participants':
                         response = self.database_interaction.get_game_participants(request['game_id'])
                     elif request['type'] == 'get_profile_picture':
-                        response = self.serve_profile_picture(request)
+                        response = self.__serve_profile_picture(request)
                     elif request['type'] == 'register_user':
                         response = self.user_auth.register_user(request['username'], request['password'], request['email'])
                     elif request['type'] == 'login_user':
@@ -168,7 +168,7 @@ class LobbyServer:
 
         client_socket.close()
 
-    def start_next_round(self, request):
+    def __start_next_round(self, request):
         print("STARTING NEXT ROUND!!")
         lobby_id = request.get("lobby_id")
         print("got lobby")
@@ -216,37 +216,37 @@ class LobbyServer:
                                                                 player.conservativeness_score)
 
             # BROADCAST GAME COMPLETED STATE
-            self.broadcast_completed_game_state(lobby_id)
+            self.__broadcast_completed_game_state(lobby_id)
         else:
-            self.broadcast_game_state(lobby_id, None, False)
+            self.__broadcast_game_state(lobby_id, None, False)
         print("started new round")
 
-    def find_disconnected_player(self, disconnected_socket):
+    def __find_disconnected_player(self, disconnected_socket):
         for lobby_id, game in self.lobbies.items():
             for player in game.players:
                 if player.client_socket == disconnected_socket:
                     return player.user_id, lobby_id
         return None, None
 
-    def find_player_from_user_id(self, user_id, game):
+    def __find_player_from_user_id(self, user_id, game):
         return next((player for player in game.players if player.user_id == user_id), None)
 
-    def get_data_for_odds(self, user_id, lobby_id):
+    def __get_data_for_odds(self, user_id, lobby_id):
         game = self.lobbies[lobby_id]
         player_cards = [[card.suit, card.rank] for card in [player for player in game.players if
                                                             player.user_id == user_id][0].hand.cards]
         print(f"player_cards: {player_cards}")
-        community_cards = [[card.suit, card.rank] for card in game.board]
+        community_cards = [[card.suit, card.rank] for card in game.board.get_board()]
         print(f"community_cards: {community_cards}")
 
         return player_cards, community_cards
 
-    def process_player_action(self, request, client_socket):
+    def __process_player_action(self, request, client_socket):
         user_id = request['user_id']
         action = request['action']
         lobby_id = request['lobby_id']
         game = self.lobbies[lobby_id]
-        player = self.find_player_from_user_id(user_id, game)
+        player = self.__find_player_from_user_id(user_id, game)
         raise_amount = request.get('amount', 0)
 
         action_response = game.process_player_action(player, action, raise_amount)
@@ -255,17 +255,17 @@ class LobbyServer:
 
         return action_response
 
-    def leave_lobby(self, user_id, lobby_id, client_socket):
+    def __leave_lobby(self, user_id, lobby_id, client_socket):
         print("player leaving")
         if lobby_id not in self.lobbies:
             return {"success": False, "error": "Could not find lobby to remove player from"}
 
         game = self.lobbies[lobby_id]
-        player = self.find_player_from_user_id(user_id, game)
+        player = self.__find_player_from_user_id(user_id, game)
         self.database_interaction.remove_player_from_lobby(player.user_id, lobby_id)
 
         # If there is only one player left
-        if len(self.get_connected_players(game)) == 1:
+        if len(self.__get_connected_players(game)) == 1:
             print("only one player left")
             self._handle_last_player_leaving(lobby_id)
             return {'success': True}
@@ -278,7 +278,7 @@ class LobbyServer:
             print("broadcasted player left game state")
         else:
             game.remove_player(user_id, completely_remove=False)
-            self.broadcast_game_state(lobby_id, client_socket, False)
+            self.__broadcast_game_state(lobby_id, client_socket, False)
 
         return {'success': True}
 
@@ -303,7 +303,7 @@ class LobbyServer:
         print(f"New positions: {game.available_positions}")
         print(f"All positions: {all_positions}")
         print(f"Leaving player position index: {leaving_player_position_index}")
-        self.broadcast_player_left_game_state(lobby_id, client_socket)
+        self.__broadcast_player_left_game_state(lobby_id, client_socket)
 
     def _handle_last_player_leaving(self, lobby_id):
         print(f"Handling last player leaving lobby: {lobby_id}")
@@ -341,7 +341,7 @@ class LobbyServer:
 
         # Handle what happens if the player is attempting to reconnect
         if game.game_started:
-            player_to_reconnect = self.find_player_from_user_id(user_id, game)
+            player_to_reconnect = self.__find_player_from_user_id(user_id, game)
             if player_to_reconnect is None:
                 # Avoid an AttributeError by only checking if the player is disconnected if player_to_reconnect
                 # is not None
@@ -351,8 +351,8 @@ class LobbyServer:
                     game.reconnect_player(user_id, client_socket)
                     self.database_interaction.join_lobby(user_id, lobby_id)
 
-                    reconnecting_state = self.get_state_for_reconnecting_player(lobby_id, player_to_reconnect)
-                    self.broadcast_game_state(lobby_id, client_socket, False)
+                    reconnecting_state = self.__get_state_for_reconnecting_player(lobby_id, player_to_reconnect)
+                    self.__broadcast_game_state(lobby_id, client_socket, False)
 
                     return {"success": True, "type": "reconnecting", "user_id": user_id, "game_state":
                         reconnecting_state}
@@ -369,9 +369,9 @@ class LobbyServer:
 
             self.database_interaction.join_lobby(user_id, lobby_id)
 
-            initial_state = self.get_initial_state(lobby_id)
+            initial_state = self.__get_initial_state(lobby_id)
             print(f"INITIAL STATE: {initial_state}")
-            self.broadcast_initial_game_state(lobby_id, client_socket)
+            self.__broadcast_initial_game_state(lobby_id, client_socket)
             print(f"(server.py): broadcasted initial game state to everyone apart from {client_socket}")
             data_type = "initial_state"
             if len(game.players) == game.player_limit:
@@ -387,25 +387,25 @@ class LobbyServer:
 
         return {"success": False, "error": error_message}
 
-    def get_connected_players(self, game):
+    def __get_connected_players(self, game):
         return [player for player in game.players if not player.disconnected]
 
-    def broadcast_game_state(self, lobby_id, current_client, broadcast_to_everyone):
+    def __broadcast_game_state(self, lobby_id, current_client, broadcast_to_everyone):
         print("BROADCASTING GAME STATE TO EVERYONE")
         data_to_return_to_client = None
         if lobby_id in self.lobbies:
             game = self.lobbies[lobby_id]
             game_states = game.send_game_state()
             if broadcast_to_everyone:
-                for player in self.get_connected_players(game):
+                for player in self.__get_connected_players(game):
                     user_id = player.user_id
                     player.client_socket.sendall((json.dumps({"type": "update_game_state", "user_id": user_id,
                                                               "game_state": game_states[user_id]}) + '\n').encode(
                         'utf-8'))
                     print(f"sent game states {game_states[user_id]} to user {user_id}")
             else:
-                print(f"broadcasting game state to connected players: {self.get_connected_players(game)}")
-                for player in self.get_connected_players(game):
+                print(f"broadcasting game state to connected players: {self.__get_connected_players(game)}")
+                for player in self.__get_connected_players(game):
                     print(f"Connected player: {player}: {player.disconnected}")
                     user_id = player.user_id
                     if current_client != player.client_socket:
@@ -421,11 +421,11 @@ class LobbyServer:
             print(f"(broadcast_game_state) returning {data_to_return_to_client}")
             return data_to_return_to_client
 
-    def broadcast_send_message(self, lobby_id, message, current_client):
+    def __broadcast_send_message(self, lobby_id, message, current_client):
         print("BROADCASTING chat message TO EVERYONE")
         if lobby_id in self.lobbies:
             game = self.lobbies[lobby_id]
-            for player in self.get_connected_players(game):
+            for player in self.__get_connected_players(game):
                 if player.client_socket != current_client:
                     user_id = player.user_id
                     player.client_socket.sendall(
@@ -433,12 +433,12 @@ class LobbyServer:
                             'utf-8'))
                     print(f"sent message {message} to user {user_id}")
 
-    def broadcast_showdown_game_state(self, lobby_id):
+    def __broadcast_showdown_game_state(self, lobby_id):
         print("BROADCASTING showdown GAME STATE TO EVERYONE")
         if lobby_id in self.lobbies:
             game = self.lobbies[lobby_id]
             game_state = game.get_game_state_for_showdown()
-            for player in self.get_connected_players(game):
+            for player in self.__get_connected_players(game):
                 user_id = player.user_id
                 player.client_socket.sendall(
                     (json.dumps({"type": "update_showdown_state", "game_state": game_state}) + '\n').encode(
@@ -447,12 +447,12 @@ class LobbyServer:
 
             print("sent game state..")
 
-    def broadcast_completed_game_state(self, lobby_id):
-        print("BROADCASTING completed GAME STATE TO EVERYONE")
+    def __broadcast_completed_game_state(self, lobby_id):
+        # Broadcast the completed game state to everyone (when someone has won the game)
         if lobby_id in self.lobbies:
             game = self.lobbies[lobby_id]
             game_state = game.get_game_state_for_completed()
-            for player in self.get_connected_players(game):
+            for player in self.__get_connected_players(game):
                 user_id = player.user_id
                 player.client_socket.sendall((json.dumps({"type": "update_completed_state", "game_state":
                     game_state}) + '\n').encode('utf-8'))
@@ -460,44 +460,44 @@ class LobbyServer:
 
             print("sent game state..")
 
-    def broadcast_initial_game_state(self, lobby_id, current_client):
+    def __broadcast_initial_game_state(self, lobby_id, current_client):
         print("BROADCASTING INITIAL GAME STATE NOT TO EVERYONE")
-        game_state = self.get_initial_state(lobby_id)
+        game_state = self.__get_initial_state(lobby_id)
         print(f"Initial game state to broadcast: {game_state}")
-        for client_socket in self.get_clients_in_lobby(lobby_id):
+        for client_socket in self.__get_clients_in_lobby(lobby_id):
             if client_socket != current_client:
                 client_socket.sendall(
                     (json.dumps({"type": "initial_state", "game_state": game_state}) + '\n').encode('utf-8'))
                 print(f"sent initial game state data to f{client_socket}")
 
-    def broadcast_player_left_game_state(self, lobby_id, current_client):
+    def __broadcast_player_left_game_state(self, lobby_id, current_client):
         # BROADCAST INITIAL GAME STATE THEN GAME STATE (NOT TO CURRENT CLIENT THOUGH!)
         print("BROADCASTING PLAYER LEFT GAME STATE NOT TO EVERYONE")
-        game_state = self.get_player_left_state(lobby_id)
+        game_state = self.__get_player_left_state(lobby_id)
         print(f"Initial game state to broadcast: {game_state}")
-        for client_socket in self.get_clients_in_lobby(lobby_id):
+        for client_socket in self.__get_clients_in_lobby(lobby_id):
             if client_socket != current_client:
                 client_socket.sendall(
                     (json.dumps({"type": "player_left_game_state", "game_state": game_state}) + '\n').encode('utf-8'))
                 print(f"sent initial game state data to f{client_socket}")
 
-    def get_state_for_reconnecting_player(self, lobby_id, player):
+    def __get_state_for_reconnecting_player(self, lobby_id, player):
         return self.lobbies[lobby_id].get_game_state_for_reconnecting_player(player)
 
-    def get_player_left_state(self, lobby_id):
+    def __get_player_left_state(self, lobby_id):
         return self.lobbies[lobby_id].get_player_left_state()
 
-    def get_initial_state(self, lobby_id):
+    def __get_initial_state(self, lobby_id):
         return self.lobbies[lobby_id].get_initial_state()
 
-    def handle_start_game(self, lobby_id):
+    def __handle_start_game(self, lobby_id):
         print("running handle_start_game")
         game = self.lobbies[lobby_id]
         if game.game_started:  # Check if the game is ready to start
             self.database_interaction.insert_game(lobby_id)  # Add the game to the games table
-            self.broadcast_game_state(lobby_id, None, False)
+            self.__broadcast_game_state(lobby_id, None, False)
 
-    def get_all_lobbies(self, request):
+    def __get_all_lobbies(self, request):
         status_filter = request["status"]
         odds_filter = request["odds"]
         lobbies = []
@@ -522,21 +522,21 @@ class LobbyServer:
 
         return lobbies
 
-    def create_lobby(self, request):
+    def __create_lobby(self, request):
         response = self.database_interaction.create_lobby(request)
         if response["success"]:
             lobby_id = response["lobby_id"]
             self.lobbies[lobby_id] = Game(starting_chips=request["buy_in"], player_limit=request['player_limit'])
         return response
 
-    def get_clients_in_lobby(self, lobby_id):
+    def __get_clients_in_lobby(self, lobby_id):
         client_sockets = []
         game = self.lobbies[lobby_id]
-        for player in self.get_connected_players(game):
+        for player in self.__get_connected_players(game):
             client_sockets.append(player.client_socket)
         return client_sockets
 
-    def handle_profile_picture_change(self, request, client_socket):
+    def __handle_profile_picture_change(self, request, client_socket):
         print("handling pfp change")
         user_id = request['user_id']
 
@@ -575,7 +575,7 @@ class LobbyServer:
         # Update the database with the filename
         return self.database_interaction.set_user_profile_picture(user_id, filename)
 
-    def serve_profile_picture(self, request):
+    def __serve_profile_picture(self, request):
         user_id = request['user_id']
         filename = self.database_interaction.get_user_profile_picture(user_id)
         file_path = os.path.join("pfps", filename)

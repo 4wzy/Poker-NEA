@@ -11,7 +11,7 @@ class UserAuth(DatabaseBase):
         self.password_hash_iterations = 2048
 
     def login_user(self, username: str, password: str):
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             # Retrieve hashed_password and salt from the database for the given username
             cursor.execute("SELECT hashed_password, salt FROM users WHERE username = %s", (username,))
             row = cursor.fetchone()
@@ -37,16 +37,16 @@ class UserAuth(DatabaseBase):
                 return {"success": False, "message": "Invalid username or password"}
 
     def register_user(self, username: str, password: str, email: str):
-        if not self.validate_password(password):
+        if not self.__validate_password(password):
             return {"success": False, "message": "Password does not meet the requirements"}
-        if not self.validate_username(username):
+        if not self.__validate_username(username):
             return {"success": False, "message": "Username does not meet the requirements"}
-        if not self.validate_email(email):
+        if not self.__validate_email(email):
             return {"success": False, "message": "Invalid email provided"}
 
-        hashed_password, salt = self.hash_password(password)
+        hashed_password, salt = self.__hash_password(password)
 
-        with self.db_cursor() as cursor:
+        with self._db_cursor() as cursor:
             try:
                 cursor.execute(
                     "INSERT INTO users (username, hashed_password, salt, email) VALUES (%s, %s, %s, %s)",
@@ -76,7 +76,7 @@ class UserAuth(DatabaseBase):
             except mysql.connector.IntegrityError:
                 return {"success": False, "message": "Username or Email already exists"}
 
-    def validate_password(self, password: str) -> bool:
+    def __validate_password(self, password: str) -> bool:
         # Use regular expressions to validate password, including checking if one or more types of characters are present
         if len(password) < 12:
             return False
@@ -88,17 +88,17 @@ class UserAuth(DatabaseBase):
             return False
         return True
 
-    def validate_email(self, email: str) -> bool:
+    def __validate_email(self, email: str) -> bool:
         if "@" not in email:
             return False
         return True
 
-    def validate_username(self, username: str) -> bool:
+    def __validate_username(self, username: str) -> bool:
         if len(username) < 3 or len(username) > 20:
             return False
         return True
 
-    def hash_password(self, password: str) -> tuple:
+    def __hash_password(self, password: str) -> tuple:
         salt = secrets.token_hex(16)
         salted_password = password + salt
 

@@ -14,9 +14,9 @@ class MainMenu(tk.Tk):
         self.controller.network_manager.reset_connection()
         self.profile_picture_manager = ProfilePictureManager(self.controller)
         self.username = self.controller.network_manager.send_message({"type": "get_username", "user_id": self.user_id})
-        self.rg_score = self.controller.network_manager.send_message({"type": "update_rg_score", "user_id":
+        self.__rg_score = self.controller.network_manager.send_message({"type": "update_rg_score", "user_id":
             self.user_id})
-        self.games_played_today = self.controller.network_manager.send_message(
+        self.__games_played_today = self.controller.network_manager.send_message(
             {"type": "get_and_check_to_reset_daily_games_played", "user_id": self.user_id})
 
         self.title("AceAware Poker")
@@ -74,7 +74,7 @@ class MainMenu(tk.Tk):
         play_button = tk.Button(left_buttons_frame, text="Play", font=tkfont.Font(family="Cambria", size=16),
                                 fg="#FFFFFF", bg="#444444", bd=0, padx=20, pady=10, width=50, borderwidth=1,
                                 command=lambda: self.controller.open_lobby_browser(self.user_id,
-                                                                                   self.games_played_today))
+                                                                                   self.__games_played_today))
         play_button.pack(side="top", fill="x", pady=5)
 
         hall_of_fame_button = tk.Button(left_buttons_frame, text="Hall of Fame",
@@ -88,6 +88,7 @@ class MainMenu(tk.Tk):
                                     command=lambda: self.controller.open_settings(self.user_id))
         settings_button.pack(side="top", fill="x", pady=5)
 
+        # Add the game's logo
         self.logo = Image.open("gui/Images/logo.png")
         self.logo = self.logo.resize((200, 200))
         self.logo = ImageTk.PhotoImage(self.logo)
@@ -124,7 +125,6 @@ class MainMenu(tk.Tk):
         quit_button = tk.Button(container, text="Quit", font=tkfont.Font(family="Cambria", size=16), fg="#FFFFFF",
                                 bg="#444444", bd=0, padx=20, pady=10, command=self.destroy)
         quit_button.grid(row=7, column=3, sticky="se", pady=10, padx=10)
-
 
     def update_profile_picture(self, user_id, new_pic_name):
         profile_pic_path = f"gui/Images/Pfps/{new_pic_name}"
