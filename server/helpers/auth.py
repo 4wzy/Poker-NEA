@@ -78,7 +78,7 @@ class UserAuth(DatabaseBase):
 
     def __validate_password(self, password: str) -> bool:
         # Use regular expressions to validate password, including checking if one or more types of characters are present
-        if len(password) < 12:
+        if len(password) < 12 or len(password) > 255:
             return False
         if not re.search("[A-Z]", password):
             return False

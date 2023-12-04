@@ -35,7 +35,7 @@ class DatabaseInteraction(DatabaseBase):
             user_id INT UNIQUE,
             games_played INT DEFAULT 0,
             games_won INT DEFAULT 0,
-            rgscore INT DEFAULT 0,
+            rgscore FLOAT DEFAULT 0,
             average_aggressiveness_score FLOAT DEFAULT 0,
             average_conservativeness_score FLOAT DEFAULT 0,
             total_play_time INT DEFAULT 0,
@@ -75,6 +75,7 @@ class DatabaseInteraction(DatabaseBase):
             host_user_id INT,
             status ENUM('waiting', 'in_progress', 'completed', 'abandoned') DEFAULT 'waiting',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            show_odds BOOLEAN DEFAULT TRUE,
             player_limit INT DEFAULT 6,
             buy_in INT NOT NULL,
             CONSTRAINT CHK_PlayerLimit CHECK (player_limit >= 3 AND player_limit <= 6),
@@ -86,7 +87,6 @@ class DatabaseInteraction(DatabaseBase):
             CREATE TABLE player_lobbies (
             user_id INT UNIQUE,
             lobby_id INT,
-            show_odds BOOLEAN DEFAULT TRUE,
             FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
             FOREIGN KEY (lobby_id) REFERENCES lobbies(lobby_id) ON DELETE CASCADE,
             PRIMARY KEY (user_id, lobby_id)
