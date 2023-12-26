@@ -98,7 +98,7 @@ class Board:
 
 class Game:
     def __init__(self, starting_chips=200, player_limit=6):
-        self._debugging_enabled = False
+        self._debugging_enabled = True
         self.players: List[Player] = []
         self.available_positions = ["top_left", "top_middle", "top_right", "bottom_right", "bottom_middle",
                                     "bottom_left"]
@@ -579,6 +579,7 @@ class Game:
             if player.disconnected:
                 player.folded = True
 
+        # If there is only one active player left in a game, the game is completed
         if len(self.__get_active_players()) == 1:
             print("start_round: get_active_players() == 1")
             # end the game
@@ -599,19 +600,21 @@ class Game:
         # The debugging_enabled variable is used to only run the code once at the start of the game so that any
         # subsequent Poker rounds or usage of the start_round() method work as intended
         if self._debugging_enabled:
-            debug_community_cards = [Card("Clubs", "4"),
-                                     Card("Diamonds", "9"),
-                                     Card("Diamonds", "8"),
-                                     Card("Diamonds", "7"),
-                                     Card("Diamonds", "6")]
+            debug_community_cards = [Card("Hearts", "Ace"),
+                                     Card("Hearts", "9"),
+                                     Card("Clubs", "9"),
+                                     Card("Hearts", "King"),
+                                     Card("Hearts", "Queen")]
             self.debug_set_community_cards(debug_community_cards)
 
-            debug_player1_cards = [Card("Hearts", "10"), Card("Diamonds", "King")]
-            debug_player1_chips = 50
-            debug_player2_cards = [Card("Hearts", "8"), Card("Diamonds", "Jack")]
+            debug_player1_cards = [Card("Spades", "9"), Card("Hearts", "8")]
+            debug_player1_chips = 75
+            debug_player2_cards = [Card("Diamonds", "Ace"), Card("Diamonds", "King")]
             debug_player2_chips = 150
-            debug_player3_cards = [Card("Hearts", "10"), Card("Diamonds", "Ace")]
-            debug_player3_chips = 200
+            debug_player3_cards = [Card("Diamonds", "2"), Card("Diamonds", "3")]
+            debug_player3_chips = 175
+            debug_player4_cards = [Card("Clubs", "4"), Card("Clubs", "5")]
+            debug_player4_chips = 100
 
             self.players[0].debug_set_cards(debug_player1_cards)
             self.players[0].debug_set_chips(debug_player1_chips)
@@ -619,6 +622,8 @@ class Game:
             self.players[1].debug_set_chips(debug_player2_chips)
             self.players[2].debug_set_cards(debug_player3_cards)
             self.players[2].debug_set_chips(debug_player3_chips)
+            self.players[3].debug_set_cards(debug_player4_cards)
+            self.players[3].debug_set_chips(debug_player4_chips)
 
             self.current_round = "river"
             self._debugging_enabled = False
@@ -626,11 +631,12 @@ class Game:
         # ---- END OF DEBUGGING METHODS ----
 
         self.__handle_shifting_positions_at_start()
-        self.__handle_posting_bets()
+        self.__handle_posting_blinds()
 
         self.__pot.add_chips(self.__small_blind + self.__big_blind)
         self.__start_new_round(self.current_round)
 
+    # Method to handle shifting the blinds and dealer button at the start of a round
     def __handle_shifting_positions_at_start(self):
         self.__dealer_position = self.__get_next_active_player(self.__dealer_position, False)
         self.__small_blind_position = self.__get_next_active_player(self.__dealer_position, False)
@@ -638,7 +644,8 @@ class Game:
         self.__current_player_turn = self.__get_next_active_player(self.__big_blind_position, False)
         print(f"Current player turn: {self.__current_player_turn}")
 
-    def __handle_posting_bets(self):
+    # Method to handle posting the blinds (making every player pay the money they need to pay because of the blinds)
+    def __handle_posting_blinds(self):
         if self.players[self.__small_blind_position].chips > self.__small_blind:
             self.players[self.__small_blind_position].chips -= self.__small_blind
             self.players[self.__small_blind_position].current_bet = self.__small_blind
@@ -659,14 +666,16 @@ class Game:
         self.players[self.__big_blind_position].blinds.append("BB")
         self.players[self.__dealer_position].dealer = True
 
+    # This method deals the flop
     def __flop(self):
-        # A card is discarded by the dealer before dealing the flop, turn, and river
+        # A card is discarded by the dealer before dealing the flop, turn, and river (Texas Hold'Em poker tradition)
         self.deck.deal_card()
         # Deal 3 cards
         for i in range(3):
             card = self.deck.deal_card()
             self.board.add_card_to_board(card)
 
+    # This method deals the turn or the river as they have the same functionality
     def __turn_river(self):
         # A card is discarded by the dealer before dealing the flop, turn, and river
         self.deck.deal_card()
@@ -674,6 +683,7 @@ class Game:
         card = self.deck.deal_card()
         self.board.add_card_to_board(card)
 
+    # The logic for when a player folds
     def __player_fold(self, player):
         message = f"{player.name} folds"
 
@@ -687,6 +697,7 @@ class Game:
 
         return message
 
+    # The logic for when a player calls
     def __player_call(self, player):
         bet_amount = self.__current_highest_bet - player.current_bet
         if player.chips >= bet_amount:
@@ -717,6 +728,7 @@ class Game:
 
         return {"success": True, "message": message}
 
+    # The logic for when a player raises
     def __player_raise(self, player, raise_amount):
         # The player raises over the current highest bet
         total_bet = raise_amount + player.current_bet
@@ -746,6 +758,7 @@ class Game:
             self.players_acted.append(player)
             return {"success": True, "message": message}
 
+    # The method used to process any player action, making use of the methods above
     def process_player_action(self, player, action, raise_amount):
         self.non_active_player = None
         self.message = ""
@@ -840,6 +853,7 @@ class Hand:
         suits = [card.suit for card in self.cards]
         return ranks, suits
 
+    # This method checks if there is a flush in a given deck
     def __check_flush(self, suits):
         suit_counts = Counter(suits)
         return any(count >= 5 for count in suit_counts.values()), suit_counts
@@ -940,7 +954,7 @@ class Hand:
 
         # Check for multiples
         is_four_of_a_kind = 4 in rank_counts.values()
-        is_three_of_a_kind = 3 in rank_counts.values()
+        is_three_of_a_kind = is_four_of_a_kind or 3 in rank_counts.values()
 
         # Check for pairs (including hands with a three/four of a kind)
         pair_counts = sum(1 for count in rank_counts.values() if count == 2)
