@@ -55,12 +55,7 @@ class UserAuth(DatabaseBase):
 
                 user_id = cursor.lastrowid  # Get the user_id of the user that just registered
 
-                # Insert default values into corrsponding tables
-
-                cursor.execute(
-                    "INSERT INTO user_chips (user_id, chips_balance) VALUES (%s, DEFAULT)",
-                    (user_id,)
-                )
+                # Insert default values into corresponding tables
 
                 cursor.execute(
                     "INSERT INTO user_statistics (user_id) VALUES (%s)",

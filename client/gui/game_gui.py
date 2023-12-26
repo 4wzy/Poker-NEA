@@ -351,6 +351,9 @@ class GameGUI(tk.Tk):
         game_state = game_state["game_state"]
         print(f"(game_gui): new game_state: {game_state}")
 
+        if game_state.get("message"):
+            self.update_game_messages_label(game_state.get("message"))
+
         self.update_roles(game_state)
         self.update_pot(game_state)
 

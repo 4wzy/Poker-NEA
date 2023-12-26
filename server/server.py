@@ -21,7 +21,7 @@ class LobbyServer:
         self.lobbies: Dict[str, Game] = {}  # I have explicitly used type hinting for easier development
 
     def start(self):
-        print("Server started...")
+        print("Server started successfully...")
         while True:
             client_socket, addr = self.server_socket.accept()
             client_handler = threading.Thread(target=self.__handle_client, args=(client_socket,))

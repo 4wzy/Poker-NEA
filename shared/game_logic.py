@@ -129,6 +129,7 @@ class Game:
         self.players_acted = []
         self.next_available_finishing_position = self.player_limit + 1
         self.winner_message = None
+        self.message = ""
 
     def debug_set_community_cards(self, cards):
         self.board.reset_board()
@@ -457,7 +458,8 @@ class Game:
             'pot': self.__pot.chips,
             'board': [str(card) for card in self.board.get_board()],
             'current_player_turn': self.__current_player_turn,
-            'hand': [str(card) for card in player.hand.cards]
+            'hand': [str(card) for card in player.hand.cards],
+            'message': self.message
         }
         print(f"(game_logic.py): returning {state} to {player}")
         return state
@@ -708,7 +710,12 @@ class Game:
             player.amount_of_times_called += 1
 
         self.players_acted.append(player)
-        return {"success": True}
+        if bet_amount == 0:
+            message = f"{player.name} checks"
+        else:
+            message = f"{player.name} calls {bet_amount} chips"
+
+        return {"success": True, "message": message}
 
     def __player_raise(self, player, raise_amount):
         # The player raises over the current highest bet
@@ -737,11 +744,11 @@ class Game:
             # Reset the players acted list as everyone needs to agree on a new amount to bet on
             self.players_acted = []
             self.players_acted.append(player)
-            return {"success": True}
+            return {"success": True, "message": message}
 
     def process_player_action(self, player, action, raise_amount):
         self.non_active_player = None
-        message = ""
+        self.message = ""
         # Check if it's the player's turn
         if player != self.players[self.__current_player_turn]:
             return {"success": False, "error": "It's not your turn!"}
@@ -754,18 +761,22 @@ class Game:
         if player.folded:
             return {"success": False, "error": "This player has folded."}
         if action == 'fold':
-            message = self.__player_fold(player)
-            print(message)
+            self.message = self.__player_fold(player)
+            print(self.message)
 
         elif action == 'call':
             action_response = self.__player_call(player)
             if not action_response['success']:
                 return action_response
+            else:
+                self.message = action_response['message']
 
         elif action == 'raise':
             action_response = self.__player_raise(player, raise_amount)
             if not action_response['success']:
                 return action_response
+            else:
+                self.message = action_response['message']
 
         player.amount_of_times_acted += 1
 
@@ -777,24 +788,23 @@ class Game:
             remaining_player = self.__get_players_for_showdown()[0]
             # remaining_player = self.get_active_players()[0]
             remaining_player.chips += self.__pot.chips
+            self.message = f"{remaining_player.name} wins the pot ({self.__pot.chips} chips) as everyone else folded!"
             self.__pot.reset_chips()
-            message = f"{remaining_player.name} wins the pot as everyone else folded!"
             if self.start_round() == "game_completed":
                 print("game completed!")
                 return {"success": True, "type": "game_completed"}
         elif self.__is_betting_round_over():
+            # If the betting round is over, check if there are still remaining players who are not all in
             if [player.all_in for player in self.__get_players_for_showdown()].count(
                     False) > 1 and self.current_round != "river":
                 print(f"{self.current_round} round over!")
-                # If the betting round is over, check if all current players are "all in"
                 self.__progress_to_next_betting_round()
             else:
                 print("skipping through Poker rounds")
                 self.__skip_through_betting_rounds()
                 return {"success": True, "type": "skip_round", "showdown": True}
         else:
-            # If the betting round is not over, go to next player's turn
-            print("betting round not over, so getting next active player turn.")
+            # If the betting round is not over, go to the next player's turn
             next_player_index = self.__get_next_active_player(self.__current_player_turn, False)
             if next_player_index == 999:
                 print("skipping through Poker rounds")
@@ -803,7 +813,7 @@ class Game:
             else:
                 self.__current_player_turn = next_player_index
 
-        return {"success": True, "message": message}
+        return {"success": True, "message": self.message}
 
 
 class Pot:

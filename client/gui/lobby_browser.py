@@ -16,7 +16,7 @@ class LobbyBrowser(tk.Tk):
         self.user_chips = self.controller.network_manager.send_message({"type": "request_user_chips", "user_id":
             self.user_id})
 
-        if not self.user_chips:
+        if self.user_chips is False:
             messagebox.showinfo("Error", "Invalid user error")
             return
 
