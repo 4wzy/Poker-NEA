@@ -584,13 +584,12 @@ class GameGUI(tk.Tk):
         if action == "raise":
             raise_amount = simpledialog.askinteger(f"Raise Amount", "Enter the amount you want to raise):",
                                                    parent=self)
-            while not raise_amount:
-                raise_amount = simpledialog.askinteger("Raise Amount", "Enter the amount you want to raise:",
-                                                       parent=self)
             if raise_amount:
                 message = {"type": "bet", "action": action, "amount": raise_amount, "user_id": self.user_id,
                            "lobby_id": \
                                self.lobby_id}
+            elif raise_amount == 0:
+                messagebox.showerror("Error", "You need to raise by a valid amount! (not 0)")
         else:
             message = {"type": "bet", "action": action, "user_id": self.user_id, "lobby_id": self.lobby_id}
 

@@ -12,13 +12,14 @@ from typing import Dict
 
 class LobbyServer:
     def __init__(self, host='127.0.0.1', port=12345):
+        # Set up the server socket which listens for incoming connections
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((host, port))
         self.server_socket.listen(0)
 
         self.database_interaction = DatabaseInteraction()
         self.user_auth = UserAuth()
-        self.lobbies: Dict[str, Game] = {}  # I have explicitly used type hinting for easier development
+        self.lobbies: Dict[str, Game] = {}  # Type hinting explicitly used for easier development
 
     def start(self):
         print("Server started successfully...")
@@ -31,6 +32,7 @@ class LobbyServer:
         buffer = ""
         while True:
             try:
+                # Received data from the client and handle any potential errors
                 data = client_socket.recv(16384)
                 if not data:
                     print("No data from client socket, searching for disconnected player")
@@ -47,7 +49,7 @@ class LobbyServer:
                     self.__leave_lobby(user_id, lobby_id, client_socket)
                 break
 
-            # Decoding the received bytes to a string before appending to the buffer
+            # Decode the received bytes to a string before appending to the buffer
             buffer += data.decode('utf-8')
 
             # Processing each message in the buffer
@@ -76,7 +78,7 @@ class LobbyServer:
                         self.__handle_start_game(request["lobby_id"])
                         continue
                     elif request["type"] == "bet":
-                        response = self.__process_player_action(request, client_socket)
+                        response = self.__process_player_action(request)
                     elif request["type"] == "send_chat":
                         try:
                             lobby_id = request['lobby_id']
@@ -176,6 +178,7 @@ class LobbyServer:
         print("got game")
         start_round_response = game.start_round()
         print(f"start_round_response: {start_round_response}")
+        # If the poker game is detected to be finished, make the necessary changes in the database
         if start_round_response == "game_completed":
             print("(server.py): game completed")
             # Add the chips that the player has won to their balance
@@ -202,6 +205,7 @@ class LobbyServer:
                 self.database_interaction.update_game_limit_after_completion(player.user_id)
                 self.database_interaction.add_to_attribute_for_user(player.user_id, "total_play_time", game_duration)
 
+                # Modify player data for the winner and for every other player appropriately
                 if player.won_game:
                     self.database_interaction.insert_game_results(game_id, player.user_id, player.finishing_position,
                                                                   game.total_pot, player.aggressiveness_score,
@@ -221,6 +225,7 @@ class LobbyServer:
             self.__broadcast_game_state(lobby_id, None, False)
         print("started new round")
 
+    # This method is used to find te player id who disconnected along with the lobby id
     def __find_disconnected_player(self, disconnected_socket):
         for lobby_id, game in self.lobbies.items():
             for player in game.players:
@@ -228,9 +233,11 @@ class LobbyServer:
                     return player.user_id, lobby_id
         return None, None
 
+    # Return a player object from a user id
     def __find_player_from_user_id(self, user_id, game):
         return next((player for player in game.players if player.user_id == user_id), None)
 
+    # Get the data required to calculate the odds of different card rankings
     def __get_data_for_odds(self, user_id, lobby_id):
         game = self.lobbies[lobby_id]
         player_cards = [[card.suit, card.rank] for card in [player for player in game.players if
@@ -241,7 +248,8 @@ class LobbyServer:
 
         return player_cards, community_cards
 
-    def __process_player_action(self, request, client_socket):
+    # This method processes a player's action such as calling, raising, folding, checking
+    def __process_player_action(self, request):
         user_id = request['user_id']
         action = request['action']
         lobby_id = request['lobby_id']
@@ -255,33 +263,38 @@ class LobbyServer:
 
         return action_response
 
+    # This method handles what happens when a player leaves a lobby
     def __leave_lobby(self, user_id, lobby_id, client_socket):
         print("player leaving")
         if lobby_id not in self.lobbies:
             return {"success": False, "error": "Could not find lobby to remove player from"}
 
+        # Get the game, find the player in the game, and remove them from the game in the database
         game = self.lobbies[lobby_id]
         player = self.__find_player_from_user_id(user_id, game)
         self.database_interaction.remove_player_from_lobby(player.user_id, lobby_id)
 
-        # If there is only one player left
+        # If there is only one player left, the game will be marked as abandoned (handle last player leaving)
         if len(self.__get_connected_players(game)) == 1:
             print("only one player left")
             self._handle_last_player_leaving(lobby_id)
             return {'success': True}
 
+        # If the game has not yet started, completely remove the player from the list of players
         if not game.game_started:
             game.remove_player(user_id, completely_remove=True)
             print(f"New player list: {game.players}")
 
             self._update_lobby_after_player_left(game, player, lobby_id, client_socket)
             print("broadcasted player left game state")
+        # If the game has started, don't completely remove the player from the players list so that they can rejoin
         else:
             game.remove_player(user_id, completely_remove=False)
             self.__broadcast_game_state(lobby_id, client_socket, False)
 
         return {'success': True}
 
+    # This handles what happens when a player leaves in a poker lobby, updating the position indexes as required
     def _update_lobby_after_player_left(self, game, player, lobby_id, client_socket):
         all_positions = ["top_left", "top_middle", "top_right", "bottom_right", "bottom_middle", "bottom_left"]
 
@@ -321,7 +334,6 @@ class LobbyServer:
                 print(f"Amount of times gone all in: {player.amount_of_times_all_in}")
                 print("-----------")
 
-            # Handle game statistics and stuff
         else:
             self.database_interaction.set_lobby_status(lobby_id, "abandoned")
         del self.lobbies[lobby_id]
@@ -391,12 +403,12 @@ class LobbyServer:
         return [player for player in game.players if not player.disconnected]
 
     def __broadcast_game_state(self, lobby_id, current_client, broadcast_to_everyone):
-        print("BROADCASTING GAME STATE TO EVERYONE")
         data_to_return_to_client = None
         if lobby_id in self.lobbies:
             game = self.lobbies[lobby_id]
             game_states = game.send_game_state()
             if broadcast_to_everyone:
+                print("BROADCASTING GAME STATE TO EVERYONE")
                 for player in self.__get_connected_players(game):
                     user_id = player.user_id
                     player.client_socket.sendall((json.dumps({"type": "update_game_state", "user_id": user_id,
@@ -421,11 +433,13 @@ class LobbyServer:
             print(f"(broadcast_game_state) returning {data_to_return_to_client}")
             return data_to_return_to_client
 
+    # When a player sends a message in a lobby, it needs to be received by every other player
     def __broadcast_send_message(self, lobby_id, message, current_client):
         print("BROADCASTING chat message TO EVERYONE")
         if lobby_id in self.lobbies:
             game = self.lobbies[lobby_id]
             for player in self.__get_connected_players(game):
+                # The person who sent the message does not need to receive it as this is not efficient
                 if player.client_socket != current_client:
                     user_id = player.user_id
                     player.client_socket.sendall(
@@ -433,6 +447,8 @@ class LobbyServer:
                             'utf-8'))
                     print(f"sent message {message} to user {user_id}")
 
+    # Each player needs to receive the "showdown state" including every players' cards
+    # That is the main difference between the showdown state and the game state
     def __broadcast_showdown_game_state(self, lobby_id):
         print("BROADCASTING showdown GAME STATE TO EVERYONE")
         if lobby_id in self.lobbies:
@@ -447,8 +463,8 @@ class LobbyServer:
 
             print("sent game state..")
 
+    # Broadcast the completed game state to everyone (when someone has won the game)
     def __broadcast_completed_game_state(self, lobby_id):
-        # Broadcast the completed game state to everyone (when someone has won the game)
         if lobby_id in self.lobbies:
             game = self.lobbies[lobby_id]
             game_state = game.get_game_state_for_completed()
@@ -460,6 +476,7 @@ class LobbyServer:
 
             print("sent game state..")
 
+    # Broadcast the initial game state (which does not contain player's cards yet)
     def __broadcast_initial_game_state(self, lobby_id, current_client):
         print("BROADCASTING INITIAL GAME STATE NOT TO EVERYONE")
         game_state = self.__get_initial_state(lobby_id)
@@ -471,7 +488,6 @@ class LobbyServer:
                 print(f"sent initial game state data to f{client_socket}")
 
     def __broadcast_player_left_game_state(self, lobby_id, current_client):
-        # BROADCAST INITIAL GAME STATE THEN GAME STATE (NOT TO CURRENT CLIENT THOUGH!)
         print("BROADCASTING PLAYER LEFT GAME STATE NOT TO EVERYONE")
         game_state = self.__get_player_left_state(lobby_id)
         print(f"Initial game state to broadcast: {game_state}")
@@ -504,6 +520,7 @@ class LobbyServer:
         user_id = request["user_id"]
         reconnect_lobby = None
 
+        # Append all lobbies that are in progress onto the end of the lobbies list if the user has the option checked
         if "in_progress" in status_filter:
             lobbies += self.database_interaction.get_all_lobbies("in_progress", odds_filter)
         lobbies += self.database_interaction.get_all_lobbies("waiting", odds_filter)
