@@ -134,6 +134,7 @@ class UserProfile(tk.Frame):
             self.num_games_dropdown['values'] = (5, 10, 20, 50, 100)
             self.num_games_dropdown.set(10)
             self.num_games_dropdown.grid(row=3, column=0, padx=10, pady=10)
+            self.num_games_dropdown.bind("<<ComboboxSelected>>", self.on_num_games_selected)
 
             self.attribute_var = tk.StringVar()
             self.attribute_dropdown = ttk.Combobox(self, textvariable=self.attribute_var, state="readonly")
@@ -176,6 +177,7 @@ class UserProfile(tk.Frame):
             "num_games": self.__num_games
         })
         self.display_graph(scores, attribute, self.right_frame)
+        self.create_recent_games_table(self.left_frame)
 
     def display_graph(self, scores, attribute, frame):
         for widget in frame.winfo_children():
