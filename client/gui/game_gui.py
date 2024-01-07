@@ -248,7 +248,11 @@ class GameGUI(tk.Tk):
             else:
                 raise ValueError("The number of iterations must be between 10 and 100000.")
         except ValueError as e:
-            tk.messagebox.showerror("Invalid Input", str(e))
+            tk.messagebox.showerror("Invalid Input, enter a valid number!", str(e))
+        except TypeError as e:
+            tk.messagebox.showerror("Invalid Input, please enter a number!", str(e))
+        except Exception as e:
+            tk.messagebox.showerror("Invalid Input, unknown exception:", str(e))
 
     def process_server_message(self, data):
         print(f"process_server_message called on {self}")

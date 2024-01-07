@@ -102,7 +102,7 @@ class Board:
 
 class Game:
     def __init__(self, starting_chips=200, player_limit=6):
-        self._debugging_enabled = True
+        self._debugging_enabled = False
         self.players: List[Player] = []
         self.available_positions = ["top_left", "top_middle", "top_right", "bottom_right", "bottom_middle",
                                     "bottom_left"]
@@ -200,6 +200,9 @@ class Game:
             elif self.players[self.last_player_to_act] == leaving_player:
                 print("Last player to act == leaving player")
                 self.non_active_player = leaving_player
+                if self.__is_betting_round_over():
+                    self.__progress_to_next_betting_round()
+                    return
                 self.last_player_to_act = self.__get_previous_active_player(self.last_player_to_act, False)
 
             print("Updating current player turn")
@@ -328,11 +331,11 @@ class Game:
         eligible_best_hands = {player: hand for player, hand in best_hands.items() if player in eligible_players}
         print(f"eligible_best_hands: {eligible_best_hands}")
 
-        # Determine the maximum card ranking for these players
+        # Determine the maximum hand ranking for these players
         max_rank = max(eligible_best_hands.values(), key=lambda x: x[0])[0]
         print(f"max_rank: {max_rank}")
 
-        # Filter players using the max card ranking
+        # Filter players using the max hand ranking
         max_rank_players = {player: cards for player, (rank, cards) in eligible_best_hands.items() if rank == max_rank}
         print(f"max_rank_players: {max_rank_players}")
 
@@ -618,10 +621,17 @@ class Game:
         # The debugging_enabled variable is used to only run the code once at the start of the game so that any
         # subsequent Poker rounds or usage of the start_round() method work as intended
         if self._debugging_enabled:
-            debug_player1_chips = 100
-            debug_player2_chips = 100
+            debug_player1_chips = 50
+            debug_player2_chips = 80
             debug_player3_chips = 100
-            debug_player4_chips = 100
+            debug_player4_chips = 150
+
+            # debug_community_cards = [Card("Hearts", "Queen"), Card("Diamonds", "Queen"), Card("Spades", "Queen"),
+            #                          Card("Clubs", "Queen"), Card("Diamonds", "4")]
+            # debug_player1_cards = [Card("Hearts", "Ace"), Card("Spades", "5")]
+            # debug_player2_cards = [Card("Diamonds", "King"), Card("Diamonds", "Jack")]
+            # debug_player3_cards = [Card("Spades", "2"), Card("Diamonds", "3")]
+            # debug_player4_cards = [Card("Spades", "2"), Card("Diamonds", "3")]
 
             # Normal testing situations ---------------------
 
@@ -682,11 +692,11 @@ class Game:
             # Expected outcome: Player1 wins with three of a kind, Kings
 
             # Straight beats Three of a Kind
-            debug_community_cards = [Card("Clubs", "10"), Card("Diamonds", "Jack"), Card("Hearts", "Queen"),
-                                     Card("Spades", "3"), Card("Clubs", "3")]
-            debug_player1_cards = [Card("Hearts", "9"), Card("Hearts", "8")]  # 8 to Queen Straight
-            debug_player2_cards = [Card("Diamonds", "2"), Card("Hearts", "3")]  # Three of a Kind
-            debug_player3_cards = [Card("Spades", "6"), Card("Clubs", "4")]
+            # debug_community_cards = [Card("Clubs", "10"), Card("Diamonds", "Jack"), Card("Hearts", "Queen"),
+            #                          Card("Spades", "3"), Card("Clubs", "3")]
+            # debug_player1_cards = [Card("Hearts", "9"), Card("Hearts", "8")]  # 8 to Queen Straight
+            # debug_player2_cards = [Card("Diamonds", "2"), Card("Hearts", "3")]  # Three of a Kind
+            # debug_player3_cards = [Card("Spades", "6"), Card("Clubs", "4")]
             # Expected outcome: Player1 wins with an 8 to Queen Straight
 
             # Flush beats a Straight
@@ -707,7 +717,7 @@ class Game:
 
             # A higher Full house beats a lower Full House (based on Three of a Kind)
             # debug_community_cards = [Card("Hearts", "King"), Card("Diamonds", "Queen"), Card("Clubs", "10"),
-            #     Card("Spades", "10"), Card("Hearts", "4")]
+            #                          Card("Spades", "10"), Card("Hearts", "4")]
             # debug_player1_cards = [Card("Spades", "King"), Card("Clubs", "King")]
             # debug_player2_cards = [Card("Diamonds", "Queen"), Card("Hearts", "Queen")]
             # debug_player3_cards = [Card("Diamonds", "4"), Card("Spades", "4")]
@@ -715,7 +725,7 @@ class Game:
 
             # A higher Full house beats a lower Full House (based on Two Pair)
             # debug_community_cards = [Card("Hearts", "King"), Card("Diamonds", "King"), Card("Clubs", "King"),
-            #     Card("Spades", "3"), Card("Hearts", "4")]
+            #                           Card("Spades", "3"), Card("Hearts", "4")]
             # debug_player1_cards = [Card("Spades", "Queen"), Card("Clubs", "Queen")]
             # debug_player2_cards = [Card("Diamonds", "Jack"), Card("Hearts", "Jack")]
             # debug_player3_cards = [Card("Hearts", "10"), Card("Spades", "10")]
@@ -733,7 +743,7 @@ class Game:
             # debug_community_cards = [Card("Clubs", "9"), Card("Clubs", "10"), Card("Clubs", "Jack"),
             #                          Card("Clubs", "King"), Card("Spades", "King")]
             # debug_player1_cards = [Card("Clubs", "7"), Card("Clubs", "8")]  # Straight flush 7 to Jack
-            # debug_player2_cards = [Card("Hearts", "King"), Card("King", "King")]  # Four of a Kind (King)
+            # debug_player2_cards = [Card("Hearts", "King"), Card("Diamonds", "King")]  # Four of a Kind (King)
             # debug_player3_cards = [Card("Diamonds", "3"), Card("Spades", "4")]
             # Expected outcome: Player1 wins with a Straight Flush
 
@@ -797,17 +807,17 @@ class Game:
             # debug_player3_cards = [Card("Spades", "2"), Card("Diamonds", "3")]
             # Expected outcome: Player1 wins with a higher kicker (Ace)
 
-            self.debug_set_community_cards(debug_community_cards)
-            self.players[0].debug_set_cards(debug_player1_cards)
+            # self.debug_set_community_cards(debug_community_cards)
+            # self.players[0].debug_set_cards(debug_player1_cards)
             self.players[0].debug_set_chips(debug_player1_chips)
-            self.players[1].debug_set_cards(debug_player2_cards)
+            # self.players[1].debug_set_cards(debug_player2_cards)
             self.players[1].debug_set_chips(debug_player2_chips)
-            self.players[2].debug_set_cards(debug_player3_cards)
+            # self.players[2].debug_set_cards(debug_player3_cards)
             self.players[2].debug_set_chips(debug_player3_chips)
             # self.players[3].debug_set_cards(debug_player4_cards)
-            # self.players[3].debug_set_chips(debug_player4_chips)
+            self.players[3].debug_set_chips(debug_player4_chips)
 
-            self.current_round = "river"
+            self.current_round = "preflop"
             self._debugging_enabled = False
 
         # ---- END OF DEBUGGING METHODS ----
