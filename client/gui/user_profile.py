@@ -393,11 +393,20 @@ class SelectProfilePic(tk.Toplevel):
         file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")])
         if file_path:
             if file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+                # Delete previous profile pictures before uploading new one
+                self.delete_previous_pictures()
+
                 # Resize and send to server
                 self.resize_and_upload(file_path)
             else:
                 # Display error if invalid file used
                 messagebox.showerror("Invalid File", "Please select a valid image file (png, jpg, jpeg).")
+
+    def delete_previous_pictures(self):
+        # Search for and delete previous profile pictures
+        for old_file in glob.glob(f"gui/Images/Pfps/{self.profile_user_id}_*.png"):
+            os.remove(old_file)
+            print(f"Removed old profile picture: {old_file}")
 
     def resize_and_upload(self, file_path):
         # Resize the image
