@@ -139,7 +139,7 @@ class UserProfile(tk.Frame):
             self.attribute_var = tk.StringVar()
             self.attribute_dropdown = ttk.Combobox(self, textvariable=self.attribute_var, state="readonly")
             self.attribute_dropdown['values'] = ("pos", "winnings", "aggressiveness_score", "conservativeness_score")
-            self.attribute_dropdown.set("conservativeness_score")  # default value
+            self.attribute_dropdown.set("aggressiveness_score")  # default value
             self.attribute_dropdown.grid(row=3, column=1, padx=10, pady=10)
             self.attribute_dropdown.bind("<<ComboboxSelected>>", self.on_attribute_selected)
 
@@ -169,7 +169,7 @@ class UserProfile(tk.Frame):
 
     def on_num_games_selected(self, event):
         self.__num_games = int(self.num_games_var.get())
-        attribute = "conservativeness_score"
+        attribute = self.attribute_var.get()
         scores = self.controller.network_manager.send_message({
             "type": "get_attribute_from_user_games_played",
             "user_id": self.profile_user_id,
@@ -392,8 +392,12 @@ class SelectProfilePic(tk.Toplevel):
     def upload_new_picture(self):
         file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")])
         if file_path:
-            # Resize and send to server
-            self.resize_and_upload(file_path)
+            if file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+                # Resize and send to server
+                self.resize_and_upload(file_path)
+            else:
+                # Display error if invalid file used
+                messagebox.showerror("Invalid File", "Please select a valid image file (png, jpg, jpeg).")
 
     def resize_and_upload(self, file_path):
         # Resize the image
