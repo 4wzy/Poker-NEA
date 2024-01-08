@@ -11,17 +11,14 @@ from gui.responsible_gambling_menu import ResponsibleGamblingMenu
 from gui.how_to_play import HowToPlay
 from gui.user_profile import UserProfile
 
-
+# The names of the methods explain what they do pretty well without other comments
 class Controller:
     def __init__(self):
         self.__current_menu = None
         self.network_manager = NetworkManager()
 
-    # Note: When running the application properly, use self.open_login_menu()
     def run(self):
-        # self.open_login_menu()
-        # The call to open_main_menu() is for debugging purposes only - to skip the login stage for time efficiency
-        self.open_main_menu(23)
+        self.open_login_menu()
         tk.mainloop()
 
     def open_login_menu(self):

@@ -15,6 +15,7 @@ class ResponsibleGamblingMenu(tk.Tk):
         self.daily_game_limit = self.controller.network_manager.send_message(
             {'type': 'get_daily_game_limit', "user_id": self.user_id})
 
+        # Set up the widgets
         self.user_id = user_id
         self.daily_game_limit = self.daily_game_limit
 
@@ -67,6 +68,7 @@ class ResponsibleGamblingMenu(tk.Tk):
                                     self.user_id))
         back_button.grid(row=i + 1, column=0, columnspan=2, pady=20)
 
+    # Allow the user to set a new daily game limit
     def set_limit(self):
         new_limit = self.new_limit_var.get()
         try:
@@ -77,14 +79,12 @@ class ResponsibleGamblingMenu(tk.Tk):
             tk.messagebox.showerror("Invalid Input", "Please enter a valid number between 1 and 499.")
             return
 
-        # Update the daily game limit in the database (you need to implement this method)
-        self.update_daily_game_limit(new_limit)
+        # Update the daily game limit in the database
+        self.daily_game_limit = self.controller.network_manager.send_message({'type': 'update_daily_game_limit',
+                                                                              "user_id": self.user_id,
+                                                                              "new_limit": new_limit})
 
         # Update the label showing the current limit
         self.current_limit_label.config(text=f"Current Daily Game Limit: {new_limit}")
 
         tk.messagebox.showinfo("Limit Updated", "Your daily game limit has been updated.")
-
-    def update_daily_game_limit(self, new_limit):
-        self.daily_game_limit = self.controller.network_manager.send_message({'type': 'update_daily_game_limit',
-                                                                              "user_id": self.user_id, "new_limit": new_limit})

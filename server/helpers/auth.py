@@ -19,6 +19,7 @@ class UserAuth(DatabaseBase):
             if row is None:
                 return {"success": False, "message": "Invalid username or password"}
                 # This message is used to not let a potential hacker know if they are dealing with a valid username
+                # it could prevent third party applications hacking into accounts
 
             stored_hashed_password, salt = row
             # Hash the provided password with the salt
@@ -37,10 +38,10 @@ class UserAuth(DatabaseBase):
                 return {"success": False, "message": "Invalid username or password"}
 
     def register_user(self, username: str, password: str, email: str):
-        if not self.__validate_password(password):
-            return {"success": False, "message": "Password does not meet the requirements"}
         if not self.__validate_username(username):
             return {"success": False, "message": "Username does not meet the requirements"}
+        if not self.__validate_password(password):
+            return {"success": False, "message": "Password does not meet the requirements"}
         if not self.__validate_email(email):
             return {"success": False, "message": "Invalid email provided"}
 
@@ -78,6 +79,8 @@ class UserAuth(DatabaseBase):
         if not re.search("[A-Z]", password):
             return False
         if not re.search("[a-z]", password):
+            return False
+        if not re.search("[0-9]", password):
             return False
         if not re.search("[!?,.()@<>#$%&*^\":{}|]", password):
             return False

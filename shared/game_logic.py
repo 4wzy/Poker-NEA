@@ -3,7 +3,6 @@ from random import randint
 from typing import List
 from collections import Counter
 
-
 class Card:
     def __init__(self, suit, rank):
         self.suit = suit
@@ -61,12 +60,12 @@ class Player:
         self.all_in = False
         self.busted = False
         # Variables for game statistics
-        self.amount_of_times_raised = 0
-        self.amount_of_times_all_in = 0
-        self.amount_of_times_called = 0
-        self.amount_of_times_checked = 0
-        self.amount_of_times_folded = 0
-        self.amount_of_times_acted = 0
+        self.number_of_times_raised = 0
+        self.number_of_times_all_in = 0
+        self.number_of_times_called = 0
+        self.number_of_times_checked = 0
+        self.number_of_times_folded = 0
+        self.number_of_times_acted = 0
         self.won_round = False
         self.won_game = False
         self.finishing_position = 0
@@ -626,196 +625,20 @@ class Game:
             debug_player3_chips = 100
             debug_player4_chips = 150
 
-            # debug_community_cards = [Card("Hearts", "Queen"), Card("Diamonds", "Queen"), Card("Spades", "Queen"),
-            #                          Card("Clubs", "Queen"), Card("Diamonds", "4")]
-            # debug_player1_cards = [Card("Hearts", "Ace"), Card("Spades", "5")]
-            # debug_player2_cards = [Card("Diamonds", "King"), Card("Diamonds", "Jack")]
-            # debug_player3_cards = [Card("Spades", "2"), Card("Diamonds", "3")]
-            # debug_player4_cards = [Card("Spades", "2"), Card("Diamonds", "3")]
-
-            # Normal testing situations ---------------------
-
-            # No player has a pair or better, high card wins
-            # debug_community_cards = [Card("Clubs", "7"), Card("Diamonds", "8"), Card("Hearts", "5"),
-            #                          Card("Spades", "3"), Card("Clubs", "10")]
-            # debug_player1_cards = [Card("Hearts", "Ace"), Card("Hearts", "4")]
-            # debug_player2_cards = [Card("Diamonds", "Jack"), Card("Clubs", "Queen")]
-            # debug_player3_cards = [Card("Diamonds", "6"), Card("Hearts", "2")]
-            # Expected outcome: Player1 wins with high card Ace
-
-            # One pair beats high card
-            # debug_community_cards = [Card("Clubs", "King"), Card("Diamonds", "8"), Card("Hearts", "9"),
-            #                          Card("Spades", "5"), Card("Clubs", "3")]
-            # debug_player1_cards = [Card("Hearts", "Ace"), Card("Hearts", "King")]  # Pair (kings)
-            # debug_player2_cards = [Card("Diamonds", "Jack"), Card("Clubs", "10")]
-            # debug_player3_cards = [Card("Spades", "4"), Card("Hearts", "6")]
-            # Expected outcome: Player1 wins with a pair of Kings
-
-            # A higher pair beats a lower pair
-            # debug_community_cards = [Card("Clubs", "King"), Card("Diamonds", "8"), Card("Hearts", "9"),
-            #                          Card("Spades", "5"), Card("Clubs", "3")]
-            # debug_player1_cards = [Card("Hearts", "Ace"), Card("Hearts", "King")]  # Pair (kings)
-            # debug_player2_cards = [Card("Diamonds", "8"), Card("Clubs", "10")]  # Pair (8)
-            # debug_player3_cards = [Card("Spades", "4"), Card("Hearts", "6")]
-            # Expected outcome: Player1 wins with a pair of Kings
-
-            # Two pair beats one pair
-            # debug_community_cards = [Card("Clubs", "King"), Card("Diamonds", "Queen"), Card("Hearts", "Queen"),
-            #                          Card("Spades", "5"), Card("Clubs", "3")]
-            # debug_player1_cards = [Card("Hearts", "Ace"), Card("Hearts", "6")]  # One pair (Queens)
-            # debug_player2_cards = [Card("Diamonds", "Jack"), Card("Clubs", "Jack")]  # Two pair (Queens, Jacks)
-            # debug_player3_cards = [Card("Spades", "2"), Card("Hearts", "7")]  # One pair (Queens)
-            # Expected outcome: Player2 wins with two pair, Queens and Jacks
-
-            # A higher two pair beats a lower two pair
-            # debug_community_cards = [Card("Clubs", "King"), Card("Diamonds", "Queen"), Card("Hearts", "Queen"),
-            #                          Card("Spades", "5"), Card("Clubs", "3")]
-            # debug_player1_cards = [Card("Hearts", "Ace"), Card("Hearts", "King")]  # Two pair (Kings and Queens)
-            # debug_player2_cards = [Card("Diamonds", "Jack"), Card("Clubs", "Jack")]  # Two pair (Queens and Jacks)
-            # debug_player3_cards = [Card("Spades", "2"), Card("Hearts", "7")]
-            # Expected outcome: Player1 wins with two pair, Queens and Jacks
-
-            # Three of a Kind beats two pair
-            # debug_community_cards = [Card("Clubs", "King"), Card("Diamonds", "King"), Card("Hearts", "9"),
-            #                          Card("Spades", "5"), Card("Clubs", "3")]
-            # debug_player1_cards = [Card("Hearts", "Ace"), Card("Hearts", "King")]  # Three of a Kind
-            # debug_player2_cards = [Card("Diamonds", "Queen"), Card("Clubs", "Queen")]  # Two pair
-            # debug_player3_cards = [Card("Hearts", "8"), Card("Diamonds", "7")]  # Pair
-            # Expected outcome: Player1 wins with three of a kind, Kings
-
-            # A higher Three of a Kind beats a lower Three of a Kind
-            # debug_community_cards = [Card("Clubs", "King"), Card("Diamonds", "4"), Card("Hearts", "9"),
-            #                          Card("Spades", "5"), Card("Clubs", "3")]
-            # debug_player1_cards = [Card("Diamonds", "King"), Card("Hearts", "King")]  # Three of a Kind (Kings)
-            # debug_player2_cards = [Card("Diamonds", "9"), Card("Clubs", "9")]  # Three of a Kind (9s)
-            # debug_player3_cards = [Card("Hearts", "8"), Card("Diamonds", "7")]  # Pair
-            # Expected outcome: Player1 wins with three of a kind, Kings
-
-            # Straight beats Three of a Kind
-            # debug_community_cards = [Card("Clubs", "10"), Card("Diamonds", "Jack"), Card("Hearts", "Queen"),
-            #                          Card("Spades", "3"), Card("Clubs", "3")]
-            # debug_player1_cards = [Card("Hearts", "9"), Card("Hearts", "8")]  # 8 to Queen Straight
-            # debug_player2_cards = [Card("Diamonds", "2"), Card("Hearts", "3")]  # Three of a Kind
-            # debug_player3_cards = [Card("Spades", "6"), Card("Clubs", "4")]
-            # Expected outcome: Player1 wins with an 8 to Queen Straight
-
-            # Flush beats a Straight
-            # debug_community_cards = [Card("Clubs", "10"), Card("Clubs", "Jack"), Card("Clubs", "Queen"),
-            #                          Card("Clubs", "4"), Card("Diamonds", "3")]
-            # debug_player1_cards = [Card("Hearts", "9"), Card("Hearts", "8")]  # 8 to Queen Straight
-            # debug_player2_cards = [Card("Clubs", "Ace"), Card("Diamonds", "5")]  # Flush
-            # debug_player3_cards = [Card("Hearts", "10"), Card("Spades", "10")]  # Three of a Kind
-            # Expected outcome: Player2 wins with a Flush of clubs
-
-            # Full house beats a Flush
-            # debug_community_cards = [Card("Clubs", "10"), Card("Clubs", "Jack"), Card("Clubs", "Queen"),
-            #                          Card("Clubs", "3"), Card("Diamonds", "3")]
-            # debug_player1_cards = [Card("Hearts", "9"), Card("Hearts", "8")]  # 8 to Queen Straight
-            # debug_player2_cards = [Card("Clubs", "Ace"), Card("Diamonds", "5")]  # Flush
-            # debug_player3_cards = [Card("Hearts", "10"), Card("Spades", "10")]  # Full House
-            # Expected outcome: Player3 wins with a Full House
-
-            # A higher Full house beats a lower Full House (based on Three of a Kind)
-            # debug_community_cards = [Card("Hearts", "King"), Card("Diamonds", "Queen"), Card("Clubs", "10"),
-            #                          Card("Spades", "10"), Card("Hearts", "4")]
-            # debug_player1_cards = [Card("Spades", "King"), Card("Clubs", "King")]
-            # debug_player2_cards = [Card("Diamonds", "Queen"), Card("Hearts", "Queen")]
-            # debug_player3_cards = [Card("Diamonds", "4"), Card("Spades", "4")]
-            # Expected outcome: Player1 wins with the Full House (Kings against Queens against 4s)
-
-            # A higher Full house beats a lower Full House (based on Two Pair)
-            # debug_community_cards = [Card("Hearts", "King"), Card("Diamonds", "King"), Card("Clubs", "King"),
-            #                           Card("Spades", "3"), Card("Hearts", "4")]
-            # debug_player1_cards = [Card("Spades", "Queen"), Card("Clubs", "Queen")]
-            # debug_player2_cards = [Card("Diamonds", "Jack"), Card("Hearts", "Jack")]
-            # debug_player3_cards = [Card("Hearts", "10"), Card("Spades", "10")]
-            # Expected outcome: Player1 wins with the Full House (Queens against Jacks against 10s)
-
-            # Four of a Kind beats a Full House
-            # debug_community_cards = [Card("Clubs", "Ace"), Card("Diamonds", "Ace"), Card("Hearts", "Ace"),
-            #                          Card("Spades", "King"), Card("Hearts", "Queen")]
-            # debug_player1_cards = [Card("Hearts", "King"), Card("Clubs", "King")]  # Full House (King)
-            # debug_player2_cards = [Card("Diamonds", "Ace"), Card("Clubs", "5")]  # Four of a Kind
-            # debug_player3_cards = [Card("Spades", "Queen"), Card("Hearts", "10")]  # Full House (Queen)
-            # Expected outcome: Player2 wins with Four of a Kind (Aces)
-
-            # Straight Flush beats Four of a Kind
-            # debug_community_cards = [Card("Clubs", "9"), Card("Clubs", "10"), Card("Clubs", "Jack"),
-            #                          Card("Clubs", "King"), Card("Spades", "King")]
-            # debug_player1_cards = [Card("Clubs", "7"), Card("Clubs", "8")]  # Straight flush 7 to Jack
-            # debug_player2_cards = [Card("Hearts", "King"), Card("Diamonds", "King")]  # Four of a Kind (King)
-            # debug_player3_cards = [Card("Diamonds", "3"), Card("Spades", "4")]
-            # Expected outcome: Player1 wins with a Straight Flush
-
             # Royal Flush beats everything else
-            # debug_community_cards = [Card("Hearts", "10"), Card("Hearts", "Jack"), Card("Hearts", "Queen"),
-            #                          Card("Spades", "3"), Card("Hearts", "3")]
-            # debug_player1_cards = [Card("Hearts", "King"), Card("Hearts", "Ace")]  # Royal flush (10 to Ace)
-            # debug_player2_cards = [Card("Diamonds", "3"), Card("Clubs", "3")]  # Four of a kind
-            # debug_player3_cards = [Card("Hearts", "8"), Card("Hearts", "9")]  # Straight flush (8 to Queen)
+            debug_community_cards = [Card("Hearts", "10"), Card("Hearts", "Jack"), Card("Hearts", "Queen"),
+                                     Card("Spades", "3"), Card("Hearts", "3")]
+            debug_player1_cards = [Card("Hearts", "King"), Card("Hearts", "Ace")]  # Royal flush (10 to Ace)
+            debug_player2_cards = [Card("Diamonds", "3"), Card("Clubs", "3")]  # Four of a kind
+            debug_player3_cards = [Card("Hearts", "8"), Card("Hearts", "9")]  # Straight flush (8 to Queen)
             # Expected outcome: Player1 has a Royal Flush. Nobody else has a Royal Flush, so they win the pot.
 
-            # Kicker testing situations from https://howtoplaypokerinfo.com/kicker/ --------------------
-
-            # High card, kicker doesn't play, pot is split (TIE)
-            # debug_community_cards = [Card("Clubs", "King"), Card("Diamonds", "Queen"), Card("Clubs", "9"),
-            #                          Card("Hearts", "8"), Card("Clubs", "3")]
-            # debug_player1_cards = [Card("Hearts", "Ace"), Card("Hearts", "7")]
-            # debug_player2_cards = [Card("Diamonds", "Ace"), Card("Clubs", "5")]
-            # debug_player3_cards = [Card("Diamonds", "2"), Card("Diamonds", "4")]
-            # Expected outcome: Pot is split between player1 and player2
-            # This is because both player's have the exact same best community card and player deck combination,
-            # Ace, King, Queen, 9, 8
-
-            # One pair with kicker, higher kicker wins
-            # debug_community_cards = [Card("Clubs", "Ace"), Card("Diamonds", "10"), Card("Spades", "7"),
-            #                          Card("Clubs", "5"), Card("Diamonds", "2")]
-            # debug_player1_cards = [Card("Hearts", "Ace"), Card("Hearts", "King")]
-            # debug_player2_cards = [Card("Diamonds", "Ace"), Card("Clubs", "Queen")]
-            # debug_player3_cards = [Card("Diamonds", "6"), Card("Diamonds", "8")]
-            # Expected outcome: Player1 wins with a higher kicker (King)
-
-            # Two pair with kicker, higher kicker wins
-            # debug_community_cards = [Card("Hearts", "Ace"), Card("Diamonds", "10"), Card("Spades", "7"),
-            #                          Card("Spades", "5"), Card("Diamonds", "5")]
-            # debug_player1_cards = [Card("Hearts", "Ace"), Card("Hearts", "King")]
-            # debug_player2_cards = [Card("Diamonds", "Ace"), Card("Clubs", "Queen")]
-            # debug_player3_cards = [Card("Diamonds", "6"), Card("Diamonds", "8")]
-            # Expected outcome: Player1 wins with a higher kicker (King)
-
-            # Tie situation with two pair, kickers don't play
-            # debug_community_cards = [Card("Hearts", "Ace"), Card("Hearts", "9"), Card("Clubs", "9"),
-            #                          Card("Diamonds", "Jack"), Card("Clubs", "4")]
-            # debug_player1_cards = [Card("Clubs", "Ace"), Card("Diamonds", "2")]
-            # debug_player2_cards = [Card("Diamonds", "Ace"), Card("Spades", "7")]
-            # debug_player3_cards = [Card("Diamonds", "6"), Card("Diamonds", "8")]
-            # Expected outcome: Pot is split between player1 and player2
-
-            # Three of a kind with kicker, higher kicker wins
-            # debug_community_cards = [Card("Clubs", "Ace"), Card("Spades", "Ace"), Card("Spades", "7"),
-            #                          Card("Hearts", "5"), Card("Diamonds", "2")]
-            # debug_player1_cards = [Card("Hearts", "Ace"), Card("Hearts", "King")]
-            # debug_player2_cards = [Card("Diamonds", "Ace"), Card("Clubs", "Queen")]
-            # debug_player3_cards = [Card("Diamonds", "6"), Card("Diamonds", "8")]
-            # Expected outcome: Player1 wins with a higher kicker (King)
-
-            # Four of a kind, kicker plays if on board
-            # debug_community_cards = [Card("Hearts", "Queen"), Card("Diamonds", "Queen"), Card("Spades", "Queen"),
-            #                          Card("Clubs", "Queen"), Card("Diamonds", "4")]
-            # debug_player1_cards = [Card("Hearts", "Ace"), Card("Spades", "5")]
-            # debug_player2_cards = [Card("Diamonds", "King"), Card("Diamonds", "Jack")]
-            # debug_player3_cards = [Card("Spades", "2"), Card("Diamonds", "3")]
-            # Expected outcome: Player1 wins with a higher kicker (Ace)
-
-            # self.debug_set_community_cards(debug_community_cards)
-            # self.players[0].debug_set_cards(debug_player1_cards)
+            self.debug_set_community_cards(debug_community_cards)
+            self.players[0].debug_set_cards(debug_player1_cards)
             self.players[0].debug_set_chips(debug_player1_chips)
-            # self.players[1].debug_set_cards(debug_player2_cards)
+            self.players[1].debug_set_cards(debug_player2_cards)
             self.players[1].debug_set_chips(debug_player2_chips)
-            # self.players[2].debug_set_cards(debug_player3_cards)
-            self.players[2].debug_set_chips(debug_player3_chips)
-            # self.players[3].debug_set_cards(debug_player4_cards)
-            self.players[3].debug_set_chips(debug_player4_chips)
+            self.players[2].debug_set_cards(debug_player3_cards)
 
             self.current_round = "preflop"
             self._debugging_enabled = False
@@ -882,7 +705,7 @@ class Game:
         message = f"{player.name} folds"
 
         player.folded = True
-        player.amount_of_times_folded += 1
+        player.number_of_times_folded += 1
         if player == self.players[self.first_player_to_act]:
             self.first_player_to_act = self.__get_next_active_player(self.first_player_to_act, False)
         elif player == self.players[self.last_player_to_act]:
@@ -906,13 +729,13 @@ class Game:
 
         if player.chips == 0:
             player.all_in = True
-            player.amount_of_times_all_in += 1
+            player.number_of_times_all_in += 1
             self.non_active_player = player
 
         if bet_amount == 0:
-            player.amount_of_times_checked += 1
+            player.number_of_times_checked += 1
         else:
-            player.amount_of_times_called += 1
+            player.number_of_times_called += 1
 
         self.players_acted.append(player)
         if bet_amount == 0:
@@ -941,10 +764,10 @@ class Game:
 
             if player.chips == 0:
                 player.all_in = True
-                player.amount_of_times_all_in += 1
+                player.number_of_times_all_in += 1
                 self.non_active_player = player
 
-            player.amount_of_times_raised += 1
+            player.number_of_times_raised += 1
 
             # Reset the players acted list as everyone needs to agree on a new amount to bet on
             self.players_acted = []
@@ -984,7 +807,7 @@ class Game:
             else:
                 self.message = action_response['message']
 
-        player.amount_of_times_acted += 1
+        player.number_of_times_acted += 1
 
         print(
             f"About to check if only one player active in list of active players: {self.__get_players_for_showdown()}")

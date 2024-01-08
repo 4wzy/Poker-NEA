@@ -11,9 +11,6 @@ class RegisterMenu(tk.Tk):
         self.configure(bg="#181F1C")
 
         # Create and configure widgets
-        # self.label = tk.Label(self, text="Login Menu")
-        # self.label.grid(row=0, column=0, padx=10, pady=10)
-
         self.logo_image = tk.PhotoImage(file="gui/Images/logo.png")
         self.logo_image = self.logo_image.subsample(4, 4)
         self.logo_label1 = tk.Label(self, image=self.logo_image, bg="black")
@@ -54,6 +51,7 @@ class RegisterMenu(tk.Tk):
         self.help_label = tk.Label(self, text="", font=("Cambria", 12), bg="#191F1C", fg="white")
         self.help_label.grid(row=7, column=0, padx=10, pady=10, columnspan=4)
 
+        # Configure the grid so the register menu resizes appropriately
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=1)
@@ -65,9 +63,9 @@ class RegisterMenu(tk.Tk):
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
+    # Send a request to register to the server with the data that the user has submitted and handle the server's response
     def register_user(self, username: str, password: str, email: str):
         result = self.controller.network_manager.send_message({"type": "register_user", "username": username, "password": password, "email": email})
-
 
         self.help_label.config(text=result["message"])
         if not result["success"]:

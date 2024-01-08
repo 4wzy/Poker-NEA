@@ -11,6 +11,7 @@ class SettingsMenu(tk.Tk):
         self.controller = controller
         self.user_id = user_id
         print(f"USING LOBBY BROWSER WITH USER_ID: {self.user_id}")
+        # Get any required data from the server
         self.username = self.controller.network_manager.send_message({"type": "get_username", "user_id": self.user_id})
         self.user_chips = self.controller.network_manager.send_message({"type": "request_user_chips", "user_id":
             self.user_id})
@@ -18,6 +19,7 @@ class SettingsMenu(tk.Tk):
         self.title("Settings - AceAware Poker")
         self.configure(bg="#333333")
 
+        # Set up the GUI widgets
         container = tk.Frame(self, bg="#333333", bd=5)
         container.pack(side="top", fill="both", expand=True)
         container.config(highlightbackground="red", highlightthickness=2)
@@ -42,6 +44,7 @@ class SettingsMenu(tk.Tk):
                 self.user_id))
         back_button.grid(row=3, column=0, sticky="ew", pady=10, padx=10)
 
+    # Allow the user to reset their chips back to the default value
     def reset_chips(self):
         response = self.controller.network_manager.send_message({"type": "update_chip_balance_for_user", "user_id":
             self.user_id, "amount": 500})

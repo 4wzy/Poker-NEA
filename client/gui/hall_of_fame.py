@@ -52,12 +52,12 @@ class HallOfFame(tk.Tk):
         self.scroll_frame.bind("<Configure>", self.on_frame_configure)
         self.canvas.bind("<Configure>", self.on_canvas_configure)
 
+    # Reset the scroll region to show the inner frame
     def on_frame_configure(self, event):
-        """Reset the scroll region to encompass the inner frame."""
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
+    # Reset the width of the scroll frame to be the same as the width of the canvas
     def on_canvas_configure(self, event):
-        """Reset the width of the scroll frame to match the width of the canvas."""
         canvas_width = event.width
         self.canvas.itemconfig(self.canvas_window, width=canvas_width)
 
@@ -144,12 +144,6 @@ class HallOfFame(tk.Tk):
             profile_pic_path = self.profile_picture_manager.check_and_fetch_profile_picture(user_id)
             if profile_pic_path:
                 self.add_player_banner(username, profile_pic_path, f"{selected_attribute}: {attribute_value}", user_id)
-
-    def get_profile_pic_path(self, user_id):
-        # Placeholder method to return the profile picture path based on the user_id
-        profile_picture_name = self.controller.network_manager.send_message({"type": "get_user_profile_picture",
-                                                                             "user_id": user_id})
-        return f"gui/Images/Pfps/{profile_picture_name}"
 
     def update_profile_picture(self, user_id, new_pic_name):
         if user_id in self.player_banners:

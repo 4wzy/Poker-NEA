@@ -116,8 +116,8 @@ class LobbyBrowser(tk.Tk):
     def open_create_lobby_window(self):
         CreateLobbyWindow(self.controller, self.user_id, self.user_chips)
 
+    # This method fetches the lobby list from the server and populates the GUI with the lobbies fetched
     def fetch_and_populate_lobby_list(self):
-        print("Fetching lobby list...")
         status_filter = self.status_var.get()
         odds_filter = self.odds_var.get()
 
@@ -210,6 +210,7 @@ class LobbyBrowser(tk.Tk):
             messagebox.showerror("Error", response_data['error'])
             return
 
+# Each lobby is represented with a "Lobby Card", which is a visual component showing information about the lobby
 
 class LobbyCard(tk.Frame):
     def __init__(self, container, lobby_info, join_command, allow_join, allow_reconnect, *args, **kwargs):
@@ -242,6 +243,7 @@ class LobbyCard(tk.Frame):
             join_button.pack(side="bottom", padx=5, pady=5)
 
 
+# The window for creating lobbies
 class CreateLobbyWindow(tk.Toplevel):
     def __init__(self, controller, user_id, user_chips, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -311,6 +313,7 @@ class CreateLobbyWindow(tk.Toplevel):
         lobby_name = self.lobby_name_entry.get()
         buy_in = self.chips_entry.get()
 
+        # Error handling below to verify that the information provided is valid
         if not lobby_name or len(lobby_name) > 16:
             messagebox.showinfo("Error", "Please enter a valid lobby name (1-16 characters)")
             return

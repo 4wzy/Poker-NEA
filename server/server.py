@@ -32,7 +32,7 @@ class LobbyServer:
         buffer = ""
         while True:
             try:
-                # Received data from the client and handle any potential errors
+                # Receive data from the client and handle any potential errors
                 data = client_socket.recv(16384)
                 if not data:
                     print("No data from client socket, searching for disconnected player")
@@ -193,13 +193,13 @@ class LobbyServer:
 
             for player in game.players:
                 # Handle the relevant statistics for each player
-                if player.amount_of_times_acted != 0:
+                if player.number_of_times_acted != 0:
                     # Avoid division by zero error in case the player left before acting
-                    player.aggressiveness_score = round((player.amount_of_times_raised / player.amount_of_times_acted) *
+                    player.aggressiveness_score = round((player.number_of_times_raised / player.number_of_times_acted) *
                                                         100, 2)
-                    player.conservativeness_score = round(((player.amount_of_times_folded +
-                                                            player.amount_of_times_checked)
-                                                           / player.amount_of_times_acted) * 100, 2)
+                    player.conservativeness_score = round(((player.number_of_times_folded +
+                                                            player.number_of_times_checked)
+                                                           / player.number_of_times_acted) * 100, 2)
 
                 self.database_interaction.add_to_attribute_for_user(player.user_id, "games_played", 1)
                 self.database_interaction.update_game_limit_after_completion(player.user_id)
@@ -219,7 +219,7 @@ class LobbyServer:
                 self.database_interaction.update_average_scores(player.user_id, player.aggressiveness_score,
                                                                 player.conservativeness_score)
 
-            # BROADCAST GAME COMPLETED STATE
+            # BROADCAST COMPLETED GAME STATE
             self.__broadcast_completed_game_state(lobby_id)
         else:
             self.__broadcast_game_state(lobby_id, None, False)
@@ -326,12 +326,12 @@ class LobbyServer:
             for player in self.lobbies[lobby_id].players:
                 print("-----------")
                 print(f"Player {player.name}:")
-                print(f"Amount of times acted: {player.amount_of_times_acted}")
-                print(f"Amount of times called: {player.amount_of_times_called}")
-                print(f"Amount of times checked: {player.amount_of_times_checked}")
-                print(f"Amount of times folded: {player.amount_of_times_folded}")
-                print(f"Amount of times raised: {player.amount_of_times_raised}")
-                print(f"Amount of times gone all in: {player.amount_of_times_all_in}")
+                print(f"Number of times acted: {player.number_of_times_acted}")
+                print(f"Number of times called: {player.number_of_times_called}")
+                print(f"Number of times checked: {player.number_of_times_checked}")
+                print(f"Number of times folded: {player.number_of_times_folded}")
+                print(f"Number of times raised: {player.number_of_times_raised}")
+                print(f"Number of times gone all in: {player.number_of_times_all_in}")
                 print("-----------")
 
         else:
@@ -401,7 +401,8 @@ class LobbyServer:
 
     def __get_connected_players(self, game):
         return [player for player in game.players if not player.disconnected]
-
+    
+    # Broadcast the state of the game
     def __broadcast_game_state(self, lobby_id, current_client, broadcast_to_everyone):
         data_to_return_to_client = None
         if lobby_id in self.lobbies:
@@ -487,6 +488,7 @@ class LobbyServer:
                     (json.dumps({"type": "initial_state", "game_state": game_state}) + '\n').encode('utf-8'))
                 print(f"sent initial game state data to f{client_socket}")
 
+    # Broadcast the state of the game after a player has left to update the GUI for every player
     def __broadcast_player_left_game_state(self, lobby_id, current_client):
         print("BROADCASTING PLAYER LEFT GAME STATE NOT TO EVERYONE")
         game_state = self.__get_player_left_state(lobby_id)

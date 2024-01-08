@@ -32,11 +32,13 @@ class GameGUI(tk.Tk):
         self.reconnecting = reconnecting
         self.odds_iterations = 2000
 
+        # Title the window
         self.title("Poker Game")
 
         main_pane = tk.PanedWindow(self, orient="horizontal", bg="#333333", bd=0)
         main_pane.pack(fill="both", expand=1)
 
+        # Set up the sidepar and add it to the main pane
         self.sidebar = tk.Frame(main_pane, bg="#333333", width=int(self.winfo_screenwidth() * 0.2))
         main_pane.add(self.sidebar)
 
@@ -184,7 +186,6 @@ class GameGUI(tk.Tk):
             print("(game_gui): attempting to reconnect...")
             self.after(10, self.update_game_state, initial_state)
 
-    # Could be made as a private method
     def start_game_update(self):
         print("starting game update")
         self.update_game_state(self.controller.network_manager.send_start_game_message(self.lobby_id))
@@ -307,7 +308,7 @@ class GameGUI(tk.Tk):
         rank = parts[0]
         suit = parts[1]
 
-        # Construct the file name
+        # Create the file name
         if rank == "Ace":
             rank = "ace"
         elif rank == "Jack":
@@ -413,10 +414,8 @@ class GameGUI(tk.Tk):
     def update_roles(self, game_state):
         # Get the components for each player, and update accordingly
         for player_data in game_state["players"]:
-            # print(f"using player data: {player_data}")
             components = self.player_components.get(player_data["user_id"])
             if not components:
-                # print(f"components: {components}")
                 return
             if player_data:
                 roles = []
@@ -453,8 +452,8 @@ class GameGUI(tk.Tk):
         self.pot_label.config(text=f"Pot: {pot_amount}")
         print(f"pot_label: {self.process_lobby_list()}")
 
+    # This method only shows the local player's cards
     def show_local_cards(self, game_state, user_id):
-        print(f"hand: {game_state.get('hand')}")
         components = self.player_components.get(user_id)
         if not components:
             print(f"No components found for user_id {user_id}")
@@ -473,8 +472,8 @@ class GameGUI(tk.Tk):
             card_label.photo = card_photo  # keep a reference to avoid garbage collection
             print(f"(game_gui): card_label after change: {card_label}")
 
+    # This method shows everyone's cards and is useful in the showdown
     def show_everyones_cards(self, game_state):
-        print("SHOWING EVERYONES CARDS!")
         for player in game_state['players']:
             user_id = player.get('user_id')
             components = self.player_components.get(user_id)
@@ -485,15 +484,12 @@ class GameGUI(tk.Tk):
             for idx, card_str in enumerate(player.get('hand', [])):
                 print(f"(game_gui): DEBUG idx: {idx} card_str: {card_str}")
                 card_image_path = self.get_card_image_path(card_str)
-                # print(f"(game_gui): card_image_path: {card_image_path}")
                 card_photo = Image.open(card_image_path)
                 card_photo = card_photo.resize((60, 90))
                 card_photo = ImageTk.PhotoImage(card_photo)
                 card_label = components[f'card{idx + 1}_label']
-                # print(f"(game_gui): card_label before change: {card_label}")
                 card_label.config(image=card_photo)
                 card_label.photo = card_photo  # keep a reference to avoid garbage collection
-                # print(f"(game_gui): card_label after change: {card_label}")
 
     def hide_everyones_cards(self, game_state):
         game_state = game_state['game_state']
@@ -611,7 +607,7 @@ class GameGUI(tk.Tk):
                 print("about to send broadcast_showdown signal")
                 task_id = self.after(0, self.controller.network_manager.send_signal, signal_message)
                 self.scheduled_tasks.append(task_id)
-                # then wait 8 seconds and send signal to broadcast update game state
+                # then wait 9 seconds and send signal to broadcast update game state
 
                 signal_message = {"type": "start_next_round", "lobby_id": self.lobby_id}
                 print("about to send start_next_round signal")
@@ -632,7 +628,7 @@ class GameGUI(tk.Tk):
         self.community_card_items = []
 
     def place_community_cards(self, cards):
-        card_x, card_y = 420, 360  # Center of the screen
+        card_x, card_y = 420, 360  # Centre of the screen
         gap = 20  # Gap between cards
 
         for idx, card_str in enumerate(cards):
@@ -644,7 +640,7 @@ class GameGUI(tk.Tk):
             card_label = tk.Label(self.game_canvas, image=card_photo, bg="#302525")
             card_label.photo = card_photo  # keep a reference to avoid garbage collection
 
-            card_x_offset = (idx - 2) * (60 + gap)  # -2 to center the cards
+            card_x_offset = (idx - 2) * (60 + gap)  # -2 to centre the cards
             item_id = self.game_canvas.create_window(card_x + card_x_offset, card_y, window=card_label)
             self.community_card_items.append(item_id)
             self.canvas_items.append(item_id)
@@ -719,6 +715,7 @@ class GameGUI(tk.Tk):
             self.chatbox.config(state="disabled")
             self.chatbox.yview_moveto(1.0)
 
+    # The code for showing the odds of different hand rankings instead of showing the chatbox
     def show_odds(self):
         self.is_chatbox_shown = False
 
@@ -728,6 +725,7 @@ class GameGUI(tk.Tk):
                               font=("Cambria", 12))
         odds_label.pack(fill="both", expand=True)
 
+        # Request the data required to generate the odds from the server
         game_data = self.controller.network_manager.send_message({
             'type': 'get_data_for_odds',
             'user_id': self.user_id,
@@ -737,6 +735,7 @@ class GameGUI(tk.Tk):
         print(f"GAME DATA: {game_data}")
         odds = monte_carlo_hand_odds(game_data[0], game_data[1], self.odds_iterations)
 
+        # Handle what happens if the cards have not been dealt yet (game has not started) or data has not been received
         if not odds:
             odds_text = "No odds yet.\nWait for your cards to be dealt!"
         else:
@@ -829,7 +828,6 @@ class GameGUI(tk.Tk):
                 'role_label': role_label,
                 'bet_label': bet_label
             }
-            # print(f"PLAYER COMPONENTS: {self.player_components}")
 
             # Positioning the player frame on the canvas
             anchor_point = "center"

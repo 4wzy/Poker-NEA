@@ -10,15 +10,19 @@ class MainMenu(tk.Tk):
         super().__init__(*args, **kwargs)
         self.controller = controller
         self.user_id = user_id
+        # The print statement below is useful for debugging
         print(f"USING MAIN MENU WITH USER_ID: {self.user_id}")
+        # Reset the client's connection with the server
         self.controller.network_manager.reset_connection()
         self.profile_picture_manager = ProfilePictureManager(self.controller)
+        # Request relevant user information from the server and update the rg_score if appropriate (decided server-side)
         self.username = self.controller.network_manager.send_message({"type": "get_username", "user_id": self.user_id})
         self.__rg_score = self.controller.network_manager.send_message({"type": "update_rg_score", "user_id":
             self.user_id})
         self.__games_played_today = self.controller.network_manager.send_message(
             {"type": "get_and_check_to_reset_daily_games_played", "user_id": self.user_id})
 
+        # Set up the GUI with a title
         self.title("AceAware Poker")
 
         self.configure(bg="#333333")
@@ -61,7 +65,6 @@ class MainMenu(tk.Tk):
         self.circular_image.paste(self.image, (0, 0), mask)
         self.profile_pic_image = ImageTk.PhotoImage(self.circular_image)
 
-        # Add this line here to store the image ID
         self.profile_pic_id = self.profile_pic.create_image(75, 25, image=self.profile_pic_image)
 
         self.profile_pic.bind("<Button-1>", lambda event: self.controller.open_user_profile(profile_user_id=self.user_id, own_user_id=self.user_id,
@@ -88,7 +91,7 @@ class MainMenu(tk.Tk):
                                     command=lambda: self.controller.open_settings(self.user_id))
         settings_button.pack(side="top", fill="x", pady=5)
 
-        # Add the game's logo
+        # Add the game's logo on the screen
         self.logo = Image.open("gui/Images/logo.png")
         self.logo = self.logo.resize((200, 200))
         self.logo = ImageTk.PhotoImage(self.logo)
@@ -126,6 +129,7 @@ class MainMenu(tk.Tk):
                                 bg="#444444", bd=0, padx=20, pady=10, command=self.destroy)
         quit_button.grid(row=7, column=3, sticky="se", pady=10, padx=10)
 
+    # Update a player's profile picture if it was changed in the user profile
     def update_profile_picture(self, user_id, new_pic_name):
         profile_pic_path = f"gui/Images/Pfps/{new_pic_name}"
         new_image = Image.open(profile_pic_path)
@@ -146,4 +150,3 @@ class MainMenu(tk.Tk):
     def update_username(self, user_id, new_username):
         self.username = new_username
         self.username_label.config(text=new_username)
-

@@ -9,6 +9,7 @@ class NetworkManager:
         self.__connect_to_server()
         self.buffer = ""
 
+    # The method for a user to initially connect to a server
     def __connect_to_server(self):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
@@ -17,6 +18,7 @@ class NetworkManager:
         except ConnectionRefusedError:
             print("Couldn't connect to the server")
 
+    # Send a message to the server and await a response
     def send_message(self, message):
         try:
             print(f"1. {message}")
@@ -44,6 +46,7 @@ class NetworkManager:
             print(f"Other exception: {e}")
             print(f"Data causing the error: {self.buffer}")
 
+    # Receive a message from the server
     def __receive_message(self):
         while True:
             try:
@@ -61,19 +64,20 @@ class NetworkManager:
                 print(f"Data causing the error: {self.buffer}")
                 self.buffer = ""
             except BlockingIOError:
-                # Handle non-blocking socket mode. If you are not using non-blocking sockets,
-                # you can remove this exception handling block.
+                # Handle non-blocking socket mode.
                 pass
             except Exception as e:
                 print(f"Unexpected error: {e}")
                 break
 
+    # Send the start_game message to the server
     def send_start_game_message(self, lobby_id):
         start_game_message = {"type": "start_game", "lobby_id": lobby_id}
         start_game_response = self.send_message(start_game_message)
         print(f"(network_manager): start_game_response: {start_game_response}")
         return start_game_response
 
+    # The code for sending a request to join a lobby and awaiting a response
     def join_lobby(self, user_id, lobby_id):
         print("starting to join lobby")
         message = {"type": "join_lobby", "user_id": user_id, "lobby_id": lobby_id}
@@ -84,6 +88,7 @@ class NetworkManager:
     def __close_connection(self):
         self.client_socket.close()
 
+    # Reset the connection after leaving a game if necessary
     def reset_connection(self):
         print("Resetting connection...")
         self.__close_connection()

@@ -342,7 +342,7 @@ class DatabaseInteraction(DatabaseBase):
 
     def update_game_limit_after_completion(self, user_id):
         with self._db_cursor() as cursor:
-            # Increment the amount of games played today by 1
+            # Increment the number of games played today by 1
             query = """
             UPDATE user_game_limits
             SET games_played_today = games_played_today + 1
@@ -371,6 +371,7 @@ class DatabaseInteraction(DatabaseBase):
             limit_data = cursor.fetchone()
 
             daily_game_limit, games_played_today, last_logged_in = limit_data or (10, 0, None)
+            # Print statement to see that the RGScore is being updated for a user
             print(f"UPDATING RGSCORE FOR USER {user_id}. Current_rgscore: {current_rgscore}, current_streak:"
                   f" {current_streak}, daily_game_limit: {daily_game_limit}, games_played_today: "
                   f"{games_played_today}, last_logged_in: {last_logged_in}")
@@ -384,13 +385,13 @@ class DatabaseInteraction(DatabaseBase):
             today = datetime.today().date()
 
             if last_logged_in_date is None or last_logged_in_date < today:
-                # Calculate games played above limit for yesterday
+                # Calculate games played above limit for previous date
                 games_played_above_limit = games_played_today - daily_game_limit
                 if games_played_above_limit < 0:
                     games_played_above_limit = 0
                 print(f"updated games_played_above_limit to: {games_played_above_limit}")
 
-                # Check if the user stayed within their limit yesterday
+                # Check if the user stayed within their limit the last day that they played
                 if games_played_today <= daily_game_limit:
                     current_streak += 1
                 else:
@@ -398,7 +399,7 @@ class DatabaseInteraction(DatabaseBase):
                 print(f"current_streak: {current_streak}")
 
                 # Calculate the new RGScore making sure it doesn't go below 0
-                influence = 0.5  # Example value
+                influence = 0.5  # This value could be adjusted over time if another value works better
                 rgscore_adjustment = -math.log2(1 + games_played_above_limit) + influence * current_streak
                 new_rgscore = round(current_rgscore + rgscore_adjustment, 2)
                 if new_rgscore < 0:
@@ -420,14 +421,6 @@ class DatabaseInteraction(DatabaseBase):
                         """, (user_id,))
 
             return current_rgscore
-
-    def check_if_within_limit(self, user_id, daily_game_limit):
-        # Logic to check if the user stayed within the daily game limit yesterday
-        pass
-
-    def get_games_played_above_limit(self, user_id, daily_game_limit):
-        # Logic to determine how many games the user played over the limit yesterday
-        pass
 
     def get_and_check_to_reset_daily_games_played(self, user_id):
         with self._db_cursor() as cursor:
